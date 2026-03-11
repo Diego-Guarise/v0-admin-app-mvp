@@ -23,10 +23,10 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Card, CardContent } from '@/components/ui/card'
-import { Plus, Search, Receipt, Eye, Edit, X, FileText } from 'lucide-react'
+import { Plus, Search, Receipt, Eye, Edit, X, FileText, Calendar } from 'lucide-react'
 import { EXPENSES, EXPENSE_CATEGORIES, formatCurrency, formatDate } from '@/lib/mock-data'
 import type { ExpenseType, ExpenseStatus } from '@/lib/types'
-import { EXPENSE_TYPE_LABELS, EXPENSE_STATUS_LABELS } from '@/lib/types'
+import { EXPENSE_TYPE_LABELS, EXPENSE_STATUS_LABELS, RECURRENCE_FREQUENCY_LABELS } from '@/lib/types'
 
 export function ExpensesContent() {
   const [search, setSearch] = useState('')
@@ -62,7 +62,7 @@ export function ExpensesContent() {
       if (invoiceFilter === 'without' && expense.has_invoice) return false
 
       return true
-    })
+    }).sort((a, b) => b.date.localeCompare(a.date))
   }, [search, categoryFilter, typeFilter, statusFilter, invoiceFilter])
 
   const clearFilters = () => {
@@ -91,7 +91,7 @@ export function ExpensesContent() {
     <div className="px-4 lg:px-6 py-6 space-y-6">
       <PageHeader 
         title="Gastos"
-        description={`${filteredExpenses.length} gasto${filteredExpenses.length !== 1 ? 's' : ''} - Total: ${formatCurrency(totals.total)}`}
+        description={`${filteredExpenses.length} gasto${filteredExpenses.length !== 1 ? 's' : ''}`}
       >
         <Link href="/gastos/nuevo">
           <Button>
@@ -102,7 +102,7 @@ export function ExpensesContent() {
       </PageHeader>
 
       {/* Filters */}
-      <Card>
+      <Card className="shadow-sm">
         <CardContent className="pt-6">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col sm:flex-row gap-4">
@@ -110,7 +110,7 @@ export function ExpensesContent() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar por concepto, proveedor o categoría..."
+                  placeholder="Buscar por concepto, proveedor o categoria..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="pl-10"
@@ -130,10 +130,10 @@ export function ExpensesContent() {
               {/* Category filter */}
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Categoría" />
+                  <SelectValue placeholder="Categoria" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas las categorías</SelectItem>
+                  <SelectItem value="all">Todas las categorias</SelectItem>
                   {EXPENSE_CATEGORIES.map((cat) => (
                     <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                   ))}
@@ -184,19 +184,18 @@ export function ExpensesContent() {
 
       {/* Expenses Table */}
       {filteredExpenses.length > 0 ? (
-        <Card>
+        <Card className="shadow-sm">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
+                  <TableRow className="bg-muted/30">
                     <TableHead>Fecha</TableHead>
                     <TableHead>Concepto</TableHead>
-                    <TableHead>Categoría</TableHead>
+                    <TableHead>Categoria</TableHead>
                     <TableHead>Proveedor</TableHead>
                     <TableHead className="text-right">Monto</TableHead>
                     <TableHead className="text-right">Sin IVA</TableHead>
-                    <TableHead className="text-right">IVA</TableHead>
                     <TableHead className="text-center">Factura</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead className="w-24">Acciones</TableHead>
@@ -204,17 +203,23 @@ export function ExpensesContent() {
                 </TableHeader>
                 <TableBody>
                   {filteredExpenses.map((expense) => (
-                    <TableRow key={expense.id}>
+                    <TableRow key={expense.id} className="group hover:bg-accent/50">
                       <TableCell className="text-muted-foreground">
                         {formatDate(expense.date)}
                       </TableCell>
                       <TableCell>
-                        <div>
+                        <div className="space-y-1">
                           <p className="font-medium">{expense.concept}</p>
                           {expense.due_date && (
-                            <p className="text-xs text-orange-600">
+                            <div className="flex items-center gap-1 text-xs text-orange-600">
+                              <Calendar className="h-3 w-3" />
                               Vence: {formatDate(expense.due_date)}
-                            </p>
+                            </div>
+                          )}
+                          {expense.expense_type === 'recurrente' && expense.recurrence_frequency && (
+                            <div className="text-xs text-violet-600">
+                              {RECURRENCE_FREQUENCY_LABELS[expense.recurrence_frequency]} - Dia {expense.estimated_day}
+                            </div>
                           )}
                         </div>
                       </TableCell>
@@ -232,27 +237,24 @@ export function ExpensesContent() {
                       <TableCell className="text-right font-bold">
                         {formatCurrency(expense.amount)}
                       </TableCell>
-                      <TableCell className="text-right font-medium">
+                      <TableCell className="text-right font-medium text-muted-foreground">
                         {formatCurrency(expense.amount_without_iva)}
-                      </TableCell>
-                      <TableCell className="text-right text-muted-foreground">
-                        {expense.iva > 0 ? formatCurrency(expense.iva) : '-'}
                       </TableCell>
                       <TableCell className="text-center">
                         {expense.has_invoice ? (
-                          <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                          <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800 border border-emerald-200">
                             <FileText className="h-3 w-3 mr-1" />
-                            Sí
+                            Si
                           </span>
                         ) : (
-                          <span className="text-muted-foreground">No</span>
+                          <span className="text-xs text-muted-foreground">No</span>
                         )}
                       </TableCell>
                       <TableCell>
-                        <StatusBadge status={expense.expense_type} type="expenseType" size="sm" />
+                        <StatusBadge status={expense.expense_type} type="expenseType" size="sm" showDot />
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Link href={`/gastos/${expense.id}`}>
                             <Button variant="ghost" size="icon" className="h-8 w-8">
                               <Eye className="h-4 w-4" />
@@ -272,7 +274,7 @@ export function ExpensesContent() {
             </div>
 
             {/* Totals */}
-            <div className="border-t px-6 py-4 bg-muted/30">
+            <div className="border-t px-6 py-4 bg-muted/20">
               <div className="flex flex-wrap gap-6 justify-end text-sm">
                 <div>
                   <span className="text-muted-foreground">Total sin IVA:</span>
@@ -291,13 +293,13 @@ export function ExpensesContent() {
           </CardContent>
         </Card>
       ) : (
-        <Card>
+        <Card className="shadow-sm">
           <CardContent className="p-0">
             <EmptyState
               icon={Receipt}
               title="No se encontraron gastos"
               description={hasFilters 
-                ? "Intenta ajustar los filtros de búsqueda" 
+                ? "Intenta ajustar los filtros de busqueda" 
                 : "Registra tu primer gasto para comenzar"
               }
               action={

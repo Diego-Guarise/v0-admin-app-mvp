@@ -1,17 +1,20 @@
 // ============================================
 // FOX Admin - Type Definitions
+// Sistema de gestión para fabricación de enduido y masilla
 // ============================================
 
-// Enums
-export type OrderStatus = 'en_produccion' | 'finalizado' | 'entregado' | 'cobrado' | 'anulado'
+// Enums - Estados separados para mayor claridad
+export type OrderStatus = 'en_produccion' | 'finalizado' | 'entregado' | 'anulado'
 export type PaymentStatus = 'pendiente' | 'parcial' | 'cobrado'
 export type CommissionStatus = 'pendiente_liquidar' | 'liquidado' | 'excluido'
+export type ClientStatus = 'activo' | 'inactivo'
 export type PriceCategory = 'barraca' | 'barraca_marca' | 'distribuidor' | 'distribuidor_marca' | 'oferta' | 'consumidor_final'
 export type ProductType = 'enduido' | 'masilla'
 export type PresentationType = 'bolsa' | 'pote'
 export type ExpenseType = 'unico' | 'recurrente' | 'diferido'
 export type ExpenseStatus = 'activo' | 'anulado'
 export type RecurrenceFrequency = 'semanal' | 'quincenal' | 'mensual' | 'bimestral' | 'trimestral' | 'semestral' | 'anual'
+export type PaymentMethod = 'efectivo' | 'transferencia' | 'cheque' | 'credito'
 
 // Price category labels for UI
 export const PRICE_CATEGORY_LABELS: Record<PriceCategory, string> = {
@@ -27,7 +30,6 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   en_produccion: 'En producción',
   finalizado: 'Finalizado',
   entregado: 'Entregado',
-  cobrado: 'Cobrado',
   anulado: 'Anulado',
 }
 
@@ -35,6 +37,17 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   pendiente: 'Pendiente',
   parcial: 'Parcial',
   cobrado: 'Cobrado',
+}
+
+export const COMMISSION_STATUS_LABELS: Record<CommissionStatus, string> = {
+  pendiente_liquidar: 'Pendiente de liquidar',
+  liquidado: 'Liquidado',
+  excluido: 'Excluido',
+}
+
+export const CLIENT_STATUS_LABELS: Record<ClientStatus, string> = {
+  activo: 'Activo',
+  inactivo: 'Inactivo',
 }
 
 export const EXPENSE_TYPE_LABELS: Record<ExpenseType, string> = {
@@ -46,6 +59,23 @@ export const EXPENSE_TYPE_LABELS: Record<ExpenseType, string> = {
 export const EXPENSE_STATUS_LABELS: Record<ExpenseStatus, string> = {
   activo: 'Activo',
   anulado: 'Anulado',
+}
+
+export const RECURRENCE_FREQUENCY_LABELS: Record<RecurrenceFrequency, string> = {
+  semanal: 'Semanal',
+  quincenal: 'Quincenal',
+  mensual: 'Mensual',
+  bimestral: 'Bimestral',
+  trimestral: 'Trimestral',
+  semestral: 'Semestral',
+  anual: 'Anual',
+}
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  efectivo: 'Efectivo',
+  transferencia: 'Transferencia',
+  cheque: 'Cheque',
+  credito: 'Crédito',
 }
 
 // Products
