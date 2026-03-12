@@ -13,8 +13,8 @@ import type {
   IngredientInput,
   IngredientCost,
   ProductFormula,
-  calculateIngredientCostIVA
 } from './types'
+import { calculateIngredientCostIVA } from './types'
 
 // ============================================
 // Products - Enduido interior y Masilla para yeso
