@@ -6,38 +6,631 @@ import type {
   OrderItem,
   Expense,
   ExpenseCategory,
-  DashboardStats 
+  DashboardStats,
+  IngredientInput,
+  IngredientCost,
+  ProductFormula,
+  calculateIngredientCostIVA
 } from './types'
 
 // ============================================
 // Products - Enduido interior y Masilla para yeso
 // ============================================
 export const PRODUCTS: Product[] = [
-  { id: 'prod-1', name: 'Enduido Interior', type: 'enduido', active: true },
-  { id: 'prod-2', name: 'Masilla para Yeso', type: 'masilla', active: true },
+  { 
+    id: 'prod-1', 
+    name: 'Enduido Interior', 
+    type: 'enduido', 
+    description: 'Enduido para interiores, ideal para preparar superficies antes de pintar',
+    active: true,
+    created_at: '2022-01-01T00:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z'
+  },
+  { 
+    id: 'prod-2', 
+    name: 'Masilla para Yeso', 
+    type: 'masilla',
+    description: 'Masilla para reparación y nivelación de superficies de yeso',
+    active: true,
+    created_at: '2022-01-01T00:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z'
+  },
 ]
 
 // ============================================
-// Presentations - Presentaciones reales del mercado uruguayo
+// Presentations - Catálogo exacto según especificación
+// Bolsas: 1, 2, 5, 10, 20 kg
+// Potes: 1.7, 7, 18 kg
+// Cada uno con with_brand = true y with_brand = false
 // ============================================
-export const PRESENTATIONS: Presentation[] = [
-  // Bolsas
-  { id: 'pres-1', name: 'Bolsa 1 kg', type: 'bolsa', weight_kg: 1, active: true },
-  { id: 'pres-2', name: 'Bolsa 5 kg', type: 'bolsa', weight_kg: 5, active: true },
-  { id: 'pres-3', name: 'Bolsa 10 kg', type: 'bolsa', weight_kg: 10, active: true },
-  { id: 'pres-4', name: 'Bolsa 25 kg', type: 'bolsa', weight_kg: 25, active: true },
-  // Potes
-  { id: 'pres-5', name: 'Pote 1.5 kg', type: 'pote', weight_kg: 1.5, active: true },
-  { id: 'pres-6', name: 'Pote 4 kg', type: 'pote', weight_kg: 4, active: true },
-  { id: 'pres-7', name: 'Pote 8 kg', type: 'pote', weight_kg: 8, active: true },
-  { id: 'pres-8', name: 'Pote 20 kg', type: 'pote', weight_kg: 20, active: true },
+const PRESENTATION_WEIGHTS = {
+  bolsa: [1, 2, 5, 10, 20],
+  pote: [1.7, 7, 18]
+}
+
+function generatePresentations(): Presentation[] {
+  const presentations: Presentation[] = []
+  let idCounter = 1
+  
+  for (const product of PRODUCTS) {
+    // Bolsas
+    for (const weight of PRESENTATION_WEIGHTS.bolsa) {
+      // With brand
+      presentations.push({
+        id: `pres-${idCounter++}`,
+        product_id: product.id,
+        name: `Bolsa ${weight} kg - Con marca`,
+        type: 'bolsa',
+        weight_kg: weight,
+        with_brand: true,
+        active: true,
+        created_at: '2022-01-01T00:00:00Z',
+        updated_at: '2025-01-15T10:00:00Z'
+      })
+      // Without brand
+      presentations.push({
+        id: `pres-${idCounter++}`,
+        product_id: product.id,
+        name: `Bolsa ${weight} kg - Sin marca`,
+        type: 'bolsa',
+        weight_kg: weight,
+        with_brand: false,
+        active: true,
+        created_at: '2022-01-01T00:00:00Z',
+        updated_at: '2025-01-15T10:00:00Z'
+      })
+    }
+    // Potes
+    for (const weight of PRESENTATION_WEIGHTS.pote) {
+      // With brand
+      presentations.push({
+        id: `pres-${idCounter++}`,
+        product_id: product.id,
+        name: `Pote ${weight} kg - Con marca`,
+        type: 'pote',
+        weight_kg: weight,
+        with_brand: true,
+        active: true,
+        created_at: '2022-01-01T00:00:00Z',
+        updated_at: '2025-01-15T10:00:00Z'
+      })
+      // Without brand
+      presentations.push({
+        id: `pres-${idCounter++}`,
+        product_id: product.id,
+        name: `Pote ${weight} kg - Sin marca`,
+        type: 'pote',
+        weight_kg: weight,
+        with_brand: false,
+        active: true,
+        created_at: '2022-01-01T00:00:00Z',
+        updated_at: '2025-01-15T10:00:00Z'
+      })
+    }
+  }
+  
+  return presentations
+}
+
+export const PRESENTATIONS: Presentation[] = generatePresentations()
+
+// Helper to get presentation by product, type, weight and brand
+export function getPresentation(
+  productId: string, 
+  type: 'bolsa' | 'pote', 
+  weightKg: number, 
+  withBrand: boolean
+): Presentation | undefined {
+  return PRESENTATIONS.find(p => 
+    p.product_id === productId && 
+    p.type === type && 
+    p.weight_kg === weightKg && 
+    p.with_brand === withBrand
+  )
+}
+
+// ============================================
+// Ingredient Inputs (Insumos)
+// ============================================
+export const INGREDIENT_INPUTS: IngredientInput[] = [
+  // Materias primas
+  {
+    id: 'ins-1',
+    name: 'Carbonato de calcio',
+    category: 'materia_prima',
+    unit_of_measure: 'kg',
+    description: 'Carga mineral principal',
+    status: 'activo',
+    created_at: '2022-01-01T00:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z'
+  },
+  {
+    id: 'ins-2',
+    name: 'CMC (Carboximetilcelulosa)',
+    category: 'aditivo',
+    unit_of_measure: 'kg',
+    description: 'Espesante y estabilizante',
+    status: 'activo',
+    created_at: '2022-01-01T00:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z'
+  },
+  {
+    id: 'ins-3',
+    name: 'Bentonita',
+    category: 'aditivo',
+    unit_of_measure: 'kg',
+    description: 'Arcilla para mejorar textura',
+    status: 'activo',
+    created_at: '2022-01-01T00:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z'
+  },
+  {
+    id: 'ins-4',
+    name: 'Emulsión acrílica',
+    category: 'materia_prima',
+    unit_of_measure: 'l',
+    description: 'Ligante principal',
+    status: 'activo',
+    created_at: '2022-01-01T00:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z'
+  },
+  {
+    id: 'ins-5',
+    name: 'Agua',
+    category: 'materia_prima',
+    unit_of_measure: 'l',
+    description: 'Solvente',
+    status: 'activo',
+    created_at: '2022-01-01T00:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z'
+  },
+  {
+    id: 'ins-6',
+    name: 'Yeso',
+    category: 'materia_prima',
+    unit_of_measure: 'kg',
+    description: 'Base para masilla',
+    status: 'activo',
+    created_at: '2022-01-01T00:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z'
+  },
+  {
+    id: 'ins-7',
+    name: 'Cal hidratada',
+    category: 'materia_prima',
+    unit_of_measure: 'kg',
+    description: 'Mejora trabajabilidad',
+    status: 'activo',
+    created_at: '2022-01-01T00:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z'
+  },
+  {
+    id: 'ins-8',
+    name: 'Retardador de fraguado',
+    category: 'aditivo',
+    unit_of_measure: 'g',
+    description: 'Control de tiempo de secado',
+    status: 'activo',
+    created_at: '2022-01-01T00:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z'
+  },
+  // Envases
+  {
+    id: 'ins-9',
+    name: 'Bolsa plástica 1 kg',
+    category: 'envase',
+    unit_of_measure: 'unidad',
+    status: 'activo',
+    created_at: '2022-01-01T00:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z'
+  },
+  {
+    id: 'ins-10',
+    name: 'Bolsa plástica 2 kg',
+    category: 'envase',
+    unit_of_measure: 'unidad',
+    status: 'activo',
+    created_at: '2022-01-01T00:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z'
+  },
+  {
+    id: 'ins-11',
+    name: 'Bolsa plástica 5 kg',
+    category: 'envase',
+    unit_of_measure: 'unidad',
+    status: 'activo',
+    created_at: '2022-01-01T00:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z'
+  },
+  {
+    id: 'ins-12',
+    name: 'Bolsa plástica 10 kg',
+    category: 'envase',
+    unit_of_measure: 'unidad',
+    status: 'activo',
+    created_at: '2022-01-01T00:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z'
+  },
+  {
+    id: 'ins-13',
+    name: 'Bolsa plástica 20 kg',
+    category: 'envase',
+    unit_of_measure: 'unidad',
+    status: 'activo',
+    created_at: '2022-01-01T00:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z'
+  },
+  {
+    id: 'ins-14',
+    name: 'Pote plástico 1.7 kg',
+    category: 'envase',
+    unit_of_measure: 'unidad',
+    status: 'activo',
+    created_at: '2022-01-01T00:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z'
+  },
+  {
+    id: 'ins-15',
+    name: 'Pote plástico 7 kg',
+    category: 'envase',
+    unit_of_measure: 'unidad',
+    status: 'activo',
+    created_at: '2022-01-01T00:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z'
+  },
+  {
+    id: 'ins-16',
+    name: 'Pote plástico 18 kg',
+    category: 'envase',
+    unit_of_measure: 'unidad',
+    status: 'activo',
+    created_at: '2022-01-01T00:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z'
+  },
+  // Etiquetas
+  {
+    id: 'ins-17',
+    name: 'Etiqueta Enduido 1-5 kg',
+    category: 'etiqueta',
+    unit_of_measure: 'unidad',
+    description: 'Etiqueta autoadhesiva para presentaciones pequeñas',
+    status: 'activo',
+    created_at: '2022-01-01T00:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z'
+  },
+  {
+    id: 'ins-18',
+    name: 'Etiqueta Enduido 10-20 kg',
+    category: 'etiqueta',
+    unit_of_measure: 'unidad',
+    description: 'Etiqueta autoadhesiva para presentaciones grandes',
+    status: 'activo',
+    created_at: '2022-01-01T00:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z'
+  },
+  {
+    id: 'ins-19',
+    name: 'Etiqueta Masilla 1-5 kg',
+    category: 'etiqueta',
+    unit_of_measure: 'unidad',
+    status: 'activo',
+    created_at: '2022-01-01T00:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z'
+  },
+  {
+    id: 'ins-20',
+    name: 'Etiqueta Masilla 10-20 kg',
+    category: 'etiqueta',
+    unit_of_measure: 'unidad',
+    status: 'activo',
+    created_at: '2022-01-01T00:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z'
+  },
 ]
+
+// ============================================
+// Ingredient Costs (Costos de Insumo)
+// Histórico de precios con IVA correctamente calculado
+// ============================================
+function createIngredientCost(
+  id: string,
+  insumo_id: string,
+  date: string,
+  provider: string,
+  quantity: number,
+  unit_of_measure: 'kg' | 'g' | 'l' | 'ml' | 'unidad',
+  total_amount: number,
+  has_invoice: boolean,
+  notes?: string
+): IngredientCost {
+  const calculated = calculateIngredientCostIVA(total_amount, has_invoice, quantity)
+  return {
+    id,
+    insumo_id,
+    insumo: INGREDIENT_INPUTS.find(i => i.id === insumo_id),
+    date,
+    provider,
+    quantity,
+    unit_of_measure,
+    total_amount,
+    has_invoice,
+    ...calculated,
+    notes,
+    created_at: date + 'T10:00:00Z',
+    updated_at: date + 'T10:00:00Z'
+  }
+}
+
+export const INGREDIENT_COSTS: IngredientCost[] = [
+  // Carbonato de calcio - con factura
+  createIngredientCost('ic-1', 'ins-1', '2025-02-01', 'Minera del Plata S.A.', 1000, 'kg', 8540, true, 'Bolsones de 25 kg x 40'),
+  createIngredientCost('ic-2', 'ins-1', '2025-03-05', 'Minera del Plata S.A.', 1500, 'kg', 13200, true, 'Incremento de precio'),
+  
+  // CMC - con factura
+  createIngredientCost('ic-3', 'ins-2', '2025-01-15', 'Químicos Industriales', 50, 'kg', 18300, true, 'Importado'),
+  createIngredientCost('ic-4', 'ins-2', '2025-03-01', 'Químicos Industriales', 25, 'kg', 9760, true),
+  
+  // Bentonita - con factura
+  createIngredientCost('ic-5', 'ins-3', '2025-02-10', 'Bentonitas del Uruguay', 200, 'kg', 4270, true),
+  
+  // Emulsión acrílica - con factura
+  createIngredientCost('ic-6', 'ins-4', '2025-02-15', 'Pinturas Nacionales S.A.', 200, 'l', 24400, true, 'Tambores de 200L'),
+  createIngredientCost('ic-7', 'ins-4', '2025-03-10', 'Pinturas Nacionales S.A.', 400, 'l', 46360, true, '2 tambores'),
+  
+  // Agua - sin factura (OSE)
+  createIngredientCost('ic-8', 'ins-5', '2025-03-01', 'OSE', 5000, 'l', 250, false, 'Estimado mensual'),
+  
+  // Yeso - con factura
+  createIngredientCost('ic-9', 'ins-6', '2025-02-05', 'Yesos del Uruguay', 500, 'kg', 7320, true),
+  createIngredientCost('ic-10', 'ins-6', '2025-03-08', 'Yesos del Uruguay', 750, 'kg', 10980, true),
+  
+  // Cal hidratada - con factura
+  createIngredientCost('ic-11', 'ins-7', '2025-02-20', 'Cales del Plata S.A.', 300, 'kg', 5490, true),
+  
+  // Retardador - con factura (cantidad en gramos)
+  createIngredientCost('ic-12', 'ins-8', '2025-01-20', 'Aditivos Químicos', 5000, 'g', 3660, true, '5 kg'),
+  
+  // Bolsas - con factura
+  createIngredientCost('ic-13', 'ins-9', '2025-02-01', 'Envases Plásticos Uruguay', 1000, 'unidad', 4880, true, 'Bolsa 1kg'),
+  createIngredientCost('ic-14', 'ins-10', '2025-02-01', 'Envases Plásticos Uruguay', 1000, 'unidad', 5490, true, 'Bolsa 2kg'),
+  createIngredientCost('ic-15', 'ins-11', '2025-02-01', 'Envases Plásticos Uruguay', 500, 'unidad', 3660, true, 'Bolsa 5kg'),
+  createIngredientCost('ic-16', 'ins-12', '2025-02-01', 'Envases Plásticos Uruguay', 500, 'unidad', 4270, true, 'Bolsa 10kg'),
+  createIngredientCost('ic-17', 'ins-13', '2025-02-01', 'Envases Plásticos Uruguay', 300, 'unidad', 3660, true, 'Bolsa 20kg'),
+  
+  // Potes - con factura
+  createIngredientCost('ic-18', 'ins-14', '2025-02-15', 'Plásticos del Este', 200, 'unidad', 7320, true, 'Pote 1.7kg'),
+  createIngredientCost('ic-19', 'ins-15', '2025-02-15', 'Plásticos del Este', 150, 'unidad', 10980, true, 'Pote 7kg'),
+  createIngredientCost('ic-20', 'ins-16', '2025-02-15', 'Plásticos del Este', 100, 'unidad', 12200, true, 'Pote 18kg'),
+  
+  // Etiquetas - con factura
+  createIngredientCost('ic-21', 'ins-17', '2025-02-10', 'Imprenta Gráfica S.R.L.', 2000, 'unidad', 4880, true, 'Etiqueta pequeña enduido'),
+  createIngredientCost('ic-22', 'ins-18', '2025-02-10', 'Imprenta Gráfica S.R.L.', 1500, 'unidad', 5490, true, 'Etiqueta grande enduido'),
+  createIngredientCost('ic-23', 'ins-19', '2025-02-10', 'Imprenta Gráfica S.R.L.', 1500, 'unidad', 3660, true, 'Etiqueta pequeña masilla'),
+  createIngredientCost('ic-24', 'ins-20', '2025-02-10', 'Imprenta Gráfica S.R.L.', 1000, 'unidad', 3660, true, 'Etiqueta grande masilla'),
+]
+
+// ============================================
+// Product Formulas (Fórmulas de Producto)
+// Cantidad de insumo por kg de producto
+// ============================================
+export const PRODUCT_FORMULAS: ProductFormula[] = [
+  // Fórmula Enduido Interior (prod-1)
+  {
+    id: 'form-1',
+    product_id: 'prod-1',
+    product: PRODUCTS[0],
+    insumo_id: 'ins-1', // Carbonato de calcio
+    insumo: INGREDIENT_INPUTS.find(i => i.id === 'ins-1'),
+    quantity_per_kg: 0.65, // 650g por kg de producto
+    notes: 'Carga principal',
+    active: true,
+    created_at: '2022-01-01T00:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z'
+  },
+  {
+    id: 'form-2',
+    product_id: 'prod-1',
+    product: PRODUCTS[0],
+    insumo_id: 'ins-2', // CMC
+    insumo: INGREDIENT_INPUTS.find(i => i.id === 'ins-2'),
+    quantity_per_kg: 0.015, // 15g por kg
+    notes: 'Espesante',
+    active: true,
+    created_at: '2022-01-01T00:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z'
+  },
+  {
+    id: 'form-3',
+    product_id: 'prod-1',
+    product: PRODUCTS[0],
+    insumo_id: 'ins-3', // Bentonita
+    insumo: INGREDIENT_INPUTS.find(i => i.id === 'ins-3'),
+    quantity_per_kg: 0.02, // 20g por kg
+    active: true,
+    created_at: '2022-01-01T00:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z'
+  },
+  {
+    id: 'form-4',
+    product_id: 'prod-1',
+    product: PRODUCTS[0],
+    insumo_id: 'ins-4', // Emulsión acrílica
+    insumo: INGREDIENT_INPUTS.find(i => i.id === 'ins-4'),
+    quantity_per_kg: 0.08, // 80ml por kg
+    notes: 'Ligante',
+    active: true,
+    created_at: '2022-01-01T00:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z'
+  },
+  {
+    id: 'form-5',
+    product_id: 'prod-1',
+    product: PRODUCTS[0],
+    insumo_id: 'ins-5', // Agua
+    insumo: INGREDIENT_INPUTS.find(i => i.id === 'ins-5'),
+    quantity_per_kg: 0.235, // 235ml por kg
+    active: true,
+    created_at: '2022-01-01T00:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z'
+  },
+  
+  // Fórmula Masilla para Yeso (prod-2)
+  {
+    id: 'form-6',
+    product_id: 'prod-2',
+    product: PRODUCTS[1],
+    insumo_id: 'ins-6', // Yeso
+    insumo: INGREDIENT_INPUTS.find(i => i.id === 'ins-6'),
+    quantity_per_kg: 0.55, // 550g por kg
+    notes: 'Base principal',
+    active: true,
+    created_at: '2022-01-01T00:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z'
+  },
+  {
+    id: 'form-7',
+    product_id: 'prod-2',
+    product: PRODUCTS[1],
+    insumo_id: 'ins-1', // Carbonato de calcio
+    insumo: INGREDIENT_INPUTS.find(i => i.id === 'ins-1'),
+    quantity_per_kg: 0.25, // 250g por kg
+    notes: 'Carga secundaria',
+    active: true,
+    created_at: '2022-01-01T00:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z'
+  },
+  {
+    id: 'form-8',
+    product_id: 'prod-2',
+    product: PRODUCTS[1],
+    insumo_id: 'ins-7', // Cal hidratada
+    insumo: INGREDIENT_INPUTS.find(i => i.id === 'ins-7'),
+    quantity_per_kg: 0.05, // 50g por kg
+    active: true,
+    created_at: '2022-01-01T00:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z'
+  },
+  {
+    id: 'form-9',
+    product_id: 'prod-2',
+    product: PRODUCTS[1],
+    insumo_id: 'ins-2', // CMC
+    insumo: INGREDIENT_INPUTS.find(i => i.id === 'ins-2'),
+    quantity_per_kg: 0.008, // 8g por kg
+    active: true,
+    created_at: '2022-01-01T00:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z'
+  },
+  {
+    id: 'form-10',
+    product_id: 'prod-2',
+    product: PRODUCTS[1],
+    insumo_id: 'ins-8', // Retardador (en g, convertir a kg para cálculo)
+    insumo: INGREDIENT_INPUTS.find(i => i.id === 'ins-8'),
+    quantity_per_kg: 2, // 2g por kg (en gramos porque el insumo es en g)
+    notes: 'Control de fraguado',
+    active: true,
+    created_at: '2022-01-01T00:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z'
+  },
+  {
+    id: 'form-11',
+    product_id: 'prod-2',
+    product: PRODUCTS[1],
+    insumo_id: 'ins-5', // Agua
+    insumo: INGREDIENT_INPUTS.find(i => i.id === 'ins-5'),
+    quantity_per_kg: 0.142, // 142ml por kg
+    active: true,
+    created_at: '2022-01-01T00:00:00Z',
+    updated_at: '2025-01-15T10:00:00Z'
+  },
+]
+
+// ============================================
+// Helper: Get latest cost for an ingredient
+// ============================================
+export function getLatestIngredientCost(insumoId: string): IngredientCost | undefined {
+  const costs = INGREDIENT_COSTS
+    .filter(c => c.insumo_id === insumoId)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  return costs[0]
+}
+
+// ============================================
+// Helper: Calculate cost per kg for a product
+// ============================================
+export function calculateProductCostPerKg(productId: string): number {
+  const formulas = PRODUCT_FORMULAS.filter(f => f.product_id === productId && f.active)
+  let totalCost = 0
+  
+  for (const formula of formulas) {
+    const latestCost = getLatestIngredientCost(formula.insumo_id)
+    if (latestCost) {
+      // Handle unit conversion for ingredients measured in grams
+      let unitCost = latestCost.unit_cost_without_iva
+      if (latestCost.unit_of_measure === 'g') {
+        // Convert g cost to kg cost for proper calculation
+        unitCost = unitCost // Already per gram, quantity_per_kg is in grams
+      }
+      totalCost += formula.quantity_per_kg * unitCost
+    }
+  }
+  
+  return totalCost
+}
+
+// ============================================
+// Helper: Get envase cost for a presentation
+// ============================================
+export function getEnvaseCost(presentationType: 'bolsa' | 'pote', weightKg: number): number {
+  // Map weight to envase insumo
+  const envaseMap: Record<string, string> = {
+    'bolsa-1': 'ins-9',
+    'bolsa-2': 'ins-10',
+    'bolsa-5': 'ins-11',
+    'bolsa-10': 'ins-12',
+    'bolsa-20': 'ins-13',
+    'pote-1.7': 'ins-14',
+    'pote-7': 'ins-15',
+    'pote-18': 'ins-16',
+  }
+  
+  const key = `${presentationType}-${weightKg}`
+  const insumoId = envaseMap[key]
+  if (!insumoId) return 0
+  
+  const latestCost = getLatestIngredientCost(insumoId)
+  return latestCost?.unit_cost_without_iva || 0
+}
+
+// ============================================
+// Helper: Get etiqueta cost (only for with_brand)
+// ============================================
+export function getEtiquetaCost(productId: string, weightKg: number): number {
+  // Determine if small or large etiqueta
+  const isSmall = weightKg <= 5
+  
+  // Map product + size to etiqueta insumo
+  const etiquetaMap: Record<string, string> = {
+    'prod-1-small': 'ins-17',
+    'prod-1-large': 'ins-18',
+    'prod-2-small': 'ins-19',
+    'prod-2-large': 'ins-20',
+  }
+  
+  const key = `${productId}-${isSmall ? 'small' : 'large'}`
+  const insumoId = etiquetaMap[key]
+  if (!insumoId) return 0
+  
+  const latestCost = getLatestIngredientCost(insumoId)
+  return latestCost?.unit_cost_without_iva || 0
+}
 
 // ============================================
 // Expense Categories - Categorías alineadas con el negocio
 // ============================================
 export const EXPENSE_CATEGORIES: ExpenseCategory[] = [
-  { id: 'cat-1', name: 'Materia prima', subcategories: ['Cal hidratada', 'Yeso', 'Aditivos', 'Otros insumos'] },
+  { id: 'cat-1', name: 'Materia prima', subcategories: ['Carbonato', 'Yeso', 'Cal', 'Aditivos', 'Otros insumos'] },
   { id: 'cat-2', name: 'Envases', subcategories: ['Bolsas', 'Potes', 'Tapas'] },
   { id: 'cat-3', name: 'Etiquetas / marca', subcategories: ['Etiquetas', 'Impresión', 'Diseño'] },
   { id: 'cat-4', name: 'Servicios', subcategories: ['Internet', 'Teléfono', 'Software'] },
@@ -141,8 +734,20 @@ export const CLIENTS: Client[] = [
 ]
 
 // ============================================
-// Orders - Pedidos realistas con cantidades coherentes
+// Orders - Pedidos realistas usando el nuevo catálogo de presentaciones
 // ============================================
+
+// Helper to find presentation from the new catalog
+function findPres(productId: string, type: 'bolsa' | 'pote', weight: number, withBrand: boolean): Presentation {
+  const pres = PRESENTATIONS.find(p => 
+    p.product_id === productId && 
+    p.type === type && 
+    p.weight_kg === weight && 
+    p.with_brand === withBrand
+  )
+  return pres || PRESENTATIONS[0]
+}
+
 const orderItemsData: Record<string, OrderItem[]> = {
   'ord-1': [
     {
@@ -150,20 +755,20 @@ const orderItemsData: Record<string, OrderItem[]> = {
       order_id: 'ord-1',
       product_id: 'prod-1',
       product: PRODUCTS[0],
-      presentation_id: 'pres-4',
-      presentation: PRESENTATIONS[3], // Bolsa 25 kg
+      presentation_id: findPres('prod-1', 'bolsa', 20, true).id,
+      presentation: findPres('prod-1', 'bolsa', 20, true),
       with_brand: true,
-      quantity: 40,
+      quantity: 50,
       unit_price: 185,
-      subtotal: 7400,
+      subtotal: 9250,
     },
     {
       id: 'item-ord-1-2',
       order_id: 'ord-1',
       product_id: 'prod-2',
       product: PRODUCTS[1],
-      presentation_id: 'pres-3',
-      presentation: PRESENTATIONS[2], // Bolsa 10 kg
+      presentation_id: findPres('prod-2', 'bolsa', 10, true).id,
+      presentation: findPres('prod-2', 'bolsa', 10, true),
       with_brand: true,
       quantity: 20,
       unit_price: 95,
@@ -176,8 +781,8 @@ const orderItemsData: Record<string, OrderItem[]> = {
       order_id: 'ord-2',
       product_id: 'prod-1',
       product: PRODUCTS[0],
-      presentation_id: 'pres-8',
-      presentation: PRESENTATIONS[7], // Pote 20 kg
+      presentation_id: findPres('prod-1', 'pote', 18, false).id,
+      presentation: findPres('prod-1', 'pote', 18, false),
       with_brand: false,
       quantity: 30,
       unit_price: 295,
@@ -190,8 +795,8 @@ const orderItemsData: Record<string, OrderItem[]> = {
       order_id: 'ord-3',
       product_id: 'prod-1',
       product: PRODUCTS[0],
-      presentation_id: 'pres-2',
-      presentation: PRESENTATIONS[1], // Bolsa 5 kg
+      presentation_id: findPres('prod-1', 'bolsa', 5, true).id,
+      presentation: findPres('prod-1', 'bolsa', 5, true),
       with_brand: true,
       quantity: 50,
       unit_price: 52,
@@ -202,8 +807,8 @@ const orderItemsData: Record<string, OrderItem[]> = {
       order_id: 'ord-3',
       product_id: 'prod-2',
       product: PRODUCTS[1],
-      presentation_id: 'pres-6',
-      presentation: PRESENTATIONS[5], // Pote 4 kg
+      presentation_id: findPres('prod-2', 'pote', 7, true).id,
+      presentation: findPres('prod-2', 'pote', 7, true),
       with_brand: true,
       quantity: 24,
       unit_price: 78,
@@ -216,8 +821,8 @@ const orderItemsData: Record<string, OrderItem[]> = {
       order_id: 'ord-4',
       product_id: 'prod-1',
       product: PRODUCTS[0],
-      presentation_id: 'pres-4',
-      presentation: PRESENTATIONS[3], // Bolsa 25 kg
+      presentation_id: findPres('prod-1', 'bolsa', 20, true).id,
+      presentation: findPres('prod-1', 'bolsa', 20, true),
       with_brand: true,
       quantity: 60,
       unit_price: 175,
@@ -228,8 +833,8 @@ const orderItemsData: Record<string, OrderItem[]> = {
       order_id: 'ord-4',
       product_id: 'prod-2',
       product: PRODUCTS[1],
-      presentation_id: 'pres-4',
-      presentation: PRESENTATIONS[3], // Bolsa 25 kg
+      presentation_id: findPres('prod-2', 'bolsa', 20, true).id,
+      presentation: findPres('prod-2', 'bolsa', 20, true),
       with_brand: true,
       quantity: 20,
       unit_price: 165,
@@ -242,8 +847,8 @@ const orderItemsData: Record<string, OrderItem[]> = {
       order_id: 'ord-5',
       product_id: 'prod-1',
       product: PRODUCTS[0],
-      presentation_id: 'pres-7',
-      presentation: PRESENTATIONS[6], // Pote 8 kg
+      presentation_id: findPres('prod-1', 'pote', 7, false).id,
+      presentation: findPres('prod-1', 'pote', 7, false),
       with_brand: false,
       quantity: 15,
       unit_price: 125,
@@ -256,8 +861,8 @@ const orderItemsData: Record<string, OrderItem[]> = {
       order_id: 'ord-6',
       product_id: 'prod-1',
       product: PRODUCTS[0],
-      presentation_id: 'pres-4',
-      presentation: PRESENTATIONS[3], // Bolsa 25 kg
+      presentation_id: findPres('prod-1', 'bolsa', 20, true).id,
+      presentation: findPres('prod-1', 'bolsa', 20, true),
       with_brand: true,
       quantity: 80,
       unit_price: 185,
@@ -268,8 +873,8 @@ const orderItemsData: Record<string, OrderItem[]> = {
       order_id: 'ord-6',
       product_id: 'prod-2',
       product: PRODUCTS[1],
-      presentation_id: 'pres-3',
-      presentation: PRESENTATIONS[2], // Bolsa 10 kg
+      presentation_id: findPres('prod-2', 'bolsa', 10, true).id,
+      presentation: findPres('prod-2', 'bolsa', 10, true),
       with_brand: true,
       quantity: 30,
       unit_price: 95,
@@ -282,8 +887,8 @@ const orderItemsData: Record<string, OrderItem[]> = {
       order_id: 'ord-7',
       product_id: 'prod-1',
       product: PRODUCTS[0],
-      presentation_id: 'pres-5',
-      presentation: PRESENTATIONS[4], // Pote 1.5 kg
+      presentation_id: findPres('prod-1', 'pote', 1.7, true).id,
+      presentation: findPres('prod-1', 'pote', 1.7, true),
       with_brand: true,
       quantity: 12,
       unit_price: 38,
@@ -294,8 +899,8 @@ const orderItemsData: Record<string, OrderItem[]> = {
       order_id: 'ord-7',
       product_id: 'prod-2',
       product: PRODUCTS[1],
-      presentation_id: 'pres-5',
-      presentation: PRESENTATIONS[4], // Pote 1.5 kg
+      presentation_id: findPres('prod-2', 'pote', 1.7, true).id,
+      presentation: findPres('prod-2', 'pote', 1.7, true),
       with_brand: true,
       quantity: 6,
       unit_price: 42,
@@ -331,9 +936,9 @@ export const ORDERS: Order[] = [
     price_category: 'barraca_marca',
     notes: 'Entregar antes de las 14hs.',
     items: orderItemsData['ord-1'],
-    subtotal: 9300,
-    iva: 2046,
-    total: 11346,
+    subtotal: 11150,
+    iva: 2453,
+    total: 13603,
     enduido_kg: calculateKg(orderItemsData['ord-1']).enduido,
     masilla_kg: calculateKg(orderItemsData['ord-1']).masilla,
     status: 'entregado',
@@ -487,14 +1092,14 @@ export const EXPENSES: Expense[] = [
     id: 'exp-1',
     date: '2025-03-01',
     accounting_month: '2025-03',
-    concept: 'Compra cal hidratada (2 pallets)',
+    concept: 'Compra carbonato de calcio (1500 kg)',
     category_id: 'cat-1',
     category: EXPENSE_CATEGORIES[0],
-    subcategory: 'Cal hidratada',
-    supplier: 'Cales del Plata S.A.',
-    amount: 28500,
-    amount_without_iva: 23360.66,
-    iva: 5139.34,
+    subcategory: 'Carbonato',
+    supplier: 'Minera del Plata S.A.',
+    amount: 13200,
+    amount_without_iva: 10819.67,
+    iva: 2380.33,
     has_invoice: true,
     expense_type: 'unico',
     status: 'activo',
@@ -566,14 +1171,14 @@ export const EXPENSES: Expense[] = [
     id: 'exp-5',
     date: '2025-03-07',
     accounting_month: '2025-03',
-    concept: 'Bolsas 25kg (1000 unidades)',
+    concept: 'Bolsas 20 kg (300 unidades)',
     category_id: 'cat-2',
     category: EXPENSE_CATEGORIES[1],
     subcategory: 'Bolsas',
     supplier: 'Envases Plásticos Uruguay S.A.',
-    amount: 15800,
-    amount_without_iva: 12950.82,
-    iva: 2849.18,
+    amount: 3660,
+    amount_without_iva: 3000,
+    iva: 660,
     has_invoice: true,
     expense_type: 'unico',
     status: 'activo',
@@ -584,14 +1189,14 @@ export const EXPENSES: Expense[] = [
     id: 'exp-6',
     date: '2025-03-08',
     accounting_month: '2025-03',
-    concept: 'Cheque diferido - Yeso (5 toneladas)',
+    concept: 'Cheque diferido - Yeso (750 kg)',
     category_id: 'cat-1',
     category: EXPENSE_CATEGORIES[0],
     subcategory: 'Yeso',
     supplier: 'Yesos del Uruguay',
-    amount: 42000,
-    amount_without_iva: 34426.23,
-    iva: 7573.77,
+    amount: 10980,
+    amount_without_iva: 9000,
+    iva: 1980,
     has_invoice: true,
     expense_type: 'diferido',
     status: 'activo',
@@ -690,77 +1295,39 @@ export const EXPENSES: Expense[] = [
     category_id: 'cat-3',
     category: EXPENSE_CATEGORIES[2],
     subcategory: 'Etiquetas',
-    supplier: 'Imprenta Gráfica Sur',
-    amount: 6500,
-    amount_without_iva: 5327.87,
-    iva: 1172.13,
+    supplier: 'Imprenta Gráfica S.R.L.',
+    amount: 9150,
+    amount_without_iva: 7500,
+    iva: 1650,
     has_invoice: true,
     expense_type: 'unico',
     status: 'activo',
     created_at: '2025-03-15T11:00:00Z',
     updated_at: '2025-03-15T11:00:00Z',
   },
-  {
-    id: 'exp-12',
-    date: '2025-03-01',
-    accounting_month: '2025-03',
-    concept: 'Pago diferido - Potes plásticos',
-    category_id: 'cat-2',
-    category: EXPENSE_CATEGORIES[1],
-    subcategory: 'Potes',
-    supplier: 'Plásticos del Uruguay',
-    amount: 18000,
-    amount_without_iva: 14754.10,
-    iva: 3245.90,
-    has_invoice: true,
-    expense_type: 'diferido',
-    status: 'activo',
-    due_date: '2025-03-30',
-    payment_method: 'Transferencia',
-    created_at: '2025-03-01T12:00:00Z',
-    updated_at: '2025-03-01T12:00:00Z',
-  },
 ]
 
 // ============================================
-// Dashboard Stats (calculated from mock data)
+// Dashboard Stats - Estadísticas calculadas
 // ============================================
-export const DASHBOARD_STATS: DashboardStats = {
-  monthly_sales_without_iva: ORDERS
-    .filter(o => o.order_date.startsWith('2025-03') && o.status !== 'anulado')
-    .reduce((acc, o) => acc + o.subtotal, 0),
-  monthly_sales_with_iva: ORDERS
-    .filter(o => o.order_date.startsWith('2025-03') && o.status !== 'anulado')
-    .reduce((acc, o) => acc + o.total, 0),
-  monthly_expenses: EXPENSES
-    .filter(e => e.accounting_month === '2025-03' && e.status === 'activo')
-    .reduce((acc, e) => acc + e.amount, 0),
-  enduido_kg_sold: ORDERS
-    .filter(o => o.order_date.startsWith('2025-03') && o.status !== 'anulado')
-    .reduce((acc, o) => acc + o.enduido_kg, 0),
-  masilla_kg_sold: ORDERS
-    .filter(o => o.order_date.startsWith('2025-03') && o.status !== 'anulado')
-    .reduce((acc, o) => acc + o.masilla_kg, 0),
+export function calculateDashboardStats(month: string = '2025-03'): DashboardStats {
+  const monthOrders = ORDERS.filter(o => o.order_date.startsWith(month) && o.status !== 'anulado')
+  const monthExpenses = EXPENSES.filter(e => e.accounting_month === month && e.status === 'activo')
+  
+  return {
+    monthly_sales_without_iva: monthOrders.reduce((sum, o) => sum + o.subtotal, 0),
+    monthly_sales_with_iva: monthOrders.reduce((sum, o) => sum + o.total, 0),
+    monthly_expenses: monthExpenses.reduce((sum, e) => sum + e.amount, 0),
+    enduido_kg_sold: monthOrders.reduce((sum, o) => sum + o.enduido_kg, 0),
+    masilla_kg_sold: monthOrders.reduce((sum, o) => sum + o.masilla_kg, 0),
+  }
 }
 
-// Helper functions
-export function getOrdersByStatus(status: Order['status']): Order[] {
-  return ORDERS.filter(o => o.status === status)
-}
+export const DASHBOARD_STATS: DashboardStats = calculateDashboardStats()
 
-export function getOrdersByPaymentStatus(status: Order['payment_status']): Order[] {
-  return ORDERS.filter(o => o.payment_status === status && o.status !== 'anulado')
-}
-
-export function getUpcomingExpenses(): Expense[] {
-  return EXPENSES.filter(e => e.due_date && e.status === 'activo')
-    .sort((a, b) => (a.due_date! > b.due_date! ? 1 : -1))
-}
-
-export function getRecurrentExpenses(): Expense[] {
-  return EXPENSES.filter(e => e.expense_type === 'recurrente' && e.status === 'activo')
-}
-
+// ============================================
+// Format Helpers
+// ============================================
 export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('es-UY', {
     style: 'currency',
@@ -768,6 +1335,33 @@ export function formatCurrency(amount: number): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount)
+}
+
+export function formatCurrencyDecimal(amount: number): string {
+  return new Intl.NumberFormat('es-UY', {
+    style: 'currency',
+    currency: 'UYU',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount)
+}
+
+export function formatWeight(kg: number): string {
+  if (kg >= 1000) {
+    return `${(kg / 1000).toFixed(1)} t`
+  }
+  return `${kg.toFixed(0)} kg`
+}
+
+export function formatNumber(num: number, decimals: number = 2): string {
+  return new Intl.NumberFormat('es-UY', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  }).format(num)
+}
+
+export function formatPercent(value: number): string {
+  return `${value.toFixed(1)}%`
 }
 
 export function formatDate(dateString: string): string {
@@ -778,26 +1372,15 @@ export function formatDate(dateString: string): string {
   })
 }
 
-export function formatWeight(kg: number): string {
-  return `${kg.toLocaleString('es-UY')} kg`
-}
-
-// Calculate client statistics
+// ============================================
+// Client Stats Helper
+// ============================================
 export function getClientStats(clientId: string) {
   const clientOrders = ORDERS.filter(o => o.client_id === clientId && o.status !== 'anulado')
   return {
     totalOrders: clientOrders.length,
-    totalPurchased: clientOrders.reduce((acc, o) => acc + o.total, 0),
-    enduidoKg: clientOrders.reduce((acc, o) => acc + o.enduido_kg, 0),
-    masillaKg: clientOrders.reduce((acc, o) => acc + o.masilla_kg, 0),
-    lastOrderDate: clientOrders.length > 0 
-      ? clientOrders.sort((a, b) => b.order_date.localeCompare(a.order_date))[0].order_date 
-      : null,
+    enduidoKg: clientOrders.reduce((sum, o) => sum + o.enduido_kg, 0),
+    masillaKg: clientOrders.reduce((sum, o) => sum + o.masilla_kg, 0),
+    totalPurchased: clientOrders.reduce((sum, o) => sum + o.total, 0),
   }
-}
-
-// Get client orders
-export function getClientOrders(clientId: string): Order[] {
-  return ORDERS.filter(o => o.client_id === clientId)
-    .sort((a, b) => b.order_date.localeCompare(a.order_date))
 }

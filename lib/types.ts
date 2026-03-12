@@ -11,6 +11,9 @@ export type ClientStatus = 'activo' | 'inactivo'
 export type PriceCategory = 'barraca' | 'barraca_marca' | 'distribuidor' | 'distribuidor_marca' | 'oferta' | 'consumidor_final'
 export type ProductType = 'enduido' | 'masilla'
 export type PresentationType = 'bolsa' | 'pote'
+export type UnitOfMeasure = 'kg' | 'g' | 'l' | 'ml' | 'unidad'
+export type IngredientCategory = 'materia_prima' | 'aditivo' | 'envase' | 'etiqueta' | 'operativo'
+export type IngredientStatus = 'activo' | 'inactivo'
 export type ExpenseType = 'unico' | 'recurrente' | 'diferido'
 export type ExpenseStatus = 'activo' | 'anulado'
 export type RecurrenceFrequency = 'semanal' | 'quincenal' | 'mensual' | 'bimestral' | 'trimestral' | 'semestral' | 'anual'
@@ -78,21 +81,125 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   credito: 'Crédito',
 }
 
+export const UNIT_OF_MEASURE_LABELS: Record<UnitOfMeasure, string> = {
+  kg: 'Kilogramos',
+  g: 'Gramos',
+  l: 'Litros',
+  ml: 'Mililitros',
+  unidad: 'Unidades',
+}
+
+export const UNIT_OF_MEASURE_ABBR: Record<UnitOfMeasure, string> = {
+  kg: 'kg',
+  g: 'g',
+  l: 'L',
+  ml: 'ml',
+  unidad: 'un',
+}
+
+export const INGREDIENT_CATEGORY_LABELS: Record<IngredientCategory, string> = {
+  materia_prima: 'Materia prima',
+  aditivo: 'Aditivo',
+  envase: 'Envase',
+  etiqueta: 'Etiqueta',
+  operativo: 'Operativo',
+}
+
+export const INGREDIENT_STATUS_LABELS: Record<IngredientStatus, string> = {
+  activo: 'Activo',
+  inactivo: 'Inactivo',
+}
+
 // Products
 export interface Product {
   id: string
   name: string
   type: ProductType
+  description?: string
+  notes?: string
   active: boolean
+  created_at: string
+  updated_at: string
 }
 
-// Presentations
+// Presentations - Enhanced with brand support
 export interface Presentation {
   id: string
+  product_id: string
   name: string
   type: PresentationType
   weight_kg: number
+  with_brand: boolean
   active: boolean
+  created_at: string
+  updated_at: string
+}
+
+// Ingredient Inputs (Insumos)
+export interface IngredientInput {
+  id: string
+  name: string
+  category: IngredientCategory
+  unit_of_measure: UnitOfMeasure
+  description?: string
+  notes?: string
+  status: IngredientStatus
+  created_at: string
+  updated_at: string
+}
+
+// Ingredient Costs (Costos de Insumo)
+export interface IngredientCost {
+  id: string
+  insumo_id: string
+  insumo?: IngredientInput
+  date: string
+  provider?: string
+  quantity: number
+  unit_of_measure: UnitOfMeasure
+  total_amount: number
+  has_invoice: boolean
+  // Calculated fields
+  amount_without_iva: number
+  iva: number
+  unit_cost_with_iva: number
+  unit_cost_without_iva: number
+  notes?: string
+  created_at: string
+  updated_at: string
+}
+
+// Product Formula (Formula de Producto)
+export interface ProductFormula {
+  id: string
+  product_id: string
+  product?: Product
+  insumo_id: string
+  insumo?: IngredientInput
+  quantity_per_kg: number // Amount of ingredient per kg of product
+  notes?: string
+  active: boolean
+  created_at: string
+  updated_at: string
+}
+
+// Presentation Cost (Costo de Presentación) - Calculated
+export interface PresentationCost {
+  presentation_id: string
+  presentation?: Presentation
+  product_id: string
+  product?: Product
+  // Costs breakdown
+  product_cost_per_kg: number
+  product_cost_for_weight: number
+  envase_cost: number
+  etiqueta_cost: number // Only included if with_brand = true
+  total_cost_without_iva: number
+  total_cost_with_iva: number
+  // Pricing and margins (when price available)
+  selling_price?: number
+  margin_over_price?: number // (price - cost) / price * 100
+  markup_over_cost?: number // (price - cost) / cost * 100
 }
 
 // Clients
@@ -243,4 +350,66 @@ export interface AppConfig {
 export const DEFAULT_CONFIG: AppConfig = {
   iva_rate: 0.22,
   default_currency: 'UYU',
+}
+
+// ============================================
+// IVA Calculation Helpers
+// ============================================
+
+/**
+ * Calculate IVA breakdown for ingredient costs
+ * @param total_amount - The total amount paid
+ * @param has_invoice - Whether the purchase has a formal invoice with IVA
+ * @param quantity - The quantity purchased
+ */
+export function calculateIngredientCostIVA(
+  total_amount: number,
+  has_invoice: boolean,
+  quantity: number
+): {
+  amount_without_iva: number
+  iva: number
+  unit_cost_with_iva: number
+  unit_cost_without_iva: number
+} {
+  if (has_invoice) {
+    // Invoice includes IVA - extract it
+    const amount_without_iva = total_amount / 1.22
+    const iva = total_amount - amount_without_iva
+    return {
+      amount_without_iva,
+      iva,
+      unit_cost_with_iva: total_amount / quantity,
+      unit_cost_without_iva: amount_without_iva / quantity,
+    }
+  } else {
+    // No invoice - no IVA to extract
+    return {
+      amount_without_iva: total_amount,
+      iva: 0,
+      unit_cost_with_iva: total_amount / quantity,
+      unit_cost_without_iva: total_amount / quantity,
+    }
+  }
+}
+
+/**
+ * Calculate profit margins
+ * @param selling_price - The selling price
+ * @param cost - The cost
+ */
+export function calculateProfitMargins(
+  selling_price: number,
+  cost: number
+): {
+  margin_over_price: number
+  markup_over_cost: number
+} {
+  if (selling_price === 0 || cost === 0) {
+    return { margin_over_price: 0, markup_over_cost: 0 }
+  }
+  return {
+    margin_over_price: ((selling_price - cost) / selling_price) * 100,
+    markup_over_cost: ((selling_price - cost) / cost) * 100,
+  }
 }
