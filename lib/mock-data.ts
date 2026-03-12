@@ -4,8 +4,11 @@ import type {
   Client, 
   Order, 
   OrderItem,
+  OrderStatus,
+  PaymentStatus,
   Expense,
   ExpenseCategory,
+  ExpenseStatus,
   DashboardStats,
   IngredientInput,
   IngredientCost,
@@ -1383,4 +1386,27 @@ export function getClientStats(clientId: string) {
     masillaKg: clientOrders.reduce((sum, o) => sum + o.masilla_kg, 0),
     totalPurchased: clientOrders.reduce((sum, o) => sum + o.total, 0),
   }
+}
+
+// ============================================
+// Dashboard Helper Functions
+// ============================================
+export function getOrdersByStatus(status: OrderStatus) {
+  return ORDERS.filter(o => o.status === status)
+}
+
+export function getOrdersByPaymentStatus(paymentStatus: PaymentStatus) {
+  return ORDERS.filter(o => o.payment_status === paymentStatus)
+}
+
+export function getUpcomingExpenses() {
+  const today = new Date()
+  return EXPENSES.filter(e => {
+    const expenseDate = new Date(e.date)
+    return expenseDate > today && expenseDate <= new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000)
+  }).slice(0, 5)
+}
+
+export function getRecurrentExpenses() {
+  return EXPENSES.filter(e => e.type === 'recurrente' && e.status === 'activo')
 }
