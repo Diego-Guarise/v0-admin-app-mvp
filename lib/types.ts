@@ -206,7 +206,8 @@ export interface PresentationCost {
 // Clients
 export interface Client {
   id: string
-  name: string
+  name?: string
+  rut?: string
   company?: string
   phone?: string
   email?: string

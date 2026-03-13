@@ -25,7 +25,7 @@ export function ClientsContent() {
       if (search) {
         const searchLower = search.toLowerCase()
         return (
-          client.name.toLowerCase().includes(searchLower) ||
+          client.name?.toLowerCase().includes(searchLower) ||
           client.company?.toLowerCase().includes(searchLower) ||
           client.email?.toLowerCase().includes(searchLower) ||
           client.phone?.includes(searchLower)
@@ -91,11 +91,11 @@ export function ClientsContent() {
                     <div className="flex items-center gap-3">
                       <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
                         <span className="text-lg font-bold text-primary">
-                          {client.name.charAt(0).toUpperCase()}
+                          {client.name ? client.name.charAt(0).toUpperCase() : '?'}
                         </span>
                       </div>
                       <div>
-                        <h3 className="font-semibold text-foreground">{client.name}</h3>
+                        <h3 className="font-semibold text-foreground">{client.name || 'Sin nombre'}</h3>
                         {client.company && (
                           <p className="text-sm text-muted-foreground flex items-center gap-1">
                             <Building className="h-3 w-3" />

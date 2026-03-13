@@ -23,6 +23,7 @@ export function ClientForm({ client }: ClientFormProps) {
 
   // Form state
   const [name, setName] = useState(client?.name || '')
+  const [rut, setRut] = useState(client?.rut || '')
   const [company, setCompany] = useState(client?.company || '')
   const [phone, setPhone] = useState(client?.phone || '')
   const [email, setEmail] = useState(client?.email || '')
@@ -36,6 +37,7 @@ export function ClientForm({ client }: ClientFormProps) {
     // In a real app, this would save to the database
     console.log('[v0] Client submitted:', {
       name,
+      rut,
       company,
       phone,
       email,
@@ -50,7 +52,7 @@ export function ClientForm({ client }: ClientFormProps) {
     <form onSubmit={handleSubmit} className="px-4 lg:px-6 py-6 space-y-6">
       <PageHeader 
         title={isEditing ? 'Editar Cliente' : 'Nuevo Cliente'}
-        description={isEditing ? `Modificar datos de ${client.name}` : 'Completa los datos del nuevo cliente'}
+        description={isEditing ? 'Modificar datos del cliente' : 'Completa los datos del nuevo cliente'}
       >
         <Link href={isEditing ? `/clientes/${client.id}` : '/clientes'}>
           <Button type="button" variant="ghost">
@@ -74,15 +76,33 @@ export function ClientForm({ client }: ClientFormProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor="name">Nombre completo *</Label>
+                <Label htmlFor="name">
+                  <span className="flex items-center gap-1">
+                    <User className="h-3 w-3" />
+                    Nombre (opcional)
+                  </span>
+                </Label>
                 <Input
                   id="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Juan Pérez"
-                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="rut">
+                  <span className="flex items-center gap-1">
+                    <FileText className="h-3 w-3" />
+                    RUT (opcional)
+                  </span>
+                </Label>
+                <Input
+                  id="rut"
+                  value={rut}
+                  onChange={(e) => setRut(e.target.value)}
+                  placeholder="12.345.678-K"
                 />
               </div>
               <div className="space-y-2">
@@ -98,6 +118,7 @@ export function ClientForm({ client }: ClientFormProps) {
                   onChange={(e) => setCompany(e.target.value)}
                   placeholder="Nombre de la empresa"
                 />
+              </div>
               </div>
             </div>
           </CardContent>

@@ -63,7 +63,7 @@ export function ClientDetail({ client }: ClientDetailProps) {
   return (
     <div className="px-4 lg:px-6 py-6 space-y-6">
       <PageHeader 
-        title={client.name}
+        title={client.name || 'Cliente sin nombre'}
         description={client.company || 'Cliente'}
       >
         <Link href="/clientes">
@@ -135,11 +135,11 @@ export function ClientDetail({ client }: ClientDetailProps) {
               <div className="flex items-center gap-4">
                 <div className="h-16 w-16 rounded-xl bg-primary/10 flex items-center justify-center">
                   <span className="text-2xl font-bold text-primary">
-                    {client.name.charAt(0).toUpperCase()}
+                    {client.name ? client.name.charAt(0).toUpperCase() : '?'}
                   </span>
                 </div>
                 <div>
-                  <p className="font-semibold text-lg">{client.name}</p>
+                  <p className="font-semibold text-lg">{client.name || 'Sin nombre'}</p>
                   {client.company && (
                     <p className="text-sm text-muted-foreground flex items-center gap-1">
                       <Building className="h-3 w-3" />
