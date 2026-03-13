@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { AdminLayout } from '@/components/admin-layout'
 import { ClientForm } from '@/components/clients/client-form'
 import { Button } from '@/components/ui/button'
@@ -13,6 +14,7 @@ interface EditClientPageProps {
 }
 
 export default function EditClientPage({ params }: EditClientPageProps) {
+  const router = useRouter()
   const [client, setClient] = useState<Client | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [id, setId] = useState<string>('')
@@ -38,6 +40,10 @@ export default function EditClientPage({ params }: EditClientPageProps) {
     setClient(foundClient)
     setIsLoading(false)
   }, [id])
+
+  const handleSave = () => {
+    router.push('/clientes')
+  }
 
   if (isLoading || !id) {
     return (
@@ -66,7 +72,7 @@ export default function EditClientPage({ params }: EditClientPageProps) {
 
   return (
     <AdminLayout>
-      <ClientForm client={client} />
+      <ClientForm client={client} onSave={handleSave} />
     </AdminLayout>
   )
 }

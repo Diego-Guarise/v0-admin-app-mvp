@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { PageHeader } from '@/components/page-header'
 import { Button } from '@/components/ui/button'
@@ -16,10 +15,10 @@ import type { Client } from '@/lib/types'
 
 interface ClientFormProps {
   client?: Client
+  onSave?: () => void
 }
 
-export function ClientForm({ client }: ClientFormProps) {
-  const router = useRouter()
+export function ClientForm({ client, onSave }: ClientFormProps) {
   const isEditing = !!client
 
   // Form state
@@ -51,7 +50,7 @@ export function ClientForm({ client }: ClientFormProps) {
     }
     
     saveClient(newClient)
-    router.push('/clientes')
+    onSave?.()
   }
 
   return (
