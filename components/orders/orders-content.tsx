@@ -289,6 +289,7 @@ export function OrdersContent() {
                   />
                 </>
               )}
+            </div>
           </div>
         </CardContent>
       </Card>
