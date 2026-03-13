@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { AdminLayout } from '@/components/admin-layout'
 import { ClientDetail } from '@/components/clients/client-detail'
-import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
 import { getClientById } from '@/lib/client-store'
 import type { Client } from '@/lib/types'
 
@@ -22,21 +23,24 @@ export default function ClientDetailPage({ params }: ClientDetailPageProps) {
   }, [params])
 
   useEffect(() => {
-    if (!id) return
+    if (!id) {
+      setIsLoading(true)
+      return
+    }
     
     const foundClient = getClientById(id)
-    console.log('[v0] Detail page: Looking for client', id, 'Found:', foundClient ? { id: foundClient.id, name: foundClient.name } : 'NOT FOUND')
     
     if (!foundClient) {
-      router.push('/404')
+      setClient(null)
+      setIsLoading(false)
       return
     }
     
     setClient(foundClient)
     setIsLoading(false)
-  }, [id, router])
+  }, [id])
 
-  if (isLoading) {
+  if (isLoading || !id) {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center py-12">
@@ -50,7 +54,12 @@ export default function ClientDetailPage({ params }: ClientDetailPageProps) {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center py-12">
-          <p className="text-red-600">Cliente no encontrado</p>
+          <div className="text-center">
+            <p className="text-red-600 mb-4">Cliente no encontrado</p>
+            <Link href="/clientes">
+              <Button variant="outline">Volver a clientes</Button>
+            </Link>
+          </div>
         </div>
       </AdminLayout>
     )

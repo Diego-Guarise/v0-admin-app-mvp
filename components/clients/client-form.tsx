@@ -51,7 +51,6 @@ export function ClientForm({ client }: ClientFormProps) {
     }
     
     saveClient(newClient)
-    console.log('[v0] Client saved:', { id: newClient.id, name: newClient.name })
     router.push('/clientes')
   }
 
