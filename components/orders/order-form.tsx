@@ -32,7 +32,7 @@ import { ArrowLeft, Plus, Trash2, Save, AlertTriangle, UserPlus, Package, Scale,
 import { CLIENTS, PRODUCTS, PRESENTATIONS, ORDERS, formatCurrency, formatWeight } from '@/lib/mock-data'
 import { PRICE_CATEGORY_LABELS, ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS, COMMISSION_STATUS_LABELS } from '@/lib/types'
 import { lookupUnitPrice, isPotesAlwaysBranded } from '@/lib/pricing'
-import { saveOrder, getOrderById } from '@/lib/order-store'
+import { saveOrder, getOrderById, getAllOrders } from '@/lib/order-store'
 import type { Order, PriceCategory, OrderStatus, PaymentStatus, CommissionStatus } from '@/lib/types'
 
 interface OrderFormProps {
@@ -125,9 +125,14 @@ export function OrderForm({ order }: OrderFormProps) {
       
       const updatedItem = { ...item, [field]: value }
       
+      // Force with_brand=true for potes
+      const presentation = PRESENTATIONS.find(p => p.id === updatedItem.presentation_id)
+      if (presentation && isPotesAlwaysBranded(updatedItem.product_id) && presentation.type === 'pote') {
+        updatedItem.with_brand = true
+      }
+      
       // Auto-fill price when key fields change (unless manual price mode)
       if (!manualPrice && (field === 'product_id' || field === 'presentation_id' || field === 'with_brand')) {
-        const presentation = PRESENTATIONS.find(p => p.id === updatedItem.presentation_id)
         if (presentation) {
           updatedItem.unit_price = lookupUnitPrice(
             updatedItem.product_id,
@@ -210,7 +215,7 @@ export function OrderForm({ order }: OrderFormProps) {
     // Create order object
     const newOrder = {
       id: isEditing ? order!.id : `order-${Date.now()}`,
-      order_number: isEditing ? order!.order_number : ORDERS.length + 1001,
+      order_number: isEditing ? order!.order_number : getAllOrders().length + 1001,
       order_date: orderDate,
       promised_date: promisedDate,
       client_id: clientId,
@@ -469,6 +474,10 @@ export function OrderForm({ order }: OrderFormProps) {
                                     // Also update presentation to first valid one
                                     if (firstPres) {
                                       updatedItem.presentation_id = firstPres.id
+                                      // Force with_brand=true for potes
+                                      if (isPotesAlwaysBranded(v) && firstPres.type === 'pote') {
+                                        updatedItem.with_brand = true
+                                      }
                                       // Auto-fill price for new presentation
                                       if (!manualPrice) {
                                         updatedItem.unit_price = lookupUnitPrice(
