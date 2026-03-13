@@ -1547,6 +1547,10 @@ export function getClientStats(clientId: string) {
   }
 }
 
+export function getClientOrders(clientId: string) {
+  return ORDERS.filter(o => o.client_id === clientId)
+}
+
 // ============================================
 // Dashboard Helper Functions
 // ============================================
