@@ -502,10 +502,10 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
                       {hasInvoice ? 'IVA 22% incluido' : 'Sin IVA (sin factura)'}
                     </p>
                   </div>
-                  <Checkbox
+                  <Switch
                     id="hasInvoice"
                     checked={hasInvoice}
-                    onCheckedChange={(checked) => setHasInvoice(checked === true)}
+                    onCheckedChange={setHasInvoice}
                   />
                 </div>
               </div>
