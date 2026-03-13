@@ -32,6 +32,7 @@ export default function VendorDetailPage({ params }: VendorDetailPageProps) {
   const [id, setId] = useState<string>('')
   const [mounted, setMounted] = useState(false)
   const [markingPaid, setMarkingPaid] = useState<string | null>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   // Unwrap params
   useEffect(() => {
@@ -58,20 +59,20 @@ export default function VendorDetailPage({ params }: VendorDetailPageProps) {
   const orders = useMemo(() => {
     if (!vendor) return []
     return getAllOrders().filter(o => o.vendor_id === vendor.id && o.status !== 'anulado')
-  }, [vendor])
+  }, [vendor, refreshKey])
 
   // Separate orders
   const pendingPaymentOrders = useMemo(() => {
     return orders.filter(o => o.payment_status !== 'cobrado')
-  }, [orders])
+  }, [orders, refreshKey])
 
   const pendingLiquidationOrders = useMemo(() => {
     return orders.filter(o => o.payment_status === 'cobrado' && o.commission_status === 'pendiente_liquidar')
-  }, [orders])
+  }, [orders, refreshKey])
 
   const liquidatedOrders = useMemo(() => {
     return orders.filter(o => o.payment_status === 'cobrado' && o.commission_status === 'liquidado')
-  }, [orders])
+  }, [orders, refreshKey])
 
   // Quick action: mark order as paid
   const handleMarkAsPaid = async (orderId: string) => {
@@ -93,6 +94,10 @@ export default function VendorDetailPage({ params }: VendorDetailPageProps) {
       // Save to order-store
       saveOrder(updatedOrder)
       console.log('[v0] Order marked as paid:', orderId)
+      
+      // Force immediate refresh of component state
+      // Re-read from order-store to trigger useMemo recalculation
+      setRefreshKey(prev => prev + 1)
     } catch (error) {
       console.error('[v0] Error marking order as paid:', error)
     } finally {
@@ -196,7 +201,7 @@ export default function VendorDetailPage({ params }: VendorDetailPageProps) {
                 <div className="space-y-2">
                   {pendingPaymentOrders.map(order => (
                     <div key={order.id} className="p-3 border rounded-lg hover:bg-accent/50 transition-colors">
-                      <Link href={`/pedidos/${order.id}`}>
+                      <Link href={`/pedidos/${order.id}?from=vendedor&vendorId=${vendor.id}`}>
                         <div className="flex justify-between items-start cursor-pointer">
                           <div>
                             <p className="font-medium">Pedido #{order.order_number}</p>
@@ -206,7 +211,7 @@ export default function VendorDetailPage({ params }: VendorDetailPageProps) {
                         </div>
                       </Link>
                       <div className="mt-2 flex gap-2">
-                        <Link href={`/pedidos/${order.id}`} className="flex-1">
+                        <Link href={`/pedidos/${order.id}?from=vendedor&vendorId=${vendor.id}`} className="flex-1">
                           <Button variant="outline" size="sm" className="w-full">
                             Ver pedido
                           </Button>
@@ -248,7 +253,7 @@ export default function VendorDetailPage({ params }: VendorDetailPageProps) {
                   <div className="space-y-2 mb-4">
                     {pendingLiquidationOrders.map(order => (
                       <div key={order.id} className="p-3 border rounded-lg hover:bg-accent/50 transition-colors">
-                        <Link href={`/pedidos/${order.id}`}>
+                        <Link href={`/pedidos/${order.id}?from=vendedor&vendorId=${vendor.id}`}>
                           <div className="flex justify-between items-start cursor-pointer mb-2">
                             <div>
                               <p className="font-medium">Pedido #{order.order_number}</p>
@@ -258,12 +263,12 @@ export default function VendorDetailPage({ params }: VendorDetailPageProps) {
                           </div>
                         </Link>
                         <div className="flex gap-2">
-                          <Link href={`/pedidos/${order.id}`} className="flex-1">
+                          <Link href={`/pedidos/${order.id}?from=vendedor&vendorId=${vendor.id}`} className="flex-1">
                             <Button variant="outline" size="sm" className="w-full">
                               Ver pedido
                             </Button>
                           </Link>
-                          <Link href={`/pedidos/${order.id}/editar`} className="flex-1">
+                          <Link href={`/pedidos/${order.id}/editar?from=vendedor&vendorId=${vendor.id}`} className="flex-1">
                             <Button variant="outline" size="sm" className="w-full">
                               Editar
                             </Button>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { AdminLayout } from '@/components/admin-layout'
 import { OrderDetail } from '@/components/orders/order-detail'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { getOrderById } from '@/lib/order-store'
 import type { Order } from '@/lib/types'
 
@@ -13,9 +13,14 @@ interface OrderDetailPageProps {
 
 export default function OrderDetailPage({ params }: OrderDetailPageProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [order, setOrder] = useState<Order | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [id, setId] = useState<string>('')
+  
+  // Get navigation context from query params
+  const from = searchParams.get('from')
+  const vendorId = searchParams.get('vendorId')
 
   useEffect(() => {
     // Unwrap params
@@ -62,7 +67,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
 
   return (
     <AdminLayout>
-      <OrderDetail order={order} />
+      <OrderDetail order={order} navigationContext={{ from, vendorId }} />
     </AdminLayout>
   )
 }

@@ -41,6 +41,10 @@ import type { Order, PriceCategory, OrderStatus, PaymentStatus, CommissionStatus
 interface OrderFormProps {
   order?: Order
   preSelectedClientId?: string
+  navigationContext?: {
+    from: string | null
+    vendorId: string | null
+  }
 }
 
 interface OrderItemForm {
@@ -53,9 +57,17 @@ interface OrderItemForm {
   manual_price: boolean
 }
 
-export function OrderForm({ order, preSelectedClientId }: OrderFormProps) {
+export function OrderForm({ order, preSelectedClientId, navigationContext }: OrderFormProps) {
   const router = useRouter()
   const isEditing = !!order
+
+  // Determine where to navigate back to based on context
+  const getBackPath = () => {
+    if (navigationContext?.from === 'vendedor' && navigationContext?.vendorId) {
+      return `/vendedores/${navigationContext.vendorId}`
+    }
+    return isEditing ? `/pedidos/${order!.id}` : '/pedidos'
+  }
 
   // Form state
   const [orderDate, setOrderDate] = useState(order?.order_date || new Date().toISOString().split('T')[0])
@@ -306,7 +318,7 @@ export function OrderForm({ order, preSelectedClientId }: OrderFormProps) {
 
     // Persist to order store (in a real app, this would be an API call)
     saveOrder(newOrder as Order)
-    router.push('/pedidos')
+    router.push(getBackPath())
   }
 
   return (
@@ -315,7 +327,7 @@ export function OrderForm({ order, preSelectedClientId }: OrderFormProps) {
         title={isEditing ? `Editar Pedido #${order.order_number}` : 'Nuevo Pedido'}
         description={isEditing ? 'Modifica los datos del pedido' : 'Completa los datos para crear un nuevo pedido'}
       >
-        <Link href={isEditing ? `/pedidos/${order.id}` : '/pedidos'}>
+        <Link href={getBackPath()}>
           <Button type="button" variant="ghost">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Cancelar

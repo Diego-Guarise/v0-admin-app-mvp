@@ -48,10 +48,22 @@ import type { Order } from '@/lib/types'
 
 interface OrderDetailProps {
   order: Order
+  navigationContext?: {
+    from: string | null
+    vendorId: string | null
+  }
 }
 
-export function OrderDetail({ order }: OrderDetailProps) {
+export function OrderDetail({ order, navigationContext }: OrderDetailProps) {
   const router = useRouter()
+
+  // Determine where to navigate back to based on context
+  const getBackPath = () => {
+    if (navigationContext?.from === 'vendedor' && navigationContext?.vendorId) {
+      return `/vendedores/${navigationContext.vendorId}`
+    }
+    return '/pedidos'
+  }
 
   const handleCancel = () => {
     // Update the order status to 'anulado' and persist to shared store
@@ -64,8 +76,8 @@ export function OrderDetail({ order }: OrderDetailProps) {
     saveOrder(cancelledOrder)
     console.log('[v0] Order cancelled and persisted:', cancelledOrder.id)
     
-    // Redirect back to orders list
-    router.push('/pedidos')
+    // Redirect back using navigation context
+    router.push(getBackPath())
   }
 
   return (
@@ -74,7 +86,7 @@ export function OrderDetail({ order }: OrderDetailProps) {
         title={`Pedido #${order.order_number}`}
         description={`Creado el ${formatDate(order.created_at)}`}
       >
-        <Link href="/pedidos">
+        <Link href={getBackPath()}>
           <Button variant="ghost">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Volver
