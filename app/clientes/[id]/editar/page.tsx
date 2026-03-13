@@ -17,35 +17,45 @@ export default function EditClientPage({ params }: EditClientPageProps) {
   const router = useRouter()
   const [client, setClient] = useState<Client | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
   const [id, setId] = useState<string>('')
+  const [mounted, setMounted] = useState(false)
 
+  // Unwrap params
   useEffect(() => {
     params.then(p => setId(p.id))
   }, [params])
 
+  // Ensure component is mounted before attempting localStorage access
   useEffect(() => {
-    if (!id) {
-      setIsLoading(true)
+    setMounted(true)
+  }, [])
+
+  // Attempt to retrieve client from store once mounted
+  useEffect(() => {
+    if (!id || !mounted) {
       return
     }
     
     const foundClient = getClientById(id)
     
-    if (!foundClient) {
+    if (foundClient) {
+      setClient(foundClient)
+      setNotFound(false)
+    } else {
       setClient(null)
-      setIsLoading(false)
-      return
+      setNotFound(true)
     }
     
-    setClient(foundClient)
     setIsLoading(false)
-  }, [id])
+  }, [id, mounted])
 
   const handleSave = () => {
     router.push('/clientes')
   }
 
-  if (isLoading || !id) {
+  // Show loading while params are being resolved or component is mounting
+  if (!id || !mounted || isLoading) {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center py-12">
@@ -55,7 +65,8 @@ export default function EditClientPage({ params }: EditClientPageProps) {
     )
   }
 
-  if (!client) {
+  // Show not found state
+  if (notFound) {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center py-12">
@@ -70,9 +81,21 @@ export default function EditClientPage({ params }: EditClientPageProps) {
     )
   }
 
+  // Show client form
+  if (client) {
+    return (
+      <AdminLayout>
+        <ClientForm client={client} onSave={handleSave} />
+      </AdminLayout>
+    )
+  }
+
+  // Fallback (should not reach here)
   return (
     <AdminLayout>
-      <ClientForm client={client} onSave={handleSave} />
+      <div className="flex items-center justify-center py-12">
+        <p className="text-muted-foreground">Cargando...</p>
+      </div>
     </AdminLayout>
   )
 }
