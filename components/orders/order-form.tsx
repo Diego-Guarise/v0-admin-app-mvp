@@ -61,7 +61,7 @@ export function OrderForm({ order, preSelectedClientId }: OrderFormProps) {
   const [orderDate, setOrderDate] = useState(order?.order_date || new Date().toISOString().split('T')[0])
   const [promisedDate, setPromisedDate] = useState(order?.promised_date || '')
   const [clientId, setClientId] = useState(order?.client_id || preSelectedClientId || '')
-  const [vendorId, setVendorId] = useState(order?.vendor_id || '')
+  const [vendorId, setVendorId] = useState(order?.vendor_id || 'none')
   const [priceCategory, setPriceCategory] = useState<PriceCategory>(order?.price_category || 'barraca')
   const [notes, setNotes] = useState(order?.notes || '')
   const [manualPrice, setManualPrice] = useState(order?.manual_price || false)
@@ -272,8 +272,8 @@ export function OrderForm({ order, preSelectedClientId }: OrderFormProps) {
       promised_date: promisedDate,
       client_id: clientId,
       client: selectedClient || { id: clientId, active: false, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }, // Include client object or fallback
-      vendor_id: vendorId,
-      vendor_name: selectedVendor?.name || '',
+      vendor_id: vendorId === 'none' ? '' : vendorId,
+      vendor_name: vendorId === 'none' ? '' : (selectedVendor?.name || ''),
       price_category: priceCategory,
       notes,
       manual_price: manualPrice,
@@ -417,7 +417,7 @@ export function OrderForm({ order, preSelectedClientId }: OrderFormProps) {
                       <SelectValue placeholder="Seleccionar vendedor" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Sin vendedor</SelectItem>
+                      <SelectItem value="none">Sin vendedor</SelectItem>
                       {activeVendors.map((vendor) => (
                         <SelectItem key={vendor.id} value={vendor.id}>
                           {vendor.name} ({vendor.commission_percentage}%)
