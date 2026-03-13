@@ -218,6 +218,23 @@ export interface Client {
   updated_at: string
 }
 
+// Price List Item - Editable pricing with sales unit information
+export interface PriceListItem {
+  id: string
+  product_id: string
+  presentation_id: string
+  with_brand: boolean
+  price_category: PriceCategory
+  // Sales unit structure
+  sales_unit_type: 'unidad' | 'funda' // What is this sold by?
+  units_per_sales_unit: number // How many physical units in one sales unit?
+  weight_per_unit_kg: number // Weight of a single physical unit
+  total_weight_per_sales_unit_kg: number // Total weight when you buy one sales unit
+  unit_price_for_sales_unit: number // Price for one sales unit (funda or unidad)
+  created_at: string
+  updated_at: string
+}
+
 // Order Items
 export interface OrderItem {
   id: string

@@ -32,7 +32,8 @@ import { ArrowLeft, Plus, Trash2, Save, AlertTriangle, UserPlus, Package, Scale,
 import { PRODUCTS, PRESENTATIONS, ORDERS, formatCurrency, formatWeight } from '@/lib/mock-data'
 import { getAllClients } from '@/lib/client-store'
 import { PRICE_CATEGORY_LABELS, ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS, COMMISSION_STATUS_LABELS } from '@/lib/types'
-import { lookupUnitPrice, isPotesAlwaysBranded } from '@/lib/pricing'
+import { lookupUnitPrice, isPotesAlwaysBranded, getPriceDetailsFromStore } from '@/lib/pricing'
+import { getAllPrices } from '@/lib/price-store'
 import { saveOrder, getOrderById, getAllOrders } from '@/lib/order-store'
 import type { Order, PriceCategory, OrderStatus, PaymentStatus, CommissionStatus } from '@/lib/types'
 
@@ -97,19 +98,31 @@ export function OrderForm({ order, preSelectedClientId }: OrderFormProps) {
     const defaultProduct = PRODUCTS.find(p => p.id === 'prod-1') || PRODUCTS[0]
     const defaultPres = PRESENTATIONS.find(p => p.product_id === defaultProduct.id && p.type === 'bolsa') || PRESENTATIONS.find(p => p.product_id === defaultProduct.id)
     
+    let unitPrice = 0
+    if (defaultPres) {
+      // Try to get price from price store (new approach)
+      const priceDetails = getPriceDetailsFromStore(defaultProduct.id, defaultPres.id, false, priceCategory)
+      unitPrice = priceDetails?.unit_price_for_sales_unit || 0
+      
+      // Fallback to legacy lookup if not found
+      if (unitPrice === 0) {
+        unitPrice = lookupUnitPrice(
+          defaultProduct.id,
+          defaultPres.type,
+          defaultPres.weight_kg,
+          false,
+          priceCategory
+        )
+      }
+    }
+    
     const newItem: OrderItemForm = {
       id: `temp-${Date.now()}`,
       product_id: defaultProduct.id,
       presentation_id: defaultPres?.id || '',
       with_brand: false,
       quantity: 1,
-      unit_price: defaultPres ? lookupUnitPrice(
-        defaultProduct.id,
-        defaultPres.type,
-        defaultPres.weight_kg,
-        false,
-        priceCategory
-      ) : 0,
+      unit_price: unitPrice,
       manual_price: manualPrice,
     }
     setItems([...items, newItem])
@@ -136,13 +149,20 @@ export function OrderForm({ order, preSelectedClientId }: OrderFormProps) {
       // Auto-fill price when key fields change (unless manual price mode)
       if (!manualPrice && (field === 'product_id' || field === 'presentation_id' || field === 'with_brand')) {
         if (presentation) {
-          updatedItem.unit_price = lookupUnitPrice(
-            updatedItem.product_id,
-            presentation.type,
-            presentation.weight_kg,
-            updatedItem.with_brand,
-            priceCategory
-          )
+          // Try to get price from price store (new approach)
+          const priceDetails = getPriceDetailsFromStore(updatedItem.product_id, presentation.id, updatedItem.with_brand, priceCategory)
+          if (priceDetails && priceDetails.unit_price_for_sales_unit) {
+            updatedItem.unit_price = priceDetails.unit_price_for_sales_unit
+          } else {
+            // Fallback to legacy lookup if not found in price store
+            updatedItem.unit_price = lookupUnitPrice(
+              updatedItem.product_id,
+              presentation.type,
+              presentation.weight_kg,
+              updatedItem.with_brand,
+              priceCategory
+            )
+          }
         }
       }
       
