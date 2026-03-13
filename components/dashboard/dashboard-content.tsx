@@ -191,7 +191,7 @@ export function DashboardContent() {
                     <span className="text-xs font-bold text-primary">#{order.order_number}</span>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-foreground">{order.client.name}</p>
+                    <p className="text-sm font-medium text-foreground">{order.client?.name || 'Sin nombre'}</p>
                     <p className="text-xs text-muted-foreground">{formatDate(order.order_date)}</p>
                   </div>
                 </div>

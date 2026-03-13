@@ -58,8 +58,8 @@ export function OrdersContent() {
         const searchLower = search.toLowerCase()
         const matchesSearch = 
           order.order_number.toString().includes(searchLower) ||
-          order.client.name.toLowerCase().includes(searchLower) ||
-          order.client.company?.toLowerCase().includes(searchLower) ||
+          order.client?.name?.toLowerCase().includes(searchLower) ||
+          order.client?.company?.toLowerCase().includes(searchLower) ||
           order.vendor_name?.toLowerCase().includes(searchLower)
         if (!matchesSearch) return false
       }
@@ -177,7 +177,7 @@ export function OrdersContent() {
                 <SelectContent>
                   <SelectItem value="all">Todos los clientes</SelectItem>
                   {CLIENTS.filter(c => c.active).map((client) => (
-                    <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
+                    <SelectItem key={client.id} value={client.id}>{client.name || 'Sin nombre'}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -231,7 +231,7 @@ export function OrdersContent() {
                       </TableCell>
                       <TableCell>
                         <div>
-                          <p className="font-medium">{order.client.name}</p>
+                          <p className="font-medium">{order.client?.name || 'Sin nombre'}</p>
                           {order.client.company && (
                             <p className="text-xs text-muted-foreground">{order.client.company}</p>
                           )}
