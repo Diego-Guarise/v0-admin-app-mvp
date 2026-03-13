@@ -14,7 +14,7 @@ import type {
   IngredientCost,
   ProductFormula,
 } from './types'
-import { calculateIngredientCostIVA } from './types'
+import { calculateIngredientCostIVA, areUnitsCompatible, convertUnit, getBaseUnit, type UnitOfMeasure } from './types'
 
 // ============================================
 // Products - Enduido interior y Masilla para yeso
@@ -42,8 +42,8 @@ export const PRODUCTS: Product[] = [
 
 // ============================================
 // Presentations - Catálogo exacto según especificación
-// Bolsas: 1, 2, 5, 10, 20 kg
-// Potes: 1.7, 7, 18 kg
+// Bolsas: 1, 2, 5, 10, 20 kg - Disponible para AMBOS productos
+// Potes: 1.7, 7, 18 kg - SOLO para Masilla para Yeso
 // Cada uno con with_brand = true y with_brand = false
 // ============================================
 const PRESENTATION_WEIGHTS = {
@@ -56,7 +56,7 @@ function generatePresentations(): Presentation[] {
   let idCounter = 1
   
   for (const product of PRODUCTS) {
-    // Bolsas
+    // Bolsas - available for ALL products
     for (const weight of PRESENTATION_WEIGHTS.bolsa) {
       // With brand
       presentations.push({
@@ -83,32 +83,34 @@ function generatePresentations(): Presentation[] {
         updated_at: '2025-01-15T10:00:00Z'
       })
     }
-    // Potes
-    for (const weight of PRESENTATION_WEIGHTS.pote) {
-      // With brand
-      presentations.push({
-        id: `pres-${idCounter++}`,
-        product_id: product.id,
-        name: `Pote ${weight} kg - Con marca`,
-        type: 'pote',
-        weight_kg: weight,
-        with_brand: true,
-        active: true,
-        created_at: '2022-01-01T00:00:00Z',
-        updated_at: '2025-01-15T10:00:00Z'
-      })
-      // Without brand
-      presentations.push({
-        id: `pres-${idCounter++}`,
-        product_id: product.id,
-        name: `Pote ${weight} kg - Sin marca`,
-        type: 'pote',
-        weight_kg: weight,
-        with_brand: false,
-        active: true,
-        created_at: '2022-01-01T00:00:00Z',
-        updated_at: '2025-01-15T10:00:00Z'
-      })
+    // Potes - ONLY for Masilla para Yeso (product type = 'masilla')
+    if (product.type === 'masilla') {
+      for (const weight of PRESENTATION_WEIGHTS.pote) {
+        // With brand
+        presentations.push({
+          id: `pres-${idCounter++}`,
+          product_id: product.id,
+          name: `Pote ${weight} kg - Con marca`,
+          type: 'pote',
+          weight_kg: weight,
+          with_brand: true,
+          active: true,
+          created_at: '2022-01-01T00:00:00Z',
+          updated_at: '2025-01-15T10:00:00Z'
+        })
+        // Without brand
+        presentations.push({
+          id: `pres-${idCounter++}`,
+          product_id: product.id,
+          name: `Pote ${weight} kg - Sin marca`,
+          type: 'pote',
+          weight_kg: weight,
+          with_brand: false,
+          active: true,
+          created_at: '2022-01-01T00:00:00Z',
+          updated_at: '2025-01-15T10:00:00Z'
+        })
+      }
     }
   }
   
@@ -290,41 +292,34 @@ export const INGREDIENT_INPUTS: IngredientInput[] = [
     created_at: '2022-01-01T00:00:00Z',
     updated_at: '2025-01-15T10:00:00Z'
   },
-  // Etiquetas
+  // Etiquetas - Configurable per product + packaging type
+  // Enduido solo tiene bolsas, Masilla tiene bolsas y potes
   {
     id: 'ins-17',
-    name: 'Etiqueta Enduido 1-5 kg',
+    name: 'Etiqueta Enduido bolsas',
     category: 'etiqueta',
     unit_of_measure: 'unidad',
-    description: 'Etiqueta autoadhesiva para presentaciones pequeñas',
+    description: 'Etiqueta autoadhesiva para bolsas de Enduido Interior',
     status: 'activo',
     created_at: '2022-01-01T00:00:00Z',
     updated_at: '2025-01-15T10:00:00Z'
   },
   {
     id: 'ins-18',
-    name: 'Etiqueta Enduido 10-20 kg',
+    name: 'Etiqueta Masilla bolsas',
     category: 'etiqueta',
     unit_of_measure: 'unidad',
-    description: 'Etiqueta autoadhesiva para presentaciones grandes',
+    description: 'Etiqueta autoadhesiva para bolsas de Masilla para Yeso',
     status: 'activo',
     created_at: '2022-01-01T00:00:00Z',
     updated_at: '2025-01-15T10:00:00Z'
   },
   {
     id: 'ins-19',
-    name: 'Etiqueta Masilla 1-5 kg',
+    name: 'Etiqueta Masilla potes',
     category: 'etiqueta',
     unit_of_measure: 'unidad',
-    status: 'activo',
-    created_at: '2022-01-01T00:00:00Z',
-    updated_at: '2025-01-15T10:00:00Z'
-  },
-  {
-    id: 'ins-20',
-    name: 'Etiqueta Masilla 10-20 kg',
-    category: 'etiqueta',
-    unit_of_measure: 'unidad',
+    description: 'Etiqueta autoadhesiva para potes de Masilla para Yeso',
     status: 'activo',
     created_at: '2022-01-01T00:00:00Z',
     updated_at: '2025-01-15T10:00:00Z'
@@ -405,11 +400,10 @@ export const INGREDIENT_COSTS: IngredientCost[] = [
   createIngredientCost('ic-19', 'ins-15', '2025-02-15', 'Plásticos del Este', 150, 'unidad', 10980, true, 'Pote 7kg'),
   createIngredientCost('ic-20', 'ins-16', '2025-02-15', 'Plásticos del Este', 100, 'unidad', 12200, true, 'Pote 18kg'),
   
-  // Etiquetas - con factura
-  createIngredientCost('ic-21', 'ins-17', '2025-02-10', 'Imprenta Gráfica S.R.L.', 2000, 'unidad', 4880, true, 'Etiqueta pequeña enduido'),
-  createIngredientCost('ic-22', 'ins-18', '2025-02-10', 'Imprenta Gráfica S.R.L.', 1500, 'unidad', 5490, true, 'Etiqueta grande enduido'),
-  createIngredientCost('ic-23', 'ins-19', '2025-02-10', 'Imprenta Gráfica S.R.L.', 1500, 'unidad', 3660, true, 'Etiqueta pequeña masilla'),
-  createIngredientCost('ic-24', 'ins-20', '2025-02-10', 'Imprenta Gráfica S.R.L.', 1000, 'unidad', 3660, true, 'Etiqueta grande masilla'),
+  // Etiquetas - con factura (configurable per product + packaging type)
+  createIngredientCost('ic-21', 'ins-17', '2025-02-10', 'Imprenta Gráfica S.R.L.', 3000, 'unidad', 5490, true, 'Etiqueta Enduido bolsas'),
+  createIngredientCost('ic-22', 'ins-18', '2025-02-10', 'Imprenta Gráfica S.R.L.', 2500, 'unidad', 4575, true, 'Etiqueta Masilla bolsas'),
+  createIngredientCost('ic-23', 'ins-19', '2025-02-10', 'Imprenta Gráfica S.R.L.', 1500, 'unidad', 4270, true, 'Etiqueta Masilla potes'),
 ]
 
 // ============================================
@@ -561,21 +555,50 @@ export function getLatestIngredientCost(insumoId: string): IngredientCost | unde
 
 // ============================================
 // Helper: Calculate cost per kg for a product
+// Uses proper unit conversion within compatible families only:
+// - Mass: kg ↔ g
+// - Volume: l ↔ ml
+// - Count: unidad (no conversion)
 // ============================================
 export function calculateProductCostPerKg(productId: string): number {
   const formulas = PRODUCT_FORMULAS.filter(f => f.product_id === productId && f.active)
   let totalCost = 0
   
   for (const formula of formulas) {
+    const insumo = formula.insumo || INGREDIENT_INPUTS.find(i => i.id === formula.insumo_id)
     const latestCost = getLatestIngredientCost(formula.insumo_id)
-    if (latestCost) {
-      // Handle unit conversion for ingredients measured in grams
-      let unitCost = latestCost.unit_cost_without_iva
-      if (latestCost.unit_of_measure === 'g') {
-        // Convert g cost to kg cost for proper calculation
-        unitCost = unitCost // Already per gram, quantity_per_kg is in grams
+    
+    if (latestCost && insumo) {
+      const formulaUnit = insumo.unit_of_measure
+      const costUnit = latestCost.unit_of_measure
+      const unitCost = latestCost.unit_cost_without_iva
+      
+      // Check if units are compatible
+      if (!areUnitsCompatible(formulaUnit, costUnit)) {
+        // Skip incompatible units - cannot convert ml to kg, etc.
+        console.warn(`[Cost] Incompatible units for ${insumo.name}: formula uses ${formulaUnit}, cost uses ${costUnit}`)
+        continue
       }
-      totalCost += formula.quantity_per_kg * unitCost
+      
+      // Convert formula quantity to cost unit if needed
+      // formula.quantity_per_kg is the amount of ingredient per 1kg of finished product
+      // unitCost is the cost per unit of the ingredient as purchased
+      let ingredientCost: number
+      
+      if (formulaUnit === costUnit) {
+        // Same unit - direct calculation
+        ingredientCost = formula.quantity_per_kg * unitCost
+      } else {
+        // Convert formula quantity to cost unit
+        const convertedQty = convertUnit(formula.quantity_per_kg, formulaUnit, costUnit)
+        if (convertedQty === null) {
+          console.warn(`[Cost] Could not convert ${formula.quantity_per_kg} ${formulaUnit} to ${costUnit}`)
+          continue
+        }
+        ingredientCost = convertedQty * unitCost
+      }
+      
+      totalCost += ingredientCost
     }
   }
   
@@ -607,26 +630,90 @@ export function getEnvaseCost(presentationType: 'bolsa' | 'pote', weightKg: numb
 }
 
 // ============================================
-// Helper: Get etiqueta cost (only for with_brand)
+// Helper: Get etiqueta cost for presentation (only for with_brand)
+// Maps: product type + packaging type -> etiqueta insumo
 // ============================================
-export function getEtiquetaCost(productId: string, weightKg: number): number {
-  // Determine if small or large etiqueta
-  const isSmall = weightKg <= 5
-  
-  // Map product + size to etiqueta insumo
+export function getEtiquetaCostForPresentation(
+  productType: 'enduido' | 'masilla', 
+  presentationType: 'bolsa' | 'pote'
+): number {
+  // Map product type + packaging type to etiqueta insumo
+  // ins-17: Etiqueta Enduido bolsas
+  // ins-18: Etiqueta Masilla bolsas
+  // ins-19: Etiqueta Masilla potes
   const etiquetaMap: Record<string, string> = {
-    'prod-1-small': 'ins-17',
-    'prod-1-large': 'ins-18',
-    'prod-2-small': 'ins-19',
-    'prod-2-large': 'ins-20',
+    'enduido-bolsa': 'ins-17',
+    'masilla-bolsa': 'ins-18',
+    'masilla-pote': 'ins-19',
   }
   
-  const key = `${productId}-${isSmall ? 'small' : 'large'}`
+  const key = `${productType}-${presentationType}`
   const insumoId = etiquetaMap[key]
   if (!insumoId) return 0
   
   const latestCost = getLatestIngredientCost(insumoId)
   return latestCost?.unit_cost_without_iva || 0
+}
+
+// Legacy helper for backward compatibility
+export function getEtiquetaCost(productId: string, presentationType: 'bolsa' | 'pote'): number {
+  const product = PRODUCTS.find(p => p.id === productId)
+  if (!product) return 0
+  return getEtiquetaCostForPresentation(product.type, presentationType)
+}
+
+// ============================================
+// Helper: Calculate full presentation cost
+// Formula: (product_cost_per_kg * weight_kg) + envase_cost + etiqueta_cost (if with_brand)
+// ============================================
+export interface PresentationCostBreakdown {
+  product_cost_per_kg: number
+  product_cost_for_weight: number
+  envase_cost: number
+  etiqueta_cost: number // Only included if with_brand = true
+  total_cost: number
+}
+
+export function calculatePresentationCost(
+  presentation: Presentation,
+  productId: string
+): PresentationCostBreakdown {
+  const product = PRODUCTS.find(p => p.id === productId)
+  if (!product) {
+    return {
+      product_cost_per_kg: 0,
+      product_cost_for_weight: 0,
+      envase_cost: 0,
+      etiqueta_cost: 0,
+      total_cost: 0,
+    }
+  }
+
+  // 1. Product cost per kg (from formula)
+  const productCostPerKg = calculateProductCostPerKg(productId)
+  
+  // 2. Product cost for presentation weight
+  const productCostForWeight = productCostPerKg * presentation.weight_kg
+  
+  // 3. Envase (packaging) cost
+  const envaseCost = getEnvaseCost(presentation.type, presentation.weight_kg)
+  
+  // 4. Etiqueta (label) cost - ONLY if with_brand = true
+  let etiquetaCost = 0
+  if (presentation.with_brand) {
+    etiquetaCost = getEtiquetaCostForPresentation(product.type, presentation.type)
+  }
+  
+  // 5. Total cost
+  const totalCost = productCostForWeight + envaseCost + etiquetaCost
+
+  return {
+    product_cost_per_kg: productCostPerKg,
+    product_cost_for_weight: productCostForWeight,
+    envase_cost: envaseCost,
+    etiqueta_cost: etiquetaCost,
+    total_cost: totalCost,
+  }
 }
 
 // ============================================

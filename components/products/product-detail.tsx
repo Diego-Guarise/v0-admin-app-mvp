@@ -13,26 +13,21 @@ import {
   Package, 
   Box, 
   Cylinder, 
-  Tag,
   CheckCircle2,
   XCircle,
-  Beaker,
   DollarSign,
-  Info
+  Info,
+  ExternalLink
 } from 'lucide-react'
 import { 
   PRODUCTS, 
   PRESENTATIONS, 
   PRODUCT_FORMULAS,
   calculateProductCostPerKg,
-  getEnvaseCost,
-  getEtiquetaCost,
+  calculatePresentationCost,
   formatCurrency,
   formatCurrencyDecimal,
-  formatNumber,
-  formatPercent
 } from '@/lib/mock-data'
-import { UNIT_OF_MEASURE_ABBR, calculateProfitMargins } from '@/lib/types'
 
 interface ProductDetailProps {
   productId: string
@@ -54,9 +49,9 @@ export function ProductDetail({ productId }: ProductDetailProps) {
     return PRESENTATIONS.filter(p => p.product_id === productId)
   }, [productId])
 
-  // Get product formula
-  const formulas = useMemo(() => {
-    return PRODUCT_FORMULAS.filter(f => f.product_id === productId && f.active)
+  // Get formula count for info display
+  const formulaCount = useMemo(() => {
+    return PRODUCT_FORMULAS.filter(f => f.product_id === productId && f.active).length
   }, [productId])
 
   // Calculate cost per kg
@@ -87,20 +82,6 @@ export function ProductDetail({ productId }: ProductDetailProps) {
     })
   }, [presentations])
 
-  // Calculate presentation costs
-  const getPresentationCost = (type: 'bolsa' | 'pote', weightKg: number, withBrand: boolean) => {
-    const productCost = costPerKg * weightKg
-    const envaseCost = getEnvaseCost(type, weightKg)
-    const etiquetaCost = withBrand ? getEtiquetaCost(productId, weightKg) : 0
-    const totalCost = productCost + envaseCost + etiquetaCost
-    return {
-      productCost,
-      envaseCost,
-      etiquetaCost,
-      totalCost,
-    }
-  }
-
   return (
     <div className="px-4 lg:px-6 py-6 space-y-6">
       {/* Header */}
@@ -123,60 +104,8 @@ export function ProductDetail({ productId }: ProductDetailProps) {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Main Info */}
+        {/* Main Info - Presentations */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Formula Card */}
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Beaker className="h-5 w-5 text-primary" />
-                Formula del Producto
-              </CardTitle>
-              <CardDescription>
-                Ingredientes por kilogramo de producto terminado
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {formulas.length > 0 ? (
-                <div className="space-y-3">
-                  {formulas.map((formula) => (
-                    <div 
-                      key={formula.id} 
-                      className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Package className="h-4 w-4 text-primary" />
-                        </div>
-                        <div>
-                          <p className="font-medium">{formula.insumo?.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {formula.insumo?.category && (
-                              <span className="capitalize">{formula.insumo.category.replace('_', ' ')}</span>
-                            )}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-mono font-semibold">
-                          {formula.quantity_per_kg < 1 
-                            ? `${(formula.quantity_per_kg * 1000).toFixed(0)} g`
-                            : `${formula.quantity_per_kg.toFixed(2)} ${UNIT_OF_MEASURE_ABBR[formula.insumo?.unit_of_measure || 'kg']}`
-                          }
-                        </p>
-                        <p className="text-xs text-muted-foreground">por kg</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground text-center py-8">
-                  No hay formula definida para este producto
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
           {/* Presentations Card */}
           <Card className="shadow-sm">
             <CardHeader>
@@ -185,14 +114,29 @@ export function ProductDetail({ productId }: ProductDetailProps) {
                 Presentaciones
               </CardTitle>
               <CardDescription>
-                Catálogo de presentaciones con costos calculados
+                Catálogo de presentaciones con costos calculados. 
+                {product.type === 'enduido' && ' Enduido Interior solo se vende en bolsas.'}
+                {product.type === 'masilla' && ' Masilla para Yeso disponible en bolsas y potes.'}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
                 {groupedPresentations.map((group) => {
-                  const costWithBrand = getPresentationCost(group.type, group.weight_kg, true)
-                  const costWithoutBrand = getPresentationCost(group.type, group.weight_kg, false)
+                  // Find actual presentation objects for cost calculation
+                  const presWithBrand = presentations.find(
+                    p => p.type === group.type && p.weight_kg === group.weight_kg && p.with_brand
+                  )
+                  const presWithoutBrand = presentations.find(
+                    p => p.type === group.type && p.weight_kg === group.weight_kg && !p.with_brand
+                  )
+                  
+                  // Calculate costs using the new helper
+                  const costWithBrand = presWithBrand 
+                    ? calculatePresentationCost(presWithBrand, productId) 
+                    : null
+                  const costWithoutBrand = presWithoutBrand 
+                    ? calculatePresentationCost(presWithoutBrand, productId)
+                    : null
                   
                   return (
                     <div key={`${group.type}-${group.weight_kg}`} className="space-y-3">
@@ -208,65 +152,69 @@ export function ProductDetail({ productId }: ProductDetailProps) {
                       
                       <div className="grid gap-3 md:grid-cols-2">
                         {/* Con marca */}
-                        <div className="p-4 border border-border rounded-lg">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-2">
-                              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                              <span className="font-medium">Con marca</span>
+                        {costWithBrand && (
+                          <div className="p-4 border border-border rounded-lg">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                                <span className="font-medium">Con marca</span>
+                              </div>
+                              <Badge variant="secondary" className="text-xs">
+                                +Etiqueta
+                              </Badge>
                             </div>
-                            <Badge variant="secondary" className="text-xs">
-                              +Etiqueta
-                            </Badge>
+                            <div className="space-y-1 text-sm">
+                              <div className="flex justify-between text-muted-foreground">
+                                <span>Producto ({group.weight_kg} kg)</span>
+                                <span>{formatCurrencyDecimal(costWithBrand.product_cost_for_weight)}</span>
+                              </div>
+                              <div className="flex justify-between text-muted-foreground">
+                                <span>Envase</span>
+                                <span>{formatCurrencyDecimal(costWithBrand.envase_cost)}</span>
+                              </div>
+                              <div className="flex justify-between text-muted-foreground">
+                                <span>Etiqueta</span>
+                                <span>{formatCurrencyDecimal(costWithBrand.etiqueta_cost)}</span>
+                              </div>
+                              <Separator className="my-2" />
+                              <div className="flex justify-between font-semibold">
+                                <span>Costo total</span>
+                                <span className="text-primary">{formatCurrency(costWithBrand.total_cost)}</span>
+                              </div>
+                            </div>
                           </div>
-                          <div className="space-y-1 text-sm">
-                            <div className="flex justify-between text-muted-foreground">
-                              <span>Producto ({group.weight_kg} kg)</span>
-                              <span>{formatCurrencyDecimal(costWithBrand.productCost)}</span>
-                            </div>
-                            <div className="flex justify-between text-muted-foreground">
-                              <span>Envase</span>
-                              <span>{formatCurrencyDecimal(costWithBrand.envaseCost)}</span>
-                            </div>
-                            <div className="flex justify-between text-muted-foreground">
-                              <span>Etiqueta</span>
-                              <span>{formatCurrencyDecimal(costWithBrand.etiquetaCost)}</span>
-                            </div>
-                            <Separator className="my-2" />
-                            <div className="flex justify-between font-semibold">
-                              <span>Costo total</span>
-                              <span className="text-primary">{formatCurrency(costWithBrand.totalCost)}</span>
-                            </div>
-                          </div>
-                        </div>
+                        )}
 
                         {/* Sin marca */}
-                        <div className="p-4 border border-border rounded-lg bg-muted/30">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-2">
-                              <XCircle className="h-4 w-4 text-slate-500" />
-                              <span className="font-medium">Sin marca</span>
+                        {costWithoutBrand && (
+                          <div className="p-4 border border-border rounded-lg bg-muted/30">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <XCircle className="h-4 w-4 text-slate-500" />
+                                <span className="font-medium">Sin marca</span>
+                              </div>
+                            </div>
+                            <div className="space-y-1 text-sm">
+                              <div className="flex justify-between text-muted-foreground">
+                                <span>Producto ({group.weight_kg} kg)</span>
+                                <span>{formatCurrencyDecimal(costWithoutBrand.product_cost_for_weight)}</span>
+                              </div>
+                              <div className="flex justify-between text-muted-foreground">
+                                <span>Envase</span>
+                                <span>{formatCurrencyDecimal(costWithoutBrand.envase_cost)}</span>
+                              </div>
+                              <div className="flex justify-between text-muted-foreground line-through opacity-50">
+                                <span>Etiqueta</span>
+                                <span>-</span>
+                              </div>
+                              <Separator className="my-2" />
+                              <div className="flex justify-between font-semibold">
+                                <span>Costo total</span>
+                                <span className="text-primary">{formatCurrency(costWithoutBrand.total_cost)}</span>
+                              </div>
                             </div>
                           </div>
-                          <div className="space-y-1 text-sm">
-                            <div className="flex justify-between text-muted-foreground">
-                              <span>Producto ({group.weight_kg} kg)</span>
-                              <span>{formatCurrencyDecimal(costWithoutBrand.productCost)}</span>
-                            </div>
-                            <div className="flex justify-between text-muted-foreground">
-                              <span>Envase</span>
-                              <span>{formatCurrencyDecimal(costWithoutBrand.envaseCost)}</span>
-                            </div>
-                            <div className="flex justify-between text-muted-foreground line-through opacity-50">
-                              <span>Etiqueta</span>
-                              <span>-</span>
-                            </div>
-                            <Separator className="my-2" />
-                            <div className="flex justify-between font-semibold">
-                              <span>Costo total</span>
-                              <span className="text-primary">{formatCurrency(costWithoutBrand.totalCost)}</span>
-                            </div>
-                          </div>
-                        </div>
+                        )}
                       </div>
                     </div>
                   )
@@ -292,13 +240,12 @@ export function ProductDetail({ productId }: ProductDetailProps) {
                 <p className="text-2xl font-bold text-primary">
                   {costPerKg > 0 ? formatCurrency(costPerKg) : 'N/A'}
                 </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Basado en {formulaCount} ingredientes
+                </p>
               </div>
 
               <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Total ingredientes</span>
-                  <span className="font-medium">{formulas.length}</span>
-                </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Presentaciones</span>
                   <span className="font-medium">{presentations.length}</span>
@@ -311,6 +258,19 @@ export function ProductDetail({ productId }: ProductDetailProps) {
                   <span className="text-muted-foreground">Sin marca</span>
                   <span className="font-medium">{presentations.filter(p => !p.with_brand).length}</span>
                 </div>
+              </div>
+
+              <Separator />
+
+              {/* Link to formulas in Costos module */}
+              <div className="pt-2">
+                <Link href="/costos/formulas">
+                  <Button variant="outline" size="sm" className="w-full">
+                    <Package className="h-4 w-4 mr-2" />
+                    Ver fórmula en Costos
+                    <ExternalLink className="h-3 w-3 ml-auto" />
+                  </Button>
+                </Link>
               </div>
             </CardContent>
           </Card>
@@ -327,6 +287,12 @@ export function ProductDetail({ productId }: ProductDetailProps) {
               <div>
                 <p className="text-muted-foreground">Tipo de producto</p>
                 <p className="font-medium capitalize">{product.type}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Envases disponibles</p>
+                <p className="font-medium">
+                  {product.type === 'enduido' ? 'Solo bolsas' : 'Bolsas y potes'}
+                </p>
               </div>
               <div>
                 <p className="text-muted-foreground">Estado</p>

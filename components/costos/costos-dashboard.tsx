@@ -29,8 +29,7 @@ import {
   INGREDIENT_INPUTS,
   INGREDIENT_COSTS,
   calculateProductCostPerKg,
-  getEnvaseCost,
-  getEtiquetaCost,
+  calculatePresentationCost,
   formatCurrency,
   formatCurrencyDecimal,
   formatPercent
@@ -116,14 +115,22 @@ export function CostosDashboard() {
         const weight = parseFloat(weightStr)
         
         ;[true, false].forEach(withBrand => {
-          const productCost = costPerKg * weight
-          const envaseCost = getEnvaseCost(type as 'bolsa' | 'pote', weight)
-          const etiquetaCost = withBrand ? getEtiquetaCost(product.id, weight) : 0
-          const totalCost = productCost + envaseCost + etiquetaCost
+          // Find the actual presentation
+          const presentation = PRESENTATIONS.find(
+            p => p.product_id === product.id && 
+                 p.type === type && 
+                 p.weight_kg === weight && 
+                 p.with_brand === withBrand
+          )
+          
+          if (!presentation) return
+          
+          // Use the new helper that properly calculates costs with etiqueta per product+type
+          const costBreakdown = calculatePresentationCost(presentation, product.id)
           const sellingPrice = prices[weight] || 0
           
           const margins = sellingPrice > 0 
-            ? calculateProfitMargins(sellingPrice, totalCost)
+            ? calculateProfitMargins(sellingPrice, costBreakdown.total_cost)
             : { margin_over_price: 0, markup_over_cost: 0 }
 
           costs.push({
@@ -131,7 +138,7 @@ export function CostosDashboard() {
             type: type as 'bolsa' | 'pote',
             weight_kg: weight,
             with_brand: withBrand,
-            cost: totalCost,
+            cost: costBreakdown.total_cost,
             sellingPrice,
             marginOverPrice: margins.margin_over_price,
             markupOverCost: margins.markup_over_cost,

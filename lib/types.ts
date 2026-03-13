@@ -413,3 +413,101 @@ export function calculateProfitMargins(
     markup_over_cost: ((selling_price - cost) / cost) * 100,
   }
 }
+
+// ============================================
+// Unit Conversion Helpers (Compatible Units Only)
+// ============================================
+
+/**
+ * Unit family definitions - only convert within same family
+ */
+export type UnitFamily = 'mass' | 'volume' | 'count'
+
+export const UNIT_FAMILIES: Record<UnitOfMeasure, UnitFamily> = {
+  kg: 'mass',
+  g: 'mass',
+  l: 'volume',
+  ml: 'volume',
+  unidad: 'count',
+}
+
+/**
+ * Base units for each family
+ */
+export const BASE_UNITS: Record<UnitFamily, UnitOfMeasure> = {
+  mass: 'kg',
+  volume: 'l',
+  count: 'unidad',
+}
+
+/**
+ * Conversion factors to base unit
+ * kg = 1, g = 0.001 (1g = 0.001kg)
+ * l = 1, ml = 0.001 (1ml = 0.001l)
+ * unidad = 1
+ */
+export const CONVERSION_TO_BASE: Record<UnitOfMeasure, number> = {
+  kg: 1,
+  g: 0.001,
+  l: 1,
+  ml: 0.001,
+  unidad: 1,
+}
+
+/**
+ * Check if two units are compatible (same family)
+ */
+export function areUnitsCompatible(unit1: UnitOfMeasure, unit2: UnitOfMeasure): boolean {
+  return UNIT_FAMILIES[unit1] === UNIT_FAMILIES[unit2]
+}
+
+/**
+ * Convert value from one unit to another (within same family only)
+ * Returns null if units are incompatible
+ * 
+ * @param value - The value to convert
+ * @param fromUnit - The source unit
+ * @param toUnit - The target unit
+ * @returns Converted value or null if incompatible
+ */
+export function convertUnit(
+  value: number,
+  fromUnit: UnitOfMeasure,
+  toUnit: UnitOfMeasure
+): number | null {
+  // Check compatibility
+  if (!areUnitsCompatible(fromUnit, toUnit)) {
+    return null
+  }
+  
+  // Same unit - no conversion needed
+  if (fromUnit === toUnit) {
+    return value
+  }
+  
+  // Convert: value in fromUnit -> base unit -> toUnit
+  const valueInBase = value * CONVERSION_TO_BASE[fromUnit]
+  const result = valueInBase / CONVERSION_TO_BASE[toUnit]
+  
+  return result
+}
+
+/**
+ * Convert value to base unit of its family
+ * Useful for cost calculations where we want to normalize to kg or l
+ * 
+ * @param value - The value to convert
+ * @param unit - The current unit
+ * @returns Value in base unit (kg for mass, l for volume, unidad for count)
+ */
+export function convertToBaseUnit(value: number, unit: UnitOfMeasure): number {
+  return value * CONVERSION_TO_BASE[unit]
+}
+
+/**
+ * Get the base unit for a given unit
+ */
+export function getBaseUnit(unit: UnitOfMeasure): UnitOfMeasure {
+  const family = UNIT_FAMILIES[unit]
+  return BASE_UNITS[family]
+}
