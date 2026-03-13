@@ -9,12 +9,16 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Plus, Search, Users, Eye, Edit, Phone, Mail, Building, Package, Scale, ShoppingCart } from 'lucide-react'
-import { getAllClients, getClientStats, formatCurrency, formatWeight } from '@/lib/mock-data'
+import { getClientStatsFromStore, formatCurrency, formatWeight } from '@/lib/mock-data'
 import { getAllClients as getStoredClients } from '@/lib/client-store'
+import { getAllOrders } from '@/lib/order-store'
 
 export function ClientsContent() {
   const [search, setSearch] = useState('')
   const [showInactive, setShowInactive] = useState(false)
+
+  // Get all orders from shared store for stats calculation
+  const allOrders = useMemo(() => getAllOrders(), [])
 
   // Filter clients
   const filteredClients = useMemo(() => {
@@ -84,7 +88,7 @@ export function ClientsContent() {
       {filteredClients.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredClients.map((client) => {
-            const stats = getClientStats(client.id)
+            const stats = getClientStatsFromStore(client.id, allOrders)
             return (
               <Card key={client.id} className="shadow-sm hover:shadow-md transition-all group">
                 <CardContent className="pt-6">

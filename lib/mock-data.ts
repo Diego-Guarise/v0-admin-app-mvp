@@ -1551,6 +1551,28 @@ export function getClientOrders(clientId: string) {
   return ORDERS.filter(o => o.client_id === clientId)
 }
 
+/**
+ * Get client stats from the shared order store (including newly created orders)
+ * This should be used instead of getClientStats() to include orders from localStorage
+ */
+export function getClientStatsFromStore(clientId: string, allOrders: Order[]) {
+  const clientOrders = allOrders.filter(o => o.client_id === clientId && o.status !== 'anulado')
+  return {
+    totalOrders: clientOrders.length,
+    enduidoKg: clientOrders.reduce((sum, o) => sum + (o.enduido_kg || 0), 0),
+    masillaKg: clientOrders.reduce((sum, o) => sum + (o.masilla_kg || 0), 0),
+    totalPurchased: clientOrders.reduce((sum, o) => sum + (o.total || 0), 0),
+  }
+}
+
+/**
+ * Get client orders from the shared order store (including newly created orders)
+ * This should be used instead of getClientOrders() to include orders from localStorage
+ */
+export function getClientOrdersFromStore(clientId: string, allOrders: Order[]): Order[] {
+  return allOrders.filter(o => o.client_id === clientId)
+}
+
 // ============================================
 // Dashboard Helper Functions
 // ============================================

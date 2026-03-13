@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { PageHeader } from '@/components/page-header'
@@ -42,7 +43,8 @@ import {
   Plus,
   ArrowRight
 } from 'lucide-react'
-import { getClientStats, getClientOrders, formatCurrency, formatDate, formatWeight } from '@/lib/mock-data'
+import { getClientStatsFromStore, getClientOrdersFromStore, formatCurrency, formatDate, formatWeight } from '@/lib/mock-data'
+import { getAllOrders } from '@/lib/order-store'
 import type { Client } from '@/lib/types'
 
 interface ClientDetailProps {
@@ -51,8 +53,11 @@ interface ClientDetailProps {
 
 export function ClientDetail({ client }: ClientDetailProps) {
   const router = useRouter()
-  const stats = getClientStats(client.id)
-  const clientOrders = getClientOrders(client.id)
+  
+  // Get all orders from the shared store (including newly created orders)
+  const allOrders = useMemo(() => getAllOrders(), [])
+  const stats = useMemo(() => getClientStatsFromStore(client.id, allOrders), [client.id, allOrders])
+  const clientOrders = useMemo(() => getClientOrdersFromStore(client.id, allOrders), [client.id, allOrders])
 
   const handleToggleStatus = () => {
     // In real app, this would call an API to toggle client status
