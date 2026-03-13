@@ -263,11 +263,15 @@ export function ProductDetail({ productId }: ProductDetailProps) {
               <Separator />
 
               {/* Link to formulas in Costos module */}
-              <div className="pt-2">
+              <div className="pt-2 space-y-2">
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs">
+                  <p className="text-amber-900 font-medium">💡 Las fórmulas son editables</p>
+                  <p className="text-amber-800 mt-1">Modifica ingredientes, cantidades y unidades en Costos → Fórmulas. Los costos se recalculan automáticamente.</p>
+                </div>
                 <Link href="/costos/formulas">
                   <Button variant="outline" size="sm" className="w-full">
                     <Package className="h-4 w-4 mr-2" />
-                    Ver fórmula en Costos
+                    Editar fórmula en Costos
                     <ExternalLink className="h-3 w-3 ml-auto" />
                   </Button>
                 </Link>

@@ -419,8 +419,10 @@ export const PRODUCT_FORMULAS: ProductFormula[] = [
     insumo_id: 'ins-1', // Carbonato de calcio
     insumo: INGREDIENT_INPUTS.find(i => i.id === 'ins-1'),
     quantity_per_kg: 0.65, // 650g por kg de producto
+    unit_of_measure: 'kg',
     notes: 'Carga principal',
     active: true,
+    version: 1,
     created_at: '2022-01-01T00:00:00Z',
     updated_at: '2025-01-15T10:00:00Z'
   },
@@ -431,8 +433,10 @@ export const PRODUCT_FORMULAS: ProductFormula[] = [
     insumo_id: 'ins-2', // CMC
     insumo: INGREDIENT_INPUTS.find(i => i.id === 'ins-2'),
     quantity_per_kg: 0.015, // 15g por kg
+    unit_of_measure: 'kg',
     notes: 'Espesante',
     active: true,
+    version: 1,
     created_at: '2022-01-01T00:00:00Z',
     updated_at: '2025-01-15T10:00:00Z'
   },
@@ -443,7 +447,9 @@ export const PRODUCT_FORMULAS: ProductFormula[] = [
     insumo_id: 'ins-3', // Bentonita
     insumo: INGREDIENT_INPUTS.find(i => i.id === 'ins-3'),
     quantity_per_kg: 0.02, // 20g por kg
+    unit_of_measure: 'kg',
     active: true,
+    version: 1,
     created_at: '2022-01-01T00:00:00Z',
     updated_at: '2025-01-15T10:00:00Z'
   },
@@ -454,8 +460,10 @@ export const PRODUCT_FORMULAS: ProductFormula[] = [
     insumo_id: 'ins-4', // Emulsión acrílica
     insumo: INGREDIENT_INPUTS.find(i => i.id === 'ins-4'),
     quantity_per_kg: 0.08, // 80ml por kg
+    unit_of_measure: 'l',
     notes: 'Ligante',
     active: true,
+    version: 1,
     created_at: '2022-01-01T00:00:00Z',
     updated_at: '2025-01-15T10:00:00Z'
   },
@@ -466,7 +474,9 @@ export const PRODUCT_FORMULAS: ProductFormula[] = [
     insumo_id: 'ins-5', // Agua
     insumo: INGREDIENT_INPUTS.find(i => i.id === 'ins-5'),
     quantity_per_kg: 0.235, // 235ml por kg
+    unit_of_measure: 'l',
     active: true,
+    version: 1,
     created_at: '2022-01-01T00:00:00Z',
     updated_at: '2025-01-15T10:00:00Z'
   },
@@ -479,8 +489,10 @@ export const PRODUCT_FORMULAS: ProductFormula[] = [
     insumo_id: 'ins-6', // Yeso
     insumo: INGREDIENT_INPUTS.find(i => i.id === 'ins-6'),
     quantity_per_kg: 0.55, // 550g por kg
+    unit_of_measure: 'kg',
     notes: 'Base principal',
     active: true,
+    version: 1,
     created_at: '2022-01-01T00:00:00Z',
     updated_at: '2025-01-15T10:00:00Z'
   },
@@ -491,8 +503,10 @@ export const PRODUCT_FORMULAS: ProductFormula[] = [
     insumo_id: 'ins-1', // Carbonato de calcio
     insumo: INGREDIENT_INPUTS.find(i => i.id === 'ins-1'),
     quantity_per_kg: 0.25, // 250g por kg
+    unit_of_measure: 'kg',
     notes: 'Carga secundaria',
     active: true,
+    version: 1,
     created_at: '2022-01-01T00:00:00Z',
     updated_at: '2025-01-15T10:00:00Z'
   },
@@ -503,7 +517,9 @@ export const PRODUCT_FORMULAS: ProductFormula[] = [
     insumo_id: 'ins-7', // Cal hidratada
     insumo: INGREDIENT_INPUTS.find(i => i.id === 'ins-7'),
     quantity_per_kg: 0.05, // 50g por kg
+    unit_of_measure: 'kg',
     active: true,
+    version: 1,
     created_at: '2022-01-01T00:00:00Z',
     updated_at: '2025-01-15T10:00:00Z'
   },
@@ -1396,6 +1412,63 @@ export const EXPENSES: Expense[] = [
     updated_at: '2025-03-15T11:00:00Z',
   },
 ]
+
+// ============================================
+// Formula Management Helpers
+// ============================================
+
+/**
+ * Get formulas for a product (only active)
+ */
+export function getProductFormulas(productId: string) {
+  return PRODUCT_FORMULAS.filter(f => f.product_id === productId && f.active)
+}
+
+/**
+ * Get available insumos for formulas
+ * Returns only insumos that can be used in formulas (NOT packaging)
+ */
+export function getFormulableInsumos() {
+  return INGREDIENT_INPUTS.filter(i => 
+    i.status === 'activo' && 
+    (i.category === 'materia_prima' || i.category === 'aditivo' || i.category === 'operativo')
+  )
+}
+
+/**
+ * Update a formula (client-side only - in real app would be persisted)
+ * Returns updated formula with new version and timestamp
+ */
+export function updateProductFormula(
+  formula: ProductFormula,
+  updates: Partial<ProductFormula>
+): ProductFormula {
+  return {
+    ...formula,
+    ...updates,
+    version: formula.version + 1,
+    updated_at: new Date().toISOString(),
+  }
+}
+
+/**
+ * Create a new formula row (client-side)
+ */
+export function createNewFormulaRow(productId: string, insumoId: string): ProductFormula {
+  const insumo = INGREDIENT_INPUTS.find(i => i.id === insumoId)
+  return {
+    id: `pf-temp-${Date.now()}`,
+    product_id: productId,
+    insumo_id: insumoId,
+    insumo,
+    quantity_per_kg: 0,
+    unit_of_measure: insumo?.unit_of_measure,
+    active: true,
+    version: 1,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }
+}
 
 // ============================================
 // Dashboard Stats - Estadísticas calculadas

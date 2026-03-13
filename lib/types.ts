@@ -177,10 +177,13 @@ export interface ProductFormula {
   insumo_id: string
   insumo?: IngredientInput
   quantity_per_kg: number // Amount of ingredient per kg of product
+  unit_of_measure?: UnitOfMeasure // Unit can be specified per formula row (overrides insumo unit)
   notes?: string
   active: boolean
+  version: number // Version number for history tracking
   created_at: string
   updated_at: string
+  updated_by?: string // Optional: who last edited
 }
 
 // Presentation Cost (Costo de Presentación) - Calculated
