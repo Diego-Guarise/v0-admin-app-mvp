@@ -119,7 +119,6 @@ export function ClientForm({ client }: ClientFormProps) {
                   placeholder="Nombre de la empresa"
                 />
               </div>
-              </div>
             </div>
           </CardContent>
         </Card>
