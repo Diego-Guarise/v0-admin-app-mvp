@@ -1,0 +1,272 @@
+'use client'
+
+import { useEffect, useState, useMemo } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { AdminLayout } from '@/components/admin-layout'
+import { PageHeader } from '@/components/page-header'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { StatusBadge } from '@/components/status-badge'
+import { ArrowLeft, Edit, Briefcase, Mail, Phone } from 'lucide-react'
+import { getVendorById } from '@/lib/vendor-store'
+import { getAllOrders } from '@/lib/order-store'
+import { formatCurrency, formatDate } from '@/lib/mock-data'
+import type { Vendor } from '@/lib/types'
+
+interface VendorDetailPageProps {
+  params: Promise<{ id: string }>
+}
+
+export default function VendorDetailPage({ params }: VendorDetailPageProps) {
+  const router = useRouter()
+  const [vendor, setVendor] = useState<Vendor | null>(null)
+  const [id, setId] = useState<string>('')
+  const [mounted, setMounted] = useState(false)
+
+  // Unwrap params
+  useEffect(() => {
+    params.then(p => setId(p.id))
+  }, [params])
+
+  // Ensure mounted before accessing localStorage
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // Load vendor
+  useEffect(() => {
+    if (!id || !mounted) return
+    const foundVendor = getVendorById(id)
+    if (!foundVendor) {
+      router.push('/vendedores')
+      return
+    }
+    setVendor(foundVendor)
+  }, [id, mounted, router])
+
+  // Get vendor's orders
+  const orders = useMemo(() => {
+    if (!vendor) return []
+    return getAllOrders().filter(o => o.vendor_id === vendor.id)
+  }, [vendor])
+
+  // Separate orders
+  const pendingPaymentOrders = useMemo(() => {
+    return orders.filter(o => o.payment_status !== 'cobrado')
+  }, [orders])
+
+  const pendingLiquidationOrders = useMemo(() => {
+    return orders.filter(o => o.payment_status === 'cobrado' && o.commission_status === 'pendiente_liquidar')
+  }, [orders])
+
+  const liquidatedOrders = useMemo(() => {
+    return orders.filter(o => o.payment_status === 'cobrado' && o.commission_status === 'liquidado')
+  }, [orders])
+
+  if (!mounted || !vendor) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center py-12">
+          <p className="text-muted-foreground">Cargando...</p>
+        </div>
+      </AdminLayout>
+    )
+  }
+
+  return (
+    <AdminLayout>
+      <div className="space-y-6 p-6">
+        {/* Header */}
+        <div className="flex items-center gap-4">
+          <Link href="/vendedores">
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          </Link>
+          <PageHeader
+            title={vendor.name}
+            description={`Comisión: ${vendor.commission_percentage}%`}
+            icon={Briefcase}
+          />
+          <Link href={`/vendedores/${vendor.id}/editar`} className="ml-auto">
+            <Button className="gap-2">
+              <Edit className="h-4 w-4" />
+              Editar
+            </Button>
+          </Link>
+        </div>
+
+        {/* Vendor Info Cards */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {/* Contact */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Email</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm break-all">{vendor.email || '-'}</p>
+            </CardContent>
+          </Card>
+
+          {/* Phone */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Teléfono</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm">{vendor.phone || '-'}</p>
+            </CardContent>
+          </Card>
+
+          {/* Total Orders */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Pedidos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold">{orders.length}</p>
+            </CardContent>
+          </Card>
+
+          {/* Status */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Estado</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <StatusBadge status={vendor.active ? 'activo' : 'inactivo'} type="client" />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Orders Sections */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Pending Payment */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>Pedidos Pendientes de Pago</span>
+                <span className="text-2xl font-bold text-amber-600">{pendingPaymentOrders.length}</span>
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mt-2">
+                Estos pedidos no están cobrados aún
+              </p>
+            </CardHeader>
+            <CardContent>
+              {pendingPaymentOrders.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-6">No hay pedidos pendientes</p>
+              ) : (
+                <div className="space-y-2">
+                  {pendingPaymentOrders.map(order => (
+                    <Link key={order.id} href={`/pedidos/${order.id}`}>
+                      <div className="p-3 border rounded-lg hover:bg-accent transition-colors text-sm">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-medium">Pedido #{order.order_number}</p>
+                            <p className="text-xs text-muted-foreground">{formatDate(order.order_date)}</p>
+                          </div>
+                          <p className="font-semibold">{formatCurrency(order.total)}</p>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Pending Liquidation */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>Pendiente de Liquidación</span>
+                <span className="text-2xl font-bold text-blue-600">{pendingLiquidationOrders.length}</span>
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mt-2">
+                Pedidos cobrados no liquidados
+              </p>
+            </CardHeader>
+            <CardContent>
+              {pendingLiquidationOrders.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-6">No hay pendientes</p>
+              ) : (
+                <>
+                  <div className="space-y-2 mb-4">
+                    {pendingLiquidationOrders.map(order => (
+                      <Link key={order.id} href={`/pedidos/${order.id}`}>
+                        <div className="p-3 border rounded-lg hover:bg-accent transition-colors text-sm">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-medium">Pedido #{order.order_number}</p>
+                              <p className="text-xs text-muted-foreground">{formatDate(order.order_date)}</p>
+                            </div>
+                            <p className="font-semibold">{formatCurrency(order.subtotal_without_iva || order.subtotal)}</p>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                  <Link href={`/vendedores/${vendor.id}/liquidar`}>
+                    <Button className="w-full">Liquidar Comisiones</Button>
+                  </Link>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Liquidated Orders */}
+        {liquidatedOrders.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Pedidos Liquidados ({liquidatedOrders.length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-lg border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Pedido</TableHead>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead className="text-right">Subtotal</TableHead>
+                      <TableHead className="text-right">Comisión</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {liquidatedOrders.map(order => {
+                      const baseAmount = order.subtotal_without_iva || order.subtotal
+                      const commission = baseAmount * (vendor.commission_percentage / 100)
+                      return (
+                        <TableRow key={order.id}>
+                          <TableCell className="font-medium">
+                            <Link href={`/pedidos/${order.id}`} className="hover:underline">
+                              #{order.order_number}
+                            </Link>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {formatDate(order.order_date)}
+                          </TableCell>
+                          <TableCell className="text-right">{formatCurrency(baseAmount)}</TableCell>
+                          <TableCell className="text-right font-semibold">{formatCurrency(commission)}</TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </AdminLayout>
+  )
+}

@@ -218,6 +218,33 @@ export interface Client {
   updated_at: string
 }
 
+// Vendedores - Sales representatives
+export interface Vendor {
+  id: string
+  name: string
+  phone?: string
+  email?: string
+  commission_percentage: number
+  notes?: string
+  active: boolean
+  created_at: string
+  updated_at: string
+}
+
+// Liquidación - Commission settlement record
+export interface Liquidacion {
+  id: string
+  vendor_id: string
+  liquidation_date: string
+  selected_order_ids: string[]
+  total_base_without_iva: number
+  commission_percentage: number
+  total_commission_paid: number
+  notes?: string
+  created_at: string
+  updated_at: string
+}
+
 // Price List Item - Editable pricing with sales unit information
 export interface PriceListItem {
   id: string
