@@ -227,14 +227,21 @@ export function OrderForm({ order }: OrderFormProps) {
       status: isEditing ? status : 'en_produccion' as const,
       payment_status: isEditing ? paymentStatus : 'pendiente' as const,
       commission_status: isEditing ? commissionStatus : 'pendiente_liquidar' as const,
-      items: items.map(item => ({
-        id: item.id,
-        product_id: item.product_id,
-        presentation_id: item.presentation_id,
-        with_brand: item.with_brand,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-      })),
+      items: items.map(item => {
+        const product = PRODUCTS.find(p => p.id === item.product_id)
+        const presentation = PRESENTATIONS.find(p => p.id === item.presentation_id)
+        return {
+          id: item.id,
+          product_id: item.product_id,
+          product: product || { id: item.product_id, name: 'Producto desconocido', type: 'enduido', active: true },
+          presentation_id: item.presentation_id,
+          presentation: presentation || { id: item.presentation_id, product_id: item.product_id, name: 'Presentación desconocida', type: 'bolsa', weight_kg: 0, active: true },
+          with_brand: item.with_brand,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          subtotal: item.quantity * item.unit_price,
+        }
+      }),
       subtotal: calculations.subtotal,
       iva: calculations.iva,
       total: calculations.total,

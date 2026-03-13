@@ -180,8 +180,8 @@ export function OrderDetail({ order }: OrderDetailProps) {
                 <TableBody>
                   {order.items.map((item) => (
                     <TableRow key={item.id}>
-                      <TableCell className="font-medium">{item.product.name}</TableCell>
-                      <TableCell>{item.presentation.name}</TableCell>
+                      <TableCell className="font-medium">{item.product?.name || item.product_id}</TableCell>
+                      <TableCell>{item.presentation?.name || item.presentation_id}</TableCell>
                       <TableCell className="text-center">
                         {item.with_brand ? (
                           <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
@@ -193,10 +193,10 @@ export function OrderDetail({ order }: OrderDetailProps) {
                       </TableCell>
                       <TableCell className="text-right">{item.quantity}</TableCell>
                       <TableCell className="text-right text-muted-foreground">
-                        {formatWeight(item.quantity * item.presentation.weight_kg)}
+                        {formatWeight(item.quantity * (item.presentation?.weight_kg || 0))}
                       </TableCell>
                       <TableCell className="text-right">{formatCurrency(item.unit_price)}</TableCell>
-                      <TableCell className="text-right font-medium">{formatCurrency(item.subtotal)}</TableCell>
+                      <TableCell className="text-right font-medium">{formatCurrency(item.subtotal || item.quantity * item.unit_price)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -275,29 +275,31 @@ export function OrderDetail({ order }: OrderDetailProps) {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <p className="font-semibold text-foreground">{order.client.name}</p>
-                {order.client.company && (
+                <p className="font-semibold text-foreground">{order.client?.name || order.client_id}</p>
+                {order.client?.company && (
                   <p className="text-sm text-muted-foreground">{order.client.company}</p>
                 )}
               </div>
-              {order.client.phone && (
+              {order.client?.phone && (
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Telefono</p>
                   <p className="text-sm font-medium">{order.client.phone}</p>
                 </div>
               )}
-              {order.client.email && (
+              {order.client?.email && (
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Email</p>
                   <p className="text-sm font-medium">{order.client.email}</p>
                 </div>
               )}
               <Separator />
-              <Link href={`/clientes/${order.client.id}`}>
-                <Button variant="outline" size="sm" className="w-full">
-                  Ver ficha del cliente
-                </Button>
-              </Link>
+              {order.client && (
+                <Link href={`/clientes/${order.client.id}`}>
+                  <Button variant="outline" size="sm" className="w-full">
+                    Ver ficha del cliente
+                  </Button>
+                </Link>
+              )}
             </CardContent>
           </Card>
 

@@ -220,15 +220,15 @@ export interface Client {
 // Order Items
 export interface OrderItem {
   id: string
-  order_id: string
+  order_id?: string
   product_id: string
-  product: Product
+  product?: Product
   presentation_id: string
-  presentation: Presentation
+  presentation?: Presentation
   with_brand: boolean
   quantity: number
   unit_price: number
-  subtotal: number
+  subtotal?: number
 }
 
 // Orders
