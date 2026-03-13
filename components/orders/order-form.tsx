@@ -81,6 +81,7 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>(order?.payment_status || 'pendiente')
   const [commissionStatus, setCommissionStatus] = useState<CommissionStatus>(order?.commission_status || 'pendiente_liquidar')
   const [hasInvoice, setHasInvoice] = useState(order?.has_invoice !== undefined ? order.has_invoice : true)
+  const [invoiceNumber, setInvoiceNumber] = useState(order?.invoice_number || '')
 
   // Items state
   const [items, setItems] = useState<OrderItemForm[]>(
@@ -315,6 +316,7 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
       enduido_kg: calculations.enduidoKg,
       masilla_kg: calculations.masillaKg,
       has_invoice: hasInvoice,
+      invoice_number: invoiceNumber.trim() || undefined,
       created_at: isEditing ? order!.created_at : new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }
@@ -392,102 +394,23 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
                   <div className="flex gap-4 text-sm text-muted-foreground">
                     {selectedClient.phone && <span>{selectedClient.phone}</span>}
                     {selectedClient.email && <span>{selectedClient.email}</span>}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Order Info */}
-          <Card className="shadow-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-base">Información del pedido</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="orderDate">Fecha del pedido *</Label>
-                  <Input
-                    id="orderDate"
-                    type="date"
-                    value={orderDate}
-                    onChange={(e) => {
-                      // Validate date format to prevent invalid years
-                      const value = e.target.value
-                      if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-                        setOrderDate(value)
-                      }
-                    }}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="promisedDate">Fecha prometida de entrega *</Label>
-                  <Input
-                    id="promisedDate"
-                    type="date"
-                    value={promisedDate}
-                    onChange={(e) => {
-                      // Validate date format to prevent invalid years
-                      const value = e.target.value
-                      if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-                        setPromisedDate(value)
-                      }
-                    }}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="vendor">Vendedor</Label>
-                  <Select value={vendorId} onValueChange={setVendorId}>
-                    <SelectTrigger id="vendor">
-                      <SelectValue placeholder="Seleccionar vendedor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Sin vendedor</SelectItem>
-                      {activeVendors.map((vendor) => (
-                        <SelectItem key={vendor.id} value={vendor.id}>
-                          {vendor.name} ({vendor.commission_percentage}%)
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="priceCategory">Categoría de precio *</Label>
-                  <Select value={priceCategory} onValueChange={(v) => {
-                    setPriceCategory(v as PriceCategory)
-                    // Auto-recalculate prices when category changes
-                    if (!manualPrice) {
-                      setItems(items.map(item => {
-                        const presentation = PRESENTATIONS.find(p => p.id === item.presentation_id)
-                        if (presentation) {
-                          return {
-                            ...item,
-                            unit_price: lookupUnitPrice(
-                              item.product_id,
-                              presentation.type,
-                              presentation.weight_kg,
-                              item.with_brand,
-                              v as PriceCategory
-                            )
-                          }
-                        }
-                        return item
-                      }))
-                    }
-                  }}>
-                    <SelectTrigger id="priceCategory">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(PRICE_CATEGORY_LABELS).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>{label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
                 </div>
               </div>
+
+              {/* Invoice Number Input */}
+              {hasInvoice && (
+                <div className="space-y-2">
+                  <Label htmlFor="invoiceNumber" className="text-sm font-medium">
+                    N° de Factura (opcional)
+                  </Label>
+                  <Input
+                    id="invoiceNumber"
+                    placeholder="Ej: FAC-2024-001"
+                    value={invoiceNumber}
+                    onChange={(e) => setInvoiceNumber(e.target.value)}
+                  />
+                </div>
+              )}
 
               <Separator />
 

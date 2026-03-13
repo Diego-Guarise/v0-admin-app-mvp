@@ -360,6 +360,12 @@ export function OrderDetail({ order, navigationContext }: OrderDetailProps) {
                 <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Factura</p>
                 <p className="text-sm font-medium">{order.has_invoice ? 'Sí (con IVA 22%)' : 'No (sin IVA)'}</p>
               </div>
+              {order.has_invoice && (
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">N° de Factura</p>
+                  <p className="text-sm font-medium">{order.invoice_number || <span className="text-amber-600 italic">Pendiente de cargar</span>}</p>
+                </div>
+              )}
               {order.manual_price && (
                 <div className="flex items-center gap-2 text-sm font-medium text-amber-700 bg-amber-50 rounded-lg p-3 border border-amber-200">
                   <AlertTriangle className="h-4 w-4" />

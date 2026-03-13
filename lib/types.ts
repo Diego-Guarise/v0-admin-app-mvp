@@ -304,6 +304,7 @@ export interface Order {
   commission_status: CommissionStatus
   manual_price: boolean
   has_invoice: boolean
+  invoice_number?: string
   created_at: string
   updated_at: string
 }

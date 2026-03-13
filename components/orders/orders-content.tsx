@@ -43,6 +43,7 @@ export function OrdersContent() {
   const [paymentFilter, setPaymentFilter] = useState<PaymentStatus | 'all'>(initialPayment || 'all')
   const [clientFilter, setClientFilter] = useState<string>('all')
   const [vendorFilter, setVendorFilter] = useState<string>('all')
+  const [invoiceFilter, setInvoiceFilter] = useState<'all' | 'with' | 'without'>('all')
   const [dateFilter, setDateFilter] = useState<'today' | 'week' | 'month' | 'last-month' | 'custom'>('month')
   const [customFromDate, setCustomFromDate] = useState('')
   const [customToDate, setCustomToDate] = useState('')
@@ -112,6 +113,10 @@ export function OrdersContent() {
       // Vendor filter
       if (vendorFilter !== 'all' && order.vendor_id !== vendorFilter) return false
 
+      // Invoice filter
+      if (invoiceFilter === 'with' && !order.has_invoice) return false
+      if (invoiceFilter === 'without' && order.has_invoice) return false
+
       // Date range filter
       if (dateRange.from && dateRange.to) {
         const orderDate = order.order_date
@@ -127,7 +132,7 @@ export function OrdersContent() {
       // Fallback: created_at descending
       return b.created_at.localeCompare(a.created_at)
     })
-  }, [search, statusFilter, paymentFilter, clientFilter, vendorFilter, dateFilter, customFromDate, customToDate])
+  }, [search, statusFilter, paymentFilter, clientFilter, vendorFilter, invoiceFilter, dateFilter, customFromDate, customToDate])
 
   const clearFilters = () => {
     setSearch('')
@@ -135,12 +140,13 @@ export function OrdersContent() {
     setPaymentFilter('all')
     setClientFilter('all')
     setVendorFilter('all')
+    setInvoiceFilter('all')
     setDateFilter('month')
     setCustomFromDate('')
     setCustomToDate('')
   }
 
-  const hasFilters = search || statusFilter !== 'all' || paymentFilter !== 'all' || clientFilter !== 'all' || vendorFilter !== 'all' || dateFilter !== 'month'
+  const hasFilters = search || statusFilter !== 'all' || paymentFilter !== 'all' || clientFilter !== 'all' || vendorFilter !== 'all' || invoiceFilter !== 'all' || dateFilter !== 'month'
 
   // Calculate totals for filtered orders
   const totals = useMemo(() => {
@@ -249,6 +255,18 @@ export function OrdersContent() {
                   })}
                 </SelectContent>
               </Select>
+
+              {/* Invoice filter */}
+              <Select value={invoiceFilter} onValueChange={(v) => setInvoiceFilter(v as any)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Factura" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  <SelectItem value="with">Con factura</SelectItem>
+                  <SelectItem value="without">Sin factura</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Date range filters */}
@@ -342,8 +360,12 @@ export function OrdersContent() {
                       <TableCell className="text-right font-bold">
                         {formatCurrency(order.total)}
                       </TableCell>
-                      <TableCell className="text-center">
-                        {order.has_invoice ? '✓' : '-'}
+                      <TableCell className="text-center font-medium">
+                        {order.has_invoice ? (
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-100 text-green-700">✓</span>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <StatusBadge status={order.status} type="order" size="sm" showDot />
