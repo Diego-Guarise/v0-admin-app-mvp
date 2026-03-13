@@ -396,7 +396,13 @@ export function OrderForm({ order, preSelectedClientId }: OrderFormProps) {
                     id="orderDate"
                     type="date"
                     value={orderDate}
-                    onChange={(e) => setOrderDate(e.target.value)}
+                    onChange={(e) => {
+                      // Validate date format to prevent invalid years
+                      const value = e.target.value
+                      if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                        setOrderDate(value)
+                      }
+                    }}
                     required
                   />
                 </div>
@@ -406,7 +412,13 @@ export function OrderForm({ order, preSelectedClientId }: OrderFormProps) {
                     id="promisedDate"
                     type="date"
                     value={promisedDate}
-                    onChange={(e) => setPromisedDate(e.target.value)}
+                    onChange={(e) => {
+                      // Validate date format to prevent invalid years
+                      const value = e.target.value
+                      if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                        setPromisedDate(value)
+                      }
+                    }}
                     required
                   />
                 </div>

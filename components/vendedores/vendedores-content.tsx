@@ -22,7 +22,8 @@ export function VendedoresContent() {
   // Calculate stats for each vendor
   const vendorStats = useMemo(() => {
     return vendors.map(vendor => {
-      const vendorOrders = orders.filter(o => o.vendor_id === vendor.id)
+      // Exclude cancelled orders from all counts
+      const vendorOrders = orders.filter(o => o.vendor_id === vendor.id && o.status !== 'anulado')
       const cobradosOrders = vendorOrders.filter(o => o.payment_status === 'cobrado')
       const pendingLiquidationOrders = cobradosOrders.filter(o => o.commission_status === 'pendiente_liquidar')
       const liquidatedOrders = cobradosOrders.filter(o => o.commission_status === 'liquidado')

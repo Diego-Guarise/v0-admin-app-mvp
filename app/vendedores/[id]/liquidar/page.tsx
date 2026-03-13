@@ -193,7 +193,7 @@ export default function LiquidarPage({ params }: LiquidarPageProps) {
                           <TableHead className="w-12">
                             <Checkbox
                               checked={selectedOrderIds.size === pendingOrders.length}
-                              onChange={handleSelectAll}
+                              onCheckedChange={handleSelectAll}
                             />
                           </TableHead>
                           <TableHead>Pedido</TableHead>
@@ -212,7 +212,7 @@ export default function LiquidarPage({ params }: LiquidarPageProps) {
                               <TableCell>
                                 <Checkbox
                                   checked={selectedOrderIds.has(order.id)}
-                                  onChange={() => handleToggleOrder(order.id)}
+                                  onCheckedChange={() => handleToggleOrder(order.id)}
                                 />
                               </TableCell>
                               <TableCell className="font-medium">#{order.order_number}</TableCell>

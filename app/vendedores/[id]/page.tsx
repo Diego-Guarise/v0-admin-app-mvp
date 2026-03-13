@@ -53,10 +53,10 @@ export default function VendorDetailPage({ params }: VendorDetailPageProps) {
     setVendor(foundVendor)
   }, [id, mounted, router])
 
-  // Get vendor's orders
+  // Get vendor's orders (excluding cancelled)
   const orders = useMemo(() => {
     if (!vendor) return []
-    return getAllOrders().filter(o => o.vendor_id === vendor.id)
+    return getAllOrders().filter(o => o.vendor_id === vendor.id && o.status !== 'anulado')
   }, [vendor])
 
   // Separate orders
