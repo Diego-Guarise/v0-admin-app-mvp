@@ -1553,6 +1553,10 @@ export function getClientOrders(clientId: string) {
 
 /**
  * Get client stats from the shared order store (including newly created orders)
+ * EXCLUDES cancelled orders from stats calculations
+ * - Cancelled orders do NOT count in totalOrders
+ * - Cancelled orders do NOT count in kilos (enduidoKg, masillaKg)  
+ * - Cancelled orders do NOT count in totalPurchased
  * This should be used instead of getClientStats() to include orders from localStorage
  */
 export function getClientStatsFromStore(clientId: string, allOrders: Order[]) {
@@ -1567,6 +1571,8 @@ export function getClientStatsFromStore(clientId: string, allOrders: Order[]) {
 
 /**
  * Get client orders from the shared order store (including newly created orders)
+ * INCLUDES cancelled orders - they remain consultable in history
+ * Cancelled orders show with status='anulado' but are NOT deleted
  * This should be used instead of getClientOrders() to include orders from localStorage
  */
 export function getClientOrdersFromStore(clientId: string, allOrders: Order[]): Order[] {

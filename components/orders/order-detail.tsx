@@ -1,5 +1,3 @@
-'use client'
-
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { PageHeader } from '@/components/page-header'
@@ -45,6 +43,7 @@ import {
 } from 'lucide-react'
 import { formatCurrency, formatDate, formatWeight } from '@/lib/mock-data'
 import { PRICE_CATEGORY_LABELS } from '@/lib/types'
+import { saveOrder } from '@/lib/order-store'
 import type { Order } from '@/lib/types'
 
 interface OrderDetailProps {
@@ -55,8 +54,17 @@ export function OrderDetail({ order }: OrderDetailProps) {
   const router = useRouter()
 
   const handleCancel = () => {
-    // In real app, this would call an API to cancel the order
-    console.log('[v0] Canceling order:', order.id)
+    // Update the order status to 'anulado' and persist to shared store
+    const cancelledOrder: Order = {
+      ...order,
+      status: 'anulado',
+      updated_at: new Date().toISOString(),
+    }
+    
+    saveOrder(cancelledOrder)
+    console.log('[v0] Order cancelled and persisted:', cancelledOrder.id)
+    
+    // Redirect back to orders list
     router.push('/pedidos')
   }
 
