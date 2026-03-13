@@ -16,9 +16,9 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { StatusBadge } from '@/components/status-badge'
-import { ArrowLeft, Edit, Briefcase, Mail, Phone } from 'lucide-react'
+import { ArrowLeft, Edit, Briefcase, Mail, Phone, Check } from 'lucide-react'
 import { getVendorById } from '@/lib/vendor-store'
-import { getAllOrders } from '@/lib/order-store'
+import { getAllOrders, saveOrder } from '@/lib/order-store'
 import { formatCurrency, formatDate } from '@/lib/mock-data'
 import type { Vendor } from '@/lib/types'
 
@@ -31,6 +31,7 @@ export default function VendorDetailPage({ params }: VendorDetailPageProps) {
   const [vendor, setVendor] = useState<Vendor | null>(null)
   const [id, setId] = useState<string>('')
   const [mounted, setMounted] = useState(false)
+  const [markingPaid, setMarkingPaid] = useState<string | null>(null)
 
   // Unwrap params
   useEffect(() => {
@@ -71,6 +72,33 @@ export default function VendorDetailPage({ params }: VendorDetailPageProps) {
   const liquidatedOrders = useMemo(() => {
     return orders.filter(o => o.payment_status === 'cobrado' && o.commission_status === 'liquidado')
   }, [orders])
+
+  // Quick action: mark order as paid
+  const handleMarkAsPaid = async (orderId: string) => {
+    setMarkingPaid(orderId)
+    try {
+      const order = getAllOrders().find(o => o.id === orderId)
+      if (!order) return
+
+      // Update order: set payment_status to 'cobrado' and set commission_status to 'pendiente_liquidar'
+      const updatedOrder = {
+        ...order,
+        payment_status: 'cobrado' as const,
+        commission_status: order.commission_status === 'liquidado' || order.commission_status === 'excluido' 
+          ? order.commission_status 
+          : 'pendiente_liquidar' as const,
+        updated_at: new Date().toISOString(),
+      }
+
+      // Save to order-store
+      saveOrder(updatedOrder)
+      console.log('[v0] Order marked as paid:', orderId)
+    } catch (error) {
+      console.error('[v0] Error marking order as paid:', error)
+    } finally {
+      setMarkingPaid(null)
+    }
+  }
 
   if (!mounted || !vendor) {
     return (
@@ -167,17 +195,34 @@ export default function VendorDetailPage({ params }: VendorDetailPageProps) {
               ) : (
                 <div className="space-y-2">
                   {pendingPaymentOrders.map(order => (
-                    <Link key={order.id} href={`/pedidos/${order.id}`}>
-                      <div className="p-3 border rounded-lg hover:bg-accent transition-colors text-sm">
-                        <div className="flex justify-between items-start">
+                    <div key={order.id} className="p-3 border rounded-lg hover:bg-accent/50 transition-colors">
+                      <Link href={`/pedidos/${order.id}`}>
+                        <div className="flex justify-between items-start cursor-pointer">
                           <div>
                             <p className="font-medium">Pedido #{order.order_number}</p>
                             <p className="text-xs text-muted-foreground">{formatDate(order.order_date)}</p>
                           </div>
                           <p className="font-semibold">{formatCurrency(order.total)}</p>
                         </div>
+                      </Link>
+                      <div className="mt-2 flex gap-2">
+                        <Link href={`/pedidos/${order.id}`} className="flex-1">
+                          <Button variant="outline" size="sm" className="w-full">
+                            Ver pedido
+                          </Button>
+                        </Link>
+                        <Button 
+                          size="sm" 
+                          variant="default"
+                          onClick={() => handleMarkAsPaid(order.id)}
+                          disabled={markingPaid === order.id}
+                          className="gap-1"
+                        >
+                          <Check className="h-4 w-4" />
+                          {markingPaid === order.id ? 'Guardando...' : 'Marcar cobrado'}
+                        </Button>
                       </div>
-                    </Link>
+                    </div>
                   ))}
                 </div>
               )}
@@ -202,17 +247,29 @@ export default function VendorDetailPage({ params }: VendorDetailPageProps) {
                 <>
                   <div className="space-y-2 mb-4">
                     {pendingLiquidationOrders.map(order => (
-                      <Link key={order.id} href={`/pedidos/${order.id}`}>
-                        <div className="p-3 border rounded-lg hover:bg-accent transition-colors text-sm">
-                          <div className="flex justify-between items-start">
+                      <div key={order.id} className="p-3 border rounded-lg hover:bg-accent/50 transition-colors">
+                        <Link href={`/pedidos/${order.id}`}>
+                          <div className="flex justify-between items-start cursor-pointer mb-2">
                             <div>
                               <p className="font-medium">Pedido #{order.order_number}</p>
                               <p className="text-xs text-muted-foreground">{formatDate(order.order_date)}</p>
                             </div>
                             <p className="font-semibold">{formatCurrency(order.subtotal_without_iva || order.subtotal)}</p>
                           </div>
+                        </Link>
+                        <div className="flex gap-2">
+                          <Link href={`/pedidos/${order.id}`} className="flex-1">
+                            <Button variant="outline" size="sm" className="w-full">
+                              Ver pedido
+                            </Button>
+                          </Link>
+                          <Link href={`/pedidos/${order.id}/editar`} className="flex-1">
+                            <Button variant="outline" size="sm" className="w-full">
+                              Editar
+                            </Button>
+                          </Link>
                         </div>
-                      </Link>
+                      </div>
                     ))}
                   </div>
                   <Link href={`/vendedores/${vendor.id}/liquidar`}>
