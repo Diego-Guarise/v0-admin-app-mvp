@@ -31,6 +31,7 @@ import {
 import { ArrowLeft, Plus, Trash2, Save, AlertTriangle, UserPlus, Package, Scale, Lock, ExternalLink } from 'lucide-react'
 import { PRODUCTS, PRESENTATIONS, ORDERS, formatCurrency, formatWeight } from '@/lib/mock-data'
 import { getAllClients } from '@/lib/client-store'
+import { getAllVendors } from '@/lib/vendor-store'
 import { PRICE_CATEGORY_LABELS, ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS, COMMISSION_STATUS_LABELS } from '@/lib/types'
 import { lookupUnitPrice, isPotesAlwaysBranded, getPriceDetailsFromStore } from '@/lib/pricing'
 import { getAllPrices } from '@/lib/price-store'
@@ -60,7 +61,7 @@ export function OrderForm({ order, preSelectedClientId }: OrderFormProps) {
   const [orderDate, setOrderDate] = useState(order?.order_date || new Date().toISOString().split('T')[0])
   const [promisedDate, setPromisedDate] = useState(order?.promised_date || '')
   const [clientId, setClientId] = useState(order?.client_id || preSelectedClientId || '')
-  const [vendorName, setVendorName] = useState(order?.vendor_name || '')
+  const [vendorId, setVendorId] = useState(order?.vendor_id || '')
   const [priceCategory, setPriceCategory] = useState<PriceCategory>(order?.price_category || 'barraca')
   const [notes, setNotes] = useState(order?.notes || '')
   const [manualPrice, setManualPrice] = useState(order?.manual_price || false)
@@ -86,6 +87,15 @@ export function OrderForm({ order, preSelectedClientId }: OrderFormProps) {
 
   // Active clients only
   const activeClients = useMemo(() => getAllClients().filter(c => c.active), [])
+
+  // Active vendors only
+  const activeVendors = useMemo(() => getAllVendors().filter(v => v.active), [])
+
+  // Get selected vendor for display
+  const selectedVendor = useMemo(() => 
+    getAllVendors().find(v => v.id === vendorId),
+    [vendorId]
+  )
 
   // Selected client
   const selectedClient = useMemo(() => 
@@ -262,7 +272,8 @@ export function OrderForm({ order, preSelectedClientId }: OrderFormProps) {
       promised_date: promisedDate,
       client_id: clientId,
       client: selectedClient || { id: clientId, active: false, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }, // Include client object or fallback
-      vendor_name: vendorName || '',
+      vendor_id: vendorId,
+      vendor_name: selectedVendor?.name || '',
       price_category: priceCategory,
       notes,
       manual_price: manualPrice,
@@ -401,12 +412,19 @@ export function OrderForm({ order, preSelectedClientId }: OrderFormProps) {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="vendor">Vendedor</Label>
-                  <Input
-                    id="vendor"
-                    value={vendorName}
-                    onChange={(e) => setVendorName(e.target.value)}
-                    placeholder="Nombre del vendedor"
-                  />
+                  <Select value={vendorId} onValueChange={setVendorId}>
+                    <SelectTrigger id="vendor">
+                      <SelectValue placeholder="Seleccionar vendedor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Sin vendedor</SelectItem>
+                      {activeVendors.map((vendor) => (
+                        <SelectItem key={vendor.id} value={vendor.id}>
+                          {vendor.name} ({vendor.commission_percentage}%)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="priceCategory">Categoría de precio *</Label>

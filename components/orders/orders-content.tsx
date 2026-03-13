@@ -8,6 +8,7 @@ import { StatusBadge } from '@/components/status-badge'
 import { EmptyState } from '@/components/empty-state'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Calendar } from 'lucide-react'
 import { 
   Select, 
   SelectContent, 
@@ -28,6 +29,7 @@ import { Plus, Search, ShoppingCart, Eye, Edit, X, Package, Scale } from 'lucide
 import { formatCurrency, formatDate, formatWeight } from '@/lib/mock-data'
 import { getAllOrders } from '@/lib/order-store'
 import { getAllClients } from '@/lib/client-store'
+import { getAllVendors } from '@/lib/vendor-store'
 import type { OrderStatus, PaymentStatus } from '@/lib/types'
 import { ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '@/lib/types'
 
@@ -41,18 +43,51 @@ export function OrdersContent() {
   const [paymentFilter, setPaymentFilter] = useState<PaymentStatus | 'all'>(initialPayment || 'all')
   const [clientFilter, setClientFilter] = useState<string>('all')
   const [vendorFilter, setVendorFilter] = useState<string>('all')
+  const [dateFilter, setDateFilter] = useState<'today' | 'week' | 'month' | 'last-month' | 'custom'>('month')
+  const [customFromDate, setCustomFromDate] = useState('')
+  const [customToDate, setCustomToDate] = useState('')
 
-  // Get unique vendors from orders
-  const vendors = useMemo(() => {
-    const vendorSet = new Set<string>()
+  // Helper to get date range based on filter
+  const getDateRange = () => {
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    
+    switch (dateFilter) {
+      case 'today':
+        return { from: today.toISOString().split('T')[0], to: today.toISOString().split('T')[0] }
+      case 'week': {
+        const weekStart = new Date(today)
+        weekStart.setDate(today.getDate() - today.getDay())
+        return { from: weekStart.toISOString().split('T')[0], to: today.toISOString().split('T')[0] }
+      }
+      case 'month': {
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+        return { from: monthStart.toISOString().split('T')[0], to: today.toISOString().split('T')[0] }
+      }
+      case 'last-month': {
+        const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0)
+        const lastMonthStart = new Date(lastMonthEnd.getFullYear(), lastMonthEnd.getMonth(), 1)
+        return { from: lastMonthStart.toISOString().split('T')[0], to: lastMonthEnd.toISOString().split('T')[0] }
+      }
+      case 'custom':
+        return { from: customFromDate, to: customToDate }
+      default:
+        return { from: '', to: '' }
+    }
+  }
+
+  // Get unique vendors from orders for filter display
+  const orderVendorIds = useMemo(() => {
+    const vendorIdSet = new Set<string>()
     getAllOrders().forEach(order => {
-      if (order.vendor_name) vendorSet.add(order.vendor_name)
+      if (order.vendor_id) vendorIdSet.add(order.vendor_id)
     })
-    return Array.from(vendorSet)
+    return Array.from(vendorIdSet)
   }, [])
 
   // Filter orders
   const filteredOrders = useMemo(() => {
+    const dateRange = getDateRange()
     return getAllOrders().filter(order => {
       // Search filter
       if (search) {
@@ -75,11 +110,24 @@ export function OrdersContent() {
       if (clientFilter !== 'all' && order.client_id !== clientFilter) return false
 
       // Vendor filter
-      if (vendorFilter !== 'all' && order.vendor_name !== vendorFilter) return false
+      if (vendorFilter !== 'all' && order.vendor_id !== vendorFilter) return false
+
+      // Date range filter
+      if (dateRange.from && dateRange.to) {
+        const orderDate = order.order_date
+        if (orderDate < dateRange.from || orderDate > dateRange.to) return false
+      }
 
       return true
-    }).sort((a, b) => b.order_date.localeCompare(a.order_date))
-  }, [search, statusFilter, paymentFilter, clientFilter, vendorFilter])
+    }).sort((a, b) => {
+      // Primary sort: order_number descending (newest first)
+      if (b.order_number !== a.order_number) {
+        return b.order_number - a.order_number
+      }
+      // Fallback: created_at descending
+      return b.created_at.localeCompare(a.created_at)
+    })
+  }, [search, statusFilter, paymentFilter, clientFilter, vendorFilter, dateFilter, customFromDate, customToDate])
 
   const clearFilters = () => {
     setSearch('')
@@ -87,9 +135,12 @@ export function OrdersContent() {
     setPaymentFilter('all')
     setClientFilter('all')
     setVendorFilter('all')
+    setDateFilter('month')
+    setCustomFromDate('')
+    setCustomToDate('')
   }
 
-  const hasFilters = search || statusFilter !== 'all' || paymentFilter !== 'all' || clientFilter !== 'all' || vendorFilter !== 'all'
+  const hasFilters = search || statusFilter !== 'all' || paymentFilter !== 'all' || clientFilter !== 'all' || vendorFilter !== 'all' || dateFilter !== 'month'
 
   // Calculate totals for filtered orders
   const totals = useMemo(() => {
@@ -190,12 +241,54 @@ export function OrdersContent() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos los vendedores</SelectItem>
-                  {vendors.map((vendor) => (
-                    <SelectItem key={vendor} value={vendor}>{vendor}</SelectItem>
-                  ))}
+                  {orderVendorIds.map((vendorId) => {
+                    const vendor = getAllVendors().find(v => v.id === vendorId)
+                    return vendor ? (
+                      <SelectItem key={vendorId} value={vendorId}>{vendor.name}</SelectItem>
+                    ) : null
+                  })}
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Date range filters */}
+            <div className="flex flex-wrap items-center gap-2 pt-3 border-t">
+              <span className="text-sm text-muted-foreground flex items-center gap-1">
+                <Calendar className="h-4 w-4" />
+                Rango de fechas:
+              </span>
+              <Select value={dateFilter} onValueChange={(v) => setDateFilter(v as any)}>
+                <SelectTrigger className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="today">Hoy</SelectItem>
+                  <SelectItem value="week">Esta semana</SelectItem>
+                  <SelectItem value="month">Este mes (actual)</SelectItem>
+                  <SelectItem value="last-month">Mes anterior</SelectItem>
+                  <SelectItem value="custom">Personalizado</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {dateFilter === 'custom' && (
+                <>
+                  <Input
+                    type="date"
+                    value={customFromDate}
+                    onChange={(e) => setCustomFromDate(e.target.value)}
+                    placeholder="Desde"
+                    className="w-32"
+                  />
+                  <span className="text-sm text-muted-foreground">a</span>
+                  <Input
+                    type="date"
+                    value={customToDate}
+                    onChange={(e) => setCustomToDate(e.target.value)}
+                    placeholder="Hasta"
+                    className="w-32"
+                  />
+                </>
+              )}
           </div>
         </CardContent>
       </Card>
