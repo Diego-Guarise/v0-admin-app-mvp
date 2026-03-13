@@ -303,6 +303,7 @@ export interface Order {
   payment_status: PaymentStatus
   commission_status: CommissionStatus
   manual_price: boolean
+  has_invoice: boolean
   created_at: string
   updated_at: string
 }

@@ -80,6 +80,7 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
   const [status, setStatus] = useState<OrderStatus>(order?.status || 'en_produccion')
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>(order?.payment_status || 'pendiente')
   const [commissionStatus, setCommissionStatus] = useState<CommissionStatus>(order?.commission_status || 'pendiente_liquidar')
+  const [hasInvoice, setHasInvoice] = useState(order?.has_invoice !== undefined ? order.has_invoice : true)
 
   // Items state
   const [items, setItems] = useState<OrderItemForm[]>(
@@ -261,11 +262,12 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
       }
     })
 
-    const iva = subtotal * 0.22
+    // IVA is only calculated if has_invoice is true
+    const iva = hasInvoice ? subtotal * 0.22 : 0
     const total = subtotal + iva
 
     return { subtotal, iva, total, enduidoKg, masillaKg }
-  }, [items])
+  }, [items, hasInvoice])
 
   // Handle submit
   const handleSubmit = (e: React.FormEvent) => {
@@ -312,6 +314,7 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
       total: calculations.total,
       enduido_kg: calculations.enduidoKg,
       masilla_kg: calculations.masillaKg,
+      has_invoice: hasInvoice,
       created_at: isEditing ? order!.created_at : new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }
@@ -483,6 +486,27 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Invoice Toggle */}
+              <div className="rounded-xl p-4 border-2 bg-muted/30 border-transparent">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="hasInvoice" className="text-sm font-semibold cursor-pointer">
+                      Con factura
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      {hasInvoice ? 'IVA 22% incluido' : 'Sin IVA (sin factura)'}
+                    </p>
+                  </div>
+                  <Checkbox
+                    id="hasInvoice"
+                    checked={hasInvoice}
+                    onCheckedChange={(checked) => setHasInvoice(checked === true)}
+                  />
                 </div>
               </div>
 

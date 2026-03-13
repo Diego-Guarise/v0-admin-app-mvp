@@ -308,6 +308,7 @@ export function OrdersContent() {
                     <TableHead>Vendedor</TableHead>
                     <TableHead className="text-right">Subtotal</TableHead>
                     <TableHead className="text-right">Total</TableHead>
+                    <TableHead className="text-center">Fac</TableHead>
                     <TableHead>Pedido</TableHead>
                     <TableHead>Cobro</TableHead>
                     <TableHead className="w-24">Acciones</TableHead>
@@ -340,6 +341,9 @@ export function OrdersContent() {
                       </TableCell>
                       <TableCell className="text-right font-bold">
                         {formatCurrency(order.total)}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {order.has_invoice ? '✓' : '-'}
                       </TableCell>
                       <TableCell>
                         <StatusBadge status={order.status} type="order" size="sm" showDot />

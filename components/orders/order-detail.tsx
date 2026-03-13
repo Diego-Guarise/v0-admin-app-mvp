@@ -356,6 +356,10 @@ export function OrderDetail({ order, navigationContext }: OrderDetailProps) {
                   <p className="text-sm font-medium">{order.vendor_name}</p>
                 </div>
               )}
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Factura</p>
+                <p className="text-sm font-medium">{order.has_invoice ? 'Sí (con IVA 22%)' : 'No (sin IVA)'}</p>
+              </div>
               {order.manual_price && (
                 <div className="flex items-center gap-2 text-sm font-medium text-amber-700 bg-amber-50 rounded-lg p-3 border border-amber-200">
                   <AlertTriangle className="h-4 w-4" />
@@ -374,8 +378,13 @@ export function OrderDetail({ order, navigationContext }: OrderDetailProps) {
                   {formatCurrency(order.total)}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Sin IVA: {formatCurrency(order.subtotal)}
+                  Subtotal: {formatCurrency(order.subtotal)}
                 </p>
+                {order.has_invoice && (
+                  <p className="text-xs text-muted-foreground">
+                    IVA 22%: {formatCurrency(order.iva)}
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
