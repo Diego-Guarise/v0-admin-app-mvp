@@ -37,6 +37,7 @@ import type { Order, PriceCategory, OrderStatus, PaymentStatus, CommissionStatus
 
 interface OrderFormProps {
   order?: Order
+  preSelectedClientId?: string
 }
 
 interface OrderItemForm {
@@ -49,14 +50,14 @@ interface OrderItemForm {
   manual_price: boolean
 }
 
-export function OrderForm({ order }: OrderFormProps) {
+export function OrderForm({ order, preSelectedClientId }: OrderFormProps) {
   const router = useRouter()
   const isEditing = !!order
 
   // Form state
   const [orderDate, setOrderDate] = useState(order?.order_date || new Date().toISOString().split('T')[0])
   const [promisedDate, setPromisedDate] = useState(order?.promised_date || '')
-  const [clientId, setClientId] = useState(order?.client_id || '')
+  const [clientId, setClientId] = useState(order?.client_id || preSelectedClientId || '')
   const [vendorName, setVendorName] = useState(order?.vendor_name || '')
   const [priceCategory, setPriceCategory] = useState<PriceCategory>(order?.price_category || 'barraca')
   const [notes, setNotes] = useState(order?.notes || '')
