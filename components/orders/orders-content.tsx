@@ -25,7 +25,8 @@ import {
 } from '@/components/ui/table'
 import { Card, CardContent } from '@/components/ui/card'
 import { Plus, Search, ShoppingCart, Eye, Edit, X, Package, Scale } from 'lucide-react'
-import { ORDERS, CLIENTS, formatCurrency, formatDate, formatWeight } from '@/lib/mock-data'
+import { CLIENTS, formatCurrency, formatDate, formatWeight } from '@/lib/mock-data'
+import { getAllOrders } from '@/lib/order-store'
 import type { OrderStatus, PaymentStatus } from '@/lib/types'
 import { ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '@/lib/types'
 
@@ -43,7 +44,7 @@ export function OrdersContent() {
   // Get unique vendors from orders
   const vendors = useMemo(() => {
     const vendorSet = new Set<string>()
-    ORDERS.forEach(order => {
+    getAllOrders().forEach(order => {
       if (order.vendor_name) vendorSet.add(order.vendor_name)
     })
     return Array.from(vendorSet)
@@ -51,7 +52,7 @@ export function OrdersContent() {
 
   // Filter orders
   const filteredOrders = useMemo(() => {
-    return ORDERS.filter(order => {
+    return getAllOrders().filter(order => {
       // Search filter
       if (search) {
         const searchLower = search.toLowerCase()

@@ -28,10 +28,11 @@ import {
   TableRow,
   TableFooter,
 } from '@/components/ui/table'
-import { ArrowLeft, Plus, Trash2, Save, AlertTriangle, UserPlus, Package, Scale, Lock } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Save, AlertTriangle, UserPlus, Package, Scale, Lock, ExternalLink } from 'lucide-react'
 import { CLIENTS, PRODUCTS, PRESENTATIONS, ORDERS, formatCurrency, formatWeight } from '@/lib/mock-data'
 import { PRICE_CATEGORY_LABELS, ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS, COMMISSION_STATUS_LABELS } from '@/lib/types'
 import { lookupUnitPrice, isPotesAlwaysBranded } from '@/lib/pricing'
+import { saveOrder, getOrderById } from '@/lib/order-store'
 import type { Order, PriceCategory, OrderStatus, PaymentStatus, CommissionStatus } from '@/lib/types'
 
 interface OrderFormProps {
@@ -238,17 +239,8 @@ export function OrderForm({ order }: OrderFormProps) {
       updated_at: new Date().toISOString(),
     }
 
-    // Persist to mock data (in a real app, this would be an API call)
-    if (isEditing) {
-      // Update existing order in mock-data
-      const index = ORDERS.findIndex(o => o.id === order!.id)
-      if (index !== -1) {
-        ORDERS[index] = newOrder
-      }
-    } else {
-      // Add new order to mock-data
-      ORDERS.push(newOrder)
-    }
+    // Persist to order store (in a real app, this would be an API call)
+    saveOrder(newOrder as Order)
 
     console.log('[v0] Order saved:', newOrder)
     router.push('/pedidos')
@@ -467,12 +459,30 @@ export function OrderForm({ order }: OrderFormProps) {
                               <Select 
                                 value={item.product_id} 
                                 onValueChange={(v) => {
-                                  // When product changes, select first valid presentation
+                                  // When product changes, batch both updates together
                                   const firstPres = getValidPresentations(v)[0]
-                                  updateItem(item.id, 'product_id', v)
-                                  if (firstPres) {
-                                    updateItem(item.id, 'presentation_id', firstPres.id)
-                                  }
+                                  setItems(prevItems => prevItems.map(prevItem => {
+                                    if (prevItem.id !== item.id) return prevItem
+                                    
+                                    const updatedItem = { ...prevItem, product_id: v }
+                                    
+                                    // Also update presentation to first valid one
+                                    if (firstPres) {
+                                      updatedItem.presentation_id = firstPres.id
+                                      // Auto-fill price for new presentation
+                                      if (!manualPrice) {
+                                        updatedItem.unit_price = lookupUnitPrice(
+                                          v,
+                                          firstPres.type,
+                                          firstPres.weight_kg,
+                                          updatedItem.with_brand,
+                                          priceCategory
+                                        )
+                                      }
+                                    }
+                                    
+                                    return updatedItem
+                                  }))
                                 }}
                               >
                                 <SelectTrigger className="w-40">

@@ -1,7 +1,7 @@
 import { AdminLayout } from '@/components/admin-layout'
 import { OrderForm } from '@/components/orders/order-form'
 import { notFound } from 'next/navigation'
-import { ORDERS } from '@/lib/mock-data'
+import { getOrderById } from '@/lib/order-store'
 
 interface EditOrderPageProps {
   params: Promise<{ id: string }>
@@ -9,7 +9,7 @@ interface EditOrderPageProps {
 
 export default async function EditOrderPage({ params }: EditOrderPageProps) {
   const { id } = await params
-  const order = ORDERS.find(o => o.id === id)
+  const order = getOrderById(id)
 
   if (!order) {
     notFound()

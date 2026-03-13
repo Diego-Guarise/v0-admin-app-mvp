@@ -1,7 +1,7 @@
 import { AdminLayout } from '@/components/admin-layout'
 import { OrderDetail } from '@/components/orders/order-detail'
 import { notFound } from 'next/navigation'
-import { ORDERS } from '@/lib/mock-data'
+import { getOrderById } from '@/lib/order-store'
 
 interface OrderDetailPageProps {
   params: Promise<{ id: string }>
@@ -9,7 +9,7 @@ interface OrderDetailPageProps {
 
 export default async function OrderDetailPage({ params }: OrderDetailPageProps) {
   const { id } = await params
-  const order = ORDERS.find(o => o.id === id)
+  const order = getOrderById(id)
 
   if (!order) {
     notFound()
