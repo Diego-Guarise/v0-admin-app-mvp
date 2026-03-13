@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArrowLeft, Save, User, Phone, Mail, MapPin, Building, FileText } from 'lucide-react'
+import { saveClient } from '@/lib/client-store'
 import type { Client } from '@/lib/types'
 
 interface ClientFormProps {
@@ -34,17 +35,23 @@ export function ClientForm({ client }: ClientFormProps) {
   // Handle submit
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    // In a real app, this would save to the database
-    console.log('[v0] Client submitted:', {
-      name,
-      rut,
-      company,
-      phone,
-      email,
-      address,
-      notes,
+    
+    const newClient: Client = {
+      id: isEditing ? client!.id : `client-${Date.now()}`,
+      name: name || undefined,
+      rut: rut || undefined,
+      company: company || undefined,
+      phone: phone || undefined,
+      email: email || undefined,
+      address: address || undefined,
+      notes: notes || undefined,
       active,
-    })
+      created_at: isEditing ? client!.created_at : new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+    
+    saveClient(newClient)
+    console.log('[v0] Client saved:', { id: newClient.id, name: newClient.name })
     router.push('/clientes')
   }
 

@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Plus, Search, Users, Eye, Edit, Phone, Mail, Building, Package, Scale, ShoppingCart } from 'lucide-react'
-import { CLIENTS, getClientStats, formatCurrency, formatWeight } from '@/lib/mock-data'
+import { getAllClients, getClientStats, formatCurrency, formatWeight } from '@/lib/mock-data'
+import { getAllClients as getStoredClients } from '@/lib/client-store'
 
 export function ClientsContent() {
   const [search, setSearch] = useState('')
@@ -17,7 +18,7 @@ export function ClientsContent() {
 
   // Filter clients
   const filteredClients = useMemo(() => {
-    return CLIENTS.filter(client => {
+    return getStoredClients().filter(client => {
       // Active filter
       if (!showInactive && !client.active) return false
 
@@ -37,7 +38,7 @@ export function ClientsContent() {
   }, [search, showInactive])
 
   // Count inactive
-  const inactiveCount = CLIENTS.filter(c => !c.active).length
+  const inactiveCount = getStoredClients().filter(c => !c.active).length
 
   return (
     <div className="px-4 lg:px-6 py-6 space-y-6">
