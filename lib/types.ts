@@ -8,7 +8,7 @@ export type OrderStatus = 'en_produccion' | 'finalizado' | 'entregado' | 'anulad
 export type PaymentStatus = 'pendiente' | 'parcial' | 'cobrado'
 export type CommissionStatus = 'pendiente_liquidar' | 'liquidado' | 'excluido'
 export type ClientStatus = 'activo' | 'inactivo'
-export type PriceCategory = 'barraca' | 'barraca_marca' | 'distribuidor' | 'distribuidor_marca' | 'oferta' | 'consumidor_final'
+export type PriceCategory = 'barraca' | 'distribuidor' | 'oferta' | 'consumidor_final'
 export type ProductType = 'enduido' | 'masilla'
 export type PresentationType = 'bolsa' | 'pote'
 export type UnitOfMeasure = 'kg' | 'g' | 'l' | 'ml' | 'unidad'
@@ -22,9 +22,7 @@ export type PaymentMethod = 'efectivo' | 'transferencia' | 'cheque' | 'credito'
 // Price category labels for UI
 export const PRICE_CATEGORY_LABELS: Record<PriceCategory, string> = {
   barraca: 'Barraca',
-  barraca_marca: 'Barraca con marca',
   distribuidor: 'Distribuidor',
-  distribuidor_marca: 'Distribuidor con marca',
   oferta: 'Oferta',
   consumidor_final: 'Consumidor final',
 }
@@ -240,7 +238,7 @@ export interface Order {
   order_date: string
   promised_date: string
   client_id: string
-  client: Client
+  client?: Client
   vendor_id?: string
   vendor_name?: string
   price_category: PriceCategory
@@ -249,8 +247,13 @@ export interface Order {
   subtotal: number
   iva: number
   total: number
+  subtotal_without_iva?: number
+  iva_amount?: number
+  total_with_iva?: number
   enduido_kg: number
   masilla_kg: number
+  endudio_kg?: number  // Alternative spelling
+  masilla_kg?: number
   status: OrderStatus
   payment_status: PaymentStatus
   commission_status: CommissionStatus

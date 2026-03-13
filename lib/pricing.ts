@@ -1,130 +1,94 @@
-// Pricing system for FOX orders
-// Maps product + presentation + brand + price_category to unit prices
+// Pricing system for FOX orders - SIMPLIFIED
+// Maps product + presentation + category (without marca) to base prices
+// Brand markup is handled by the marca toggle on each order item
 
-import type { Product, Presentation, PriceCategory } from './types'
+import type { PriceCategory } from './types'
 
 export interface PricingEntry {
   productId: string
   presentationType: 'bolsa' | 'pote'
   weight: number
-  withBrand: boolean
   category: PriceCategory
-  unitPrice: number
+  priceWithoutBrand: number
+  priceWithBrand: number  // Price when marca=true
 }
 
-// Pricing table - seeded with realistic values
-// Structure: Each product/presentation combination has prices for each category
+// Simplified pricing table
+// Now: each entry has both branded and non-branded prices
+// Potes don't have non-branded entries (always branded)
 export const PRICING_TABLE: PricingEntry[] = [
   // ===== ENDUIDO INTERIOR - BOLSAS =====
-  // 1 kg
-  { productId: 'prod-1', presentationType: 'bolsa', weight: 1, withBrand: false, category: 'barraca', unitPrice: 25 },
-  { productId: 'prod-1', presentationType: 'bolsa', weight: 1, withBrand: true, category: 'barraca_marca', unitPrice: 30 },
-  { productId: 'prod-1', presentationType: 'bolsa', weight: 1, withBrand: false, category: 'distribuidor', unitPrice: 22 },
-  { productId: 'prod-1', presentationType: 'bolsa', weight: 1, withBrand: true, category: 'distribuidor_marca', unitPrice: 28 },
-  { productId: 'prod-1', presentationType: 'bolsa', weight: 1, withBrand: false, category: 'oferta', unitPrice: 20 },
-  { productId: 'prod-1', presentationType: 'bolsa', weight: 1, withBrand: false, category: 'consumidor_final', unitPrice: 35 },
+  { productId: 'prod-1', presentationType: 'bolsa', weight: 1, category: 'barraca', priceWithoutBrand: 25, priceWithBrand: 30 },
+  { productId: 'prod-1', presentationType: 'bolsa', weight: 1, category: 'distribuidor', priceWithoutBrand: 22, priceWithBrand: 28 },
+  { productId: 'prod-1', presentationType: 'bolsa', weight: 1, category: 'oferta', priceWithoutBrand: 20, priceWithBrand: 25 },
+  { productId: 'prod-1', presentationType: 'bolsa', weight: 1, category: 'consumidor_final', priceWithoutBrand: 35, priceWithBrand: 40 },
   
-  // 2 kg
-  { productId: 'prod-1', presentationType: 'bolsa', weight: 2, withBrand: false, category: 'barraca', unitPrice: 45 },
-  { productId: 'prod-1', presentationType: 'bolsa', weight: 2, withBrand: true, category: 'barraca_marca', unitPrice: 52 },
-  { productId: 'prod-1', presentationType: 'bolsa', weight: 2, withBrand: false, category: 'distribuidor', unitPrice: 40 },
-  { productId: 'prod-1', presentationType: 'bolsa', weight: 2, withBrand: true, category: 'distribuidor_marca', unitPrice: 48 },
-  { productId: 'prod-1', presentationType: 'bolsa', weight: 2, withBrand: false, category: 'oferta', unitPrice: 36 },
-  { productId: 'prod-1', presentationType: 'bolsa', weight: 2, withBrand: false, category: 'consumidor_final', unitPrice: 62 },
+  { productId: 'prod-1', presentationType: 'bolsa', weight: 2, category: 'barraca', priceWithoutBrand: 45, priceWithBrand: 52 },
+  { productId: 'prod-1', presentationType: 'bolsa', weight: 2, category: 'distribuidor', priceWithoutBrand: 40, priceWithBrand: 48 },
+  { productId: 'prod-1', presentationType: 'bolsa', weight: 2, category: 'oferta', priceWithoutBrand: 36, priceWithBrand: 43 },
+  { productId: 'prod-1', presentationType: 'bolsa', weight: 2, category: 'consumidor_final', priceWithoutBrand: 62, priceWithBrand: 72 },
   
-  // 5 kg
-  { productId: 'prod-1', presentationType: 'bolsa', weight: 5, withBrand: false, category: 'barraca', unitPrice: 85 },
-  { productId: 'prod-1', presentationType: 'bolsa', weight: 5, withBrand: true, category: 'barraca_marca', unitPrice: 98 },
-  { productId: 'prod-1', presentationType: 'bolsa', weight: 5, withBrand: false, category: 'distribuidor', unitPrice: 75 },
-  { productId: 'prod-1', presentationType: 'bolsa', weight: 5, withBrand: true, category: 'distribuidor_marca', unitPrice: 88 },
-  { productId: 'prod-1', presentationType: 'bolsa', weight: 5, withBrand: false, category: 'oferta', unitPrice: 68 },
-  { productId: 'prod-1', presentationType: 'bolsa', weight: 5, withBrand: false, category: 'consumidor_final', unitPrice: 115 },
+  { productId: 'prod-1', presentationType: 'bolsa', weight: 5, category: 'barraca', priceWithoutBrand: 85, priceWithBrand: 98 },
+  { productId: 'prod-1', presentationType: 'bolsa', weight: 5, category: 'distribuidor', priceWithoutBrand: 75, priceWithBrand: 88 },
+  { productId: 'prod-1', presentationType: 'bolsa', weight: 5, category: 'oferta', priceWithoutBrand: 68, priceWithBrand: 80 },
+  { productId: 'prod-1', presentationType: 'bolsa', weight: 5, category: 'consumidor_final', priceWithoutBrand: 115, priceWithBrand: 132 },
   
-  // 10 kg
-  { productId: 'prod-1', presentationType: 'bolsa', weight: 10, withBrand: false, category: 'barraca', unitPrice: 155 },
-  { productId: 'prod-1', presentationType: 'bolsa', weight: 10, withBrand: true, category: 'barraca_marca', unitPrice: 175 },
-  { productId: 'prod-1', presentationType: 'bolsa', weight: 10, withBrand: false, category: 'distribuidor', unitPrice: 138 },
-  { productId: 'prod-1', presentationType: 'bolsa', weight: 10, withBrand: true, category: 'distribuidor_marca', unitPrice: 158 },
-  { productId: 'prod-1', presentationType: 'bolsa', weight: 10, withBrand: false, category: 'oferta', unitPrice: 125 },
-  { productId: 'prod-1', presentationType: 'bolsa', weight: 10, withBrand: false, category: 'consumidor_final', unitPrice: 210 },
+  { productId: 'prod-1', presentationType: 'bolsa', weight: 10, category: 'barraca', priceWithoutBrand: 155, priceWithBrand: 175 },
+  { productId: 'prod-1', presentationType: 'bolsa', weight: 10, category: 'distribuidor', priceWithoutBrand: 138, priceWithBrand: 158 },
+  { productId: 'prod-1', presentationType: 'bolsa', weight: 10, category: 'oferta', priceWithoutBrand: 125, priceWithBrand: 145 },
+  { productId: 'prod-1', presentationType: 'bolsa', weight: 10, category: 'consumidor_final', priceWithoutBrand: 210, priceWithBrand: 240 },
   
-  // 20 kg
-  { productId: 'prod-1', presentationType: 'bolsa', weight: 20, withBrand: false, category: 'barraca', unitPrice: 290 },
-  { productId: 'prod-1', presentationType: 'bolsa', weight: 20, withBrand: true, category: 'barraca_marca', unitPrice: 330 },
-  { productId: 'prod-1', presentationType: 'bolsa', weight: 20, withBrand: false, category: 'distribuidor', unitPrice: 260 },
-  { productId: 'prod-1', presentationType: 'bolsa', weight: 20, withBrand: true, category: 'distribuidor_marca', unitPrice: 300 },
-  { productId: 'prod-1', presentationType: 'bolsa', weight: 20, withBrand: false, category: 'oferta', unitPrice: 235 },
-  { productId: 'prod-1', presentationType: 'bolsa', weight: 20, withBrand: false, category: 'consumidor_final', unitPrice: 395 },
+  { productId: 'prod-1', presentationType: 'bolsa', weight: 20, category: 'barraca', priceWithoutBrand: 290, priceWithBrand: 330 },
+  { productId: 'prod-1', presentationType: 'bolsa', weight: 20, category: 'distribuidor', priceWithoutBrand: 260, priceWithBrand: 300 },
+  { productId: 'prod-1', presentationType: 'bolsa', weight: 20, category: 'oferta', priceWithoutBrand: 235, priceWithBrand: 275 },
+  { productId: 'prod-1', presentationType: 'bolsa', weight: 20, category: 'consumidor_final', priceWithoutBrand: 395, priceWithBrand: 450 },
   
   // ===== MASILLA PARA YESO - BOLSAS =====
-  // 1 kg
-  { productId: 'prod-2', presentationType: 'bolsa', weight: 1, withBrand: false, category: 'barraca', unitPrice: 22 },
-  { productId: 'prod-2', presentationType: 'bolsa', weight: 1, withBrand: true, category: 'barraca_marca', unitPrice: 28 },
-  { productId: 'prod-2', presentationType: 'bolsa', weight: 1, withBrand: false, category: 'distribuidor', unitPrice: 20 },
-  { productId: 'prod-2', presentationType: 'bolsa', weight: 1, withBrand: true, category: 'distribuidor_marca', unitPrice: 26 },
-  { productId: 'prod-2', presentationType: 'bolsa', weight: 1, withBrand: false, category: 'oferta', unitPrice: 18 },
-  { productId: 'prod-2', presentationType: 'bolsa', weight: 1, withBrand: false, category: 'consumidor_final', unitPrice: 32 },
+  { productId: 'prod-2', presentationType: 'bolsa', weight: 1, category: 'barraca', priceWithoutBrand: 22, priceWithBrand: 28 },
+  { productId: 'prod-2', presentationType: 'bolsa', weight: 1, category: 'distribuidor', priceWithoutBrand: 20, priceWithBrand: 26 },
+  { productId: 'prod-2', presentationType: 'bolsa', weight: 1, category: 'oferta', priceWithoutBrand: 18, priceWithBrand: 23 },
+  { productId: 'prod-2', presentationType: 'bolsa', weight: 1, category: 'consumidor_final', priceWithoutBrand: 32, priceWithBrand: 38 },
   
-  // 2 kg
-  { productId: 'prod-2', presentationType: 'bolsa', weight: 2, withBrand: false, category: 'barraca', unitPrice: 40 },
-  { productId: 'prod-2', presentationType: 'bolsa', weight: 2, withBrand: true, category: 'barraca_marca', unitPrice: 48 },
-  { productId: 'prod-2', presentationType: 'bolsa', weight: 2, withBrand: false, category: 'distribuidor', unitPrice: 36 },
-  { productId: 'prod-2', presentationType: 'bolsa', weight: 2, withBrand: true, category: 'distribuidor_marca', unitPrice: 44 },
-  { productId: 'prod-2', presentationType: 'bolsa', weight: 2, withBrand: false, category: 'oferta', unitPrice: 32 },
-  { productId: 'prod-2', presentationType: 'bolsa', weight: 2, withBrand: false, category: 'consumidor_final', unitPrice: 56 },
+  { productId: 'prod-2', presentationType: 'bolsa', weight: 2, category: 'barraca', priceWithoutBrand: 40, priceWithBrand: 48 },
+  { productId: 'prod-2', presentationType: 'bolsa', weight: 2, category: 'distribuidor', priceWithoutBrand: 36, priceWithBrand: 44 },
+  { productId: 'prod-2', presentationType: 'bolsa', weight: 2, category: 'oferta', priceWithoutBrand: 32, priceWithBrand: 40 },
+  { productId: 'prod-2', presentationType: 'bolsa', weight: 2, category: 'consumidor_final', priceWithoutBrand: 56, priceWithBrand: 66 },
   
-  // 5 kg
-  { productId: 'prod-2', presentationType: 'bolsa', weight: 5, withBrand: false, category: 'barraca', unitPrice: 78 },
-  { productId: 'prod-2', presentationType: 'bolsa', weight: 5, withBrand: true, category: 'barraca_marca', unitPrice: 92 },
-  { productId: 'prod-2', presentationType: 'bolsa', weight: 5, withBrand: false, category: 'distribuidor', unitPrice: 70 },
-  { productId: 'prod-2', presentationType: 'bolsa', weight: 5, withBrand: true, category: 'distribuidor_marca', unitPrice: 84 },
-  { productId: 'prod-2', presentationType: 'bolsa', weight: 5, withBrand: false, category: 'oferta', unitPrice: 62 },
-  { productId: 'prod-2', presentationType: 'bolsa', weight: 5, withBrand: false, category: 'consumidor_final', unitPrice: 105 },
+  { productId: 'prod-2', presentationType: 'bolsa', weight: 5, category: 'barraca', priceWithoutBrand: 78, priceWithBrand: 92 },
+  { productId: 'prod-2', presentationType: 'bolsa', weight: 5, category: 'distribuidor', priceWithoutBrand: 70, priceWithBrand: 84 },
+  { productId: 'prod-2', presentationType: 'bolsa', weight: 5, category: 'oferta', priceWithoutBrand: 62, priceWithBrand: 76 },
+  { productId: 'prod-2', presentationType: 'bolsa', weight: 5, category: 'consumidor_final', priceWithoutBrand: 105, priceWithBrand: 125 },
   
-  // 10 kg
-  { productId: 'prod-2', presentationType: 'bolsa', weight: 10, withBrand: false, category: 'barraca', unitPrice: 140 },
-  { productId: 'prod-2', presentationType: 'bolsa', weight: 10, withBrand: true, category: 'barraca_marca', unitPrice: 162 },
-  { productId: 'prod-2', presentationType: 'bolsa', weight: 10, withBrand: false, category: 'distribuidor', unitPrice: 125 },
-  { productId: 'prod-2', presentationType: 'bolsa', weight: 10, withBrand: true, category: 'distribuidor_marca', unitPrice: 147 },
-  { productId: 'prod-2', presentationType: 'bolsa', weight: 10, withBrand: false, category: 'oferta', unitPrice: 112 },
-  { productId: 'prod-2', presentationType: 'bolsa', weight: 10, withBrand: false, category: 'consumidor_final', unitPrice: 190 },
+  { productId: 'prod-2', presentationType: 'bolsa', weight: 10, category: 'barraca', priceWithoutBrand: 140, priceWithBrand: 162 },
+  { productId: 'prod-2', presentationType: 'bolsa', weight: 10, category: 'distribuidor', priceWithoutBrand: 125, priceWithBrand: 147 },
+  { productId: 'prod-2', presentationType: 'bolsa', weight: 10, category: 'oferta', priceWithoutBrand: 112, priceWithBrand: 135 },
+  { productId: 'prod-2', presentationType: 'bolsa', weight: 10, category: 'consumidor_final', priceWithoutBrand: 190, priceWithBrand: 225 },
   
-  // 20 kg
-  { productId: 'prod-2', presentationType: 'bolsa', weight: 20, withBrand: false, category: 'barraca', unitPrice: 260 },
-  { productId: 'prod-2', presentationType: 'bolsa', weight: 20, withBrand: true, category: 'barraca_marca', unitPrice: 304 },
-  { productId: 'prod-2', presentationType: 'bolsa', weight: 20, withBrand: false, category: 'distribuidor', unitPrice: 234 },
-  { productId: 'prod-2', presentationType: 'bolsa', weight: 20, withBrand: true, category: 'distribuidor_marca', unitPrice: 278 },
-  { productId: 'prod-2', presentationType: 'bolsa', weight: 20, withBrand: false, category: 'oferta', unitPrice: 210 },
-  { productId: 'prod-2', presentationType: 'bolsa', weight: 20, withBrand: false, category: 'consumidor_final', unitPrice: 360 },
+  { productId: 'prod-2', presentationType: 'bolsa', weight: 20, category: 'barraca', priceWithoutBrand: 260, priceWithBrand: 304 },
+  { productId: 'prod-2', presentationType: 'bolsa', weight: 20, category: 'distribuidor', priceWithoutBrand: 234, priceWithBrand: 278 },
+  { productId: 'prod-2', presentationType: 'bolsa', weight: 20, category: 'oferta', priceWithoutBrand: 210, priceWithBrand: 255 },
+  { productId: 'prod-2', presentationType: 'bolsa', weight: 20, category: 'consumidor_final', priceWithoutBrand: 360, priceWithBrand: 425 },
   
-  // ===== MASILLA PARA YESO - POTES (Always branded) =====
-  // 1.7 kg - Always treated as branded
-  { productId: 'prod-2', presentationType: 'pote', weight: 1.7, withBrand: true, category: 'barraca_marca', unitPrice: 55 },
-  { productId: 'prod-2', presentationType: 'pote', weight: 1.7, withBrand: true, category: 'distribuidor_marca', unitPrice: 48 },
-  { productId: 'prod-2', presentationType: 'pote', weight: 1.7, withBrand: true, category: 'oferta', unitPrice: 42 },
-  { productId: 'prod-2', presentationType: 'pote', weight: 1.7, withBrand: true, category: 'consumidor_final', unitPrice: 75 },
+  // ===== MASILLA PARA YESO - POTES (Always branded, so only priceWithBrand used) =====
+  { productId: 'prod-2', presentationType: 'pote', weight: 1.7, category: 'barraca', priceWithoutBrand: 0, priceWithBrand: 55 },
+  { productId: 'prod-2', presentationType: 'pote', weight: 1.7, category: 'distribuidor', priceWithoutBrand: 0, priceWithBrand: 48 },
+  { productId: 'prod-2', presentationType: 'pote', weight: 1.7, category: 'oferta', priceWithoutBrand: 0, priceWithBrand: 42 },
+  { productId: 'prod-2', presentationType: 'pote', weight: 1.7, category: 'consumidor_final', priceWithoutBrand: 0, priceWithBrand: 75 },
   
-  // 7 kg
-  { productId: 'prod-2', presentationType: 'pote', weight: 7, withBrand: true, category: 'barraca_marca', unitPrice: 165 },
-  { productId: 'prod-2', presentationType: 'pote', weight: 7, withBrand: true, category: 'distribuidor_marca', unitPrice: 148 },
-  { productId: 'prod-2', presentationType: 'pote', weight: 7, withBrand: true, category: 'oferta', unitPrice: 130 },
-  { productId: 'prod-2', presentationType: 'pote', weight: 7, withBrand: true, category: 'consumidor_final', unitPrice: 225 },
+  { productId: 'prod-2', presentationType: 'pote', weight: 7, category: 'barraca', priceWithoutBrand: 0, priceWithBrand: 165 },
+  { productId: 'prod-2', presentationType: 'pote', weight: 7, category: 'distribuidor', priceWithoutBrand: 0, priceWithBrand: 148 },
+  { productId: 'prod-2', presentationType: 'pote', weight: 7, category: 'oferta', priceWithoutBrand: 0, priceWithBrand: 130 },
+  { productId: 'prod-2', presentationType: 'pote', weight: 7, category: 'consumidor_final', priceWithoutBrand: 0, priceWithBrand: 225 },
   
-  // 18 kg
-  { productId: 'prod-2', presentationType: 'pote', weight: 18, withBrand: true, category: 'barraca_marca', unitPrice: 395 },
-  { productId: 'prod-2', presentationType: 'pote', weight: 18, withBrand: true, category: 'distribuidor_marca', unitPrice: 360 },
-  { productId: 'prod-2', presentationType: 'pote', weight: 18, withBrand: true, category: 'oferta', unitPrice: 318 },
-  { productId: 'prod-2', presentationType: 'pote', weight: 18, withBrand: true, category: 'consumidor_final', unitPrice: 540 },
+  { productId: 'prod-2', presentationType: 'pote', weight: 18, category: 'barraca', priceWithoutBrand: 0, priceWithBrand: 395 },
+  { productId: 'prod-2', presentationType: 'pote', weight: 18, category: 'distribuidor', priceWithoutBrand: 0, priceWithBrand: 360 },
+  { productId: 'prod-2', presentationType: 'pote', weight: 18, category: 'oferta', priceWithoutBrand: 0, priceWithBrand: 318 },
+  { productId: 'prod-2', presentationType: 'pote', weight: 18, category: 'consumidor_final', priceWithoutBrand: 0, priceWithBrand: 540 },
 ]
 
 /**
  * Look up unit price for a product/presentation combination
- * @param productId - The product ID
- * @param presentationType - 'bolsa' or 'pote'
- * @param weightKg - The weight in kg
- * @param withBrand - Whether the presentation has branding
- * @param priceCategory - The price category
- * @returns The unit price, or 0 if not found
+ * Now uses simplified category (no marca variants) + marca field
  */
 export function lookupUnitPrice(
   productId: string,
@@ -137,10 +101,13 @@ export function lookupUnitPrice(
     p.productId === productId &&
     p.presentationType === presentationType &&
     p.weight === weightKg &&
-    p.withBrand === withBrand &&
     p.category === priceCategory
   )
-  return entry?.unitPrice || 0
+  
+  if (!entry) return 0
+  
+  // Return appropriate price based on marca flag
+  return withBrand ? entry.priceWithBrand : entry.priceWithoutBrand
 }
 
 /**

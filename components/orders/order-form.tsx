@@ -92,20 +92,24 @@ export function OrderForm({ order }: OrderFormProps) {
   // Add new item with sensible defaults
   const addItem = () => {
     const defaultProduct = PRODUCTS.find(p => p.id === 'prod-1') || PRODUCTS[0]
-    const defaultPres = PRESENTATIONS.find(p => p.product_id === defaultProduct.id && p.type === 'bolsa') || PRESENTATIONS[0]
+    const defaultPres = PRESENTATIONS.find(p => p.product_id === defaultProduct.id && p.type === 'bolsa') || PRESENTATIONS.find(p => p.product_id === defaultProduct.id)
     
-    setItems([
-      ...items,
-      {
-        id: `temp-${Date.now()}`,
-        product_id: defaultProduct.id,
-        presentation_id: defaultPres.id,
-        with_brand: false,
-        quantity: 1,
-        unit_price: 0,
-        manual_price: manualPrice,
-      },
-    ])
+    const newItem: OrderItemForm = {
+      id: `temp-${Date.now()}`,
+      product_id: defaultProduct.id,
+      presentation_id: defaultPres?.id || '',
+      with_brand: false,
+      quantity: 1,
+      unit_price: defaultPres ? lookupUnitPrice(
+        defaultProduct.id,
+        defaultPres.type,
+        defaultPres.weight_kg,
+        false,
+        priceCategory
+      ) : 0,
+      manual_price: manualPrice,
+    }
+    setItems([...items, newItem])
   }
 
   // Remove item
@@ -138,12 +142,25 @@ export function OrderForm({ order }: OrderFormProps) {
     }))
   }
 
-  // Get valid presentations for selected product
+  // Get valid presentations for selected product (NO DUPLICATES)
   const getValidPresentations = (productId: string) => {
-    return PRESENTATIONS.filter(p => p.product_id === productId && p.active).sort((a, b) => {
+    const presentations = PRESENTATIONS.filter(p => p.product_id === productId && p.active)
+    // Use Set to remove duplicates by presentation key (type + weight)
+    const seenKeys = new Set<string>()
+    const unique: typeof PRESENTATIONS = []
+    
+    presentations.sort((a, b) => {
       if (a.type !== b.type) return a.type === 'bolsa' ? -1 : 1
       return a.weight_kg - b.weight_kg
+    }).forEach(pres => {
+      const key = `${pres.type}-${pres.weight_kg}`
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key)
+        unique.push(pres)
+      }
     })
+    
+    return unique
   }
 
   // Format presentation label (without brand in name)
@@ -183,20 +200,57 @@ export function OrderForm({ order }: OrderFormProps) {
   // Handle submit
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    console.log('[v0] Order submitted:', {
-      orderDate,
-      promisedDate,
-      clientId,
-      vendorName,
-      priceCategory,
+    
+    if (!clientId || items.length === 0) {
+      alert('Por favor completa cliente y al menos un producto')
+      return
+    }
+
+    // Create order object
+    const newOrder = {
+      id: isEditing ? order!.id : `order-${Date.now()}`,
+      order_number: isEditing ? order!.order_number : ORDERS.length + 1001,
+      order_date: orderDate,
+      promised_date: promisedDate,
+      client_id: clientId,
+      client: selectedClient, // Include client object
+      vendor_name: vendorName || '',
+      price_category: priceCategory,
       notes,
-      manualPrice,
-      status,
-      paymentStatus,
-      commissionStatus,
-      items,
-      calculations,
-    })
+      manual_price: manualPrice,
+      status: isEditing ? status : 'en_produccion' as const,
+      payment_status: isEditing ? paymentStatus : 'pendiente' as const,
+      commission_status: isEditing ? commissionStatus : 'pendiente_liquidar' as const,
+      items: items.map(item => ({
+        id: item.id,
+        product_id: item.product_id,
+        presentation_id: item.presentation_id,
+        with_brand: item.with_brand,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+      })),
+      subtotal: calculations.subtotal,
+      iva: calculations.iva,
+      total: calculations.total,
+      enduido_kg: calculations.enduidoKg,
+      masilla_kg: calculations.masillaKg,
+      created_at: isEditing ? order!.created_at : new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+
+    // Persist to mock data (in a real app, this would be an API call)
+    if (isEditing) {
+      // Update existing order in mock-data
+      const index = ORDERS.findIndex(o => o.id === order!.id)
+      if (index !== -1) {
+        ORDERS[index] = newOrder
+      }
+    } else {
+      // Add new order to mock-data
+      ORDERS.push(newOrder)
+    }
+
+    console.log('[v0] Order saved:', newOrder)
     router.push('/pedidos')
   }
 
