@@ -25,8 +25,9 @@ import {
 } from '@/components/ui/table'
 import { Card, CardContent } from '@/components/ui/card'
 import { Plus, Search, ShoppingCart, Eye, Edit, X, Package, Scale } from 'lucide-react'
-import { CLIENTS, formatCurrency, formatDate, formatWeight } from '@/lib/mock-data'
+import { formatCurrency, formatDate, formatWeight } from '@/lib/mock-data'
 import { getAllOrders } from '@/lib/order-store'
+import { getAllClients } from '@/lib/client-store'
 import type { OrderStatus, PaymentStatus } from '@/lib/types'
 import { ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '@/lib/types'
 
@@ -176,7 +177,7 @@ export function OrdersContent() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos los clientes</SelectItem>
-                  {CLIENTS.filter(c => c.active).map((client) => (
+                  {getAllClients().filter(c => c.active).map((client) => (
                     <SelectItem key={client.id} value={client.id}>{client.name || 'Sin nombre'}</SelectItem>
                   ))}
                 </SelectContent>
@@ -232,7 +233,7 @@ export function OrdersContent() {
                       <TableCell>
                         <div>
                           <p className="font-medium">{order.client?.name || 'Sin nombre'}</p>
-                          {order.client.company && (
+                          {order.client?.company && (
                             <p className="text-xs text-muted-foreground">{order.client.company}</p>
                           )}
                         </div>

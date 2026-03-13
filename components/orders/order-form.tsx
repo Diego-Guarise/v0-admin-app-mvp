@@ -29,7 +29,8 @@ import {
   TableFooter,
 } from '@/components/ui/table'
 import { ArrowLeft, Plus, Trash2, Save, AlertTriangle, UserPlus, Package, Scale, Lock, ExternalLink } from 'lucide-react'
-import { CLIENTS, PRODUCTS, PRESENTATIONS, ORDERS, formatCurrency, formatWeight } from '@/lib/mock-data'
+import { PRODUCTS, PRESENTATIONS, ORDERS, formatCurrency, formatWeight } from '@/lib/mock-data'
+import { getAllClients } from '@/lib/client-store'
 import { PRICE_CATEGORY_LABELS, ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS, COMMISSION_STATUS_LABELS } from '@/lib/types'
 import { lookupUnitPrice, isPotesAlwaysBranded } from '@/lib/pricing'
 import { saveOrder, getOrderById, getAllOrders } from '@/lib/order-store'
@@ -83,11 +84,11 @@ export function OrderForm({ order, preSelectedClientId }: OrderFormProps) {
   )
 
   // Active clients only
-  const activeClients = useMemo(() => CLIENTS.filter(c => c.active), [])
+  const activeClients = useMemo(() => getAllClients().filter(c => c.active), [])
 
   // Selected client
   const selectedClient = useMemo(() => 
-    CLIENTS.find(c => c.id === clientId), 
+    getAllClients().find(c => c.id === clientId), 
     [clientId]
   )
 
@@ -220,7 +221,7 @@ export function OrderForm({ order, preSelectedClientId }: OrderFormProps) {
       order_date: orderDate,
       promised_date: promisedDate,
       client_id: clientId,
-      client: selectedClient, // Include client object
+      client: selectedClient || { id: clientId, active: false, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }, // Include client object or fallback
       vendor_name: vendorName || '',
       price_category: priceCategory,
       notes,
@@ -316,7 +317,7 @@ export function OrderForm({ order, preSelectedClientId }: OrderFormProps) {
               {selectedClient && (
                 <div className="bg-muted/50 rounded-xl p-4 space-y-2">
                   <div className="flex items-center justify-between">
-                    <p className="font-semibold">{selectedClient.name}</p>
+                    <p className="font-semibold">{selectedClient.name || 'Sin nombre'}</p>
                     <StatusBadge status={selectedClient.active ? 'activo' : 'inactivo'} type="client" size="sm" />
                   </div>
                   {selectedClient.company && (
