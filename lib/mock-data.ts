@@ -1528,11 +1528,10 @@ export function formatPercent(value: number): string {
 }
 
 export function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('es-UY', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  })
+  // Parse date parts directly from ISO string to avoid timezone/hydration issues
+  const [datePart] = dateString.split('T')
+  const [year, month, day] = datePart.split('-')
+  return `${day}/${month}/${year}`
 }
 
 // ============================================
