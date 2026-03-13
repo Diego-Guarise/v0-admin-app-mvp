@@ -246,8 +246,6 @@ export function OrderForm({ order }: OrderFormProps) {
 
     // Persist to order store (in a real app, this would be an API call)
     saveOrder(newOrder as Order)
-
-    console.log('[v0] Order saved:', newOrder)
     router.push('/pedidos')
   }
 

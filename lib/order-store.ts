@@ -1,41 +1,77 @@
 // This file manages the order store across the app
 // It provides access to both seeded orders and newly created orders
+// Uses browser localStorage to persist newly created orders across page reloads
 
 import type { Order } from '@/lib/types'
 import { ORDERS as SEEDED_ORDERS } from '@/lib/mock-data'
 
-// In-memory store for tracking all orders (seeded + newly created)
-let allOrders: Order[] = [...SEEDED_ORDERS]
+const STORAGE_KEY = 'app_created_orders'
 
 /**
- * Get all orders (seeded + newly created)
+ * Get newly created orders from localStorage
+ */
+function getStoredOrders(): Order[] {
+  if (typeof window === 'undefined') {
+    // Server-side: return empty array, client will have the data
+    return []
+  }
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    return stored ? JSON.parse(stored) : []
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Save newly created orders to localStorage
+ */
+function saveStoredOrders(orders: Order[]): void {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(orders))
+  } catch {
+    // Silently fail if localStorage is not available
+  }
+}
+
+/**
+ * Get all orders (seeded + newly created from localStorage)
  */
 export function getAllOrders(): Order[] {
-  return allOrders
+  const createdOrders = getStoredOrders()
+  return [...SEEDED_ORDERS, ...createdOrders]
 }
 
 /**
  * Get a single order by ID
  */
 export function getOrderById(id: string): Order | undefined {
-  return allOrders.find(o => o.id === id)
+  return getAllOrders().find(o => o.id === id)
 }
 
 /**
  * Add or update an order
  */
 export function saveOrder(order: Order): void {
-  const existingIndex = allOrders.findIndex(o => o.id === order.id)
+  const createdOrders = getStoredOrders()
+  const existingIndex = createdOrders.findIndex(o => o.id === order.id)
+  
   if (existingIndex !== -1) {
-    allOrders[existingIndex] = order
+    createdOrders[existingIndex] = order
   } else {
-    allOrders.push(order)
+    createdOrders.push(order)
   }
+  
+  saveStoredOrders(createdOrders)
+  console.log('[v0] Order persisted to localStorage:', { id: order.id, totalCreated: createdOrders.length })
 }
 
 /**
  * Reset orders (for testing)
  */
 export function resetOrders(): void {
-  allOrders = [...SEEDED_ORDERS]
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(STORAGE_KEY)
+  }
 }
