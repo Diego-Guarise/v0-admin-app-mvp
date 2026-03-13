@@ -394,8 +394,9 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
                   <div className="flex gap-4 text-sm text-muted-foreground">
                     {selectedClient.phone && <span>{selectedClient.phone}</span>}
                     {selectedClient.email && <span>{selectedClient.email}</span>}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Invoice Number Input */}
               {hasInvoice && (
