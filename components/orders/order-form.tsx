@@ -196,7 +196,26 @@ export function OrderForm({ order, preSelectedClientId }: OrderFormProps) {
     return `${pres.type === 'bolsa' ? 'Bolsa' : 'Pote'} ${pres.weight_kg} kg`
   }
 
-  // Calculate totals
+  // Helper function to get the total weight per sales unit from the price store
+  // This respects pack/funda structure (e.g., Enduido 1kg sold by funda=20kg total)
+  const getItemTotalWeight = (productId: string, presentationId: string, withBrand: boolean): number => {
+    const priceItem = getAllPrices().find(p => 
+      p.product_id === productId && 
+      p.presentation_id === presentationId && 
+      p.with_brand === withBrand &&
+      p.price_category === priceCategory
+    )
+    
+    if (priceItem) {
+      return priceItem.total_weight_per_sales_unit_kg
+    }
+    
+    // Fallback to presentation weight if price not found
+    const presentation = PRESENTATIONS.find(p => p.id === presentationId)
+    return presentation?.weight_kg || 0
+  }
+
+  // Calculate totals using sales-unit aware weights
   const calculations = useMemo(() => {
     let subtotal = 0
     let enduidoKg = 0
@@ -210,7 +229,8 @@ export function OrderForm({ order, preSelectedClientId }: OrderFormProps) {
       const product = PRODUCTS.find(p => p.id === item.product_id)
 
       if (presentation && product) {
-        const totalKg = item.quantity * presentation.weight_kg
+        // Use sales-unit-aware weight from price store
+        const totalKg = item.quantity * getItemTotalWeight(item.product_id, item.presentation_id, item.with_brand)
         if (product.type === 'enduido') {
           enduidoKg += totalKg
         } else {
@@ -483,7 +503,8 @@ export function OrderForm({ order, preSelectedClientId }: OrderFormProps) {
                         const product = PRODUCTS.find(p => p.id === item.product_id)
                         const potesAlwaysBranded = product && isPotesAlwaysBranded(product.id) && presentation?.type === 'pote'
                         const validPresentations = getValidPresentations(item.product_id)
-                        const kg = presentation ? item.quantity * presentation.weight_kg : 0
+                        // Use sales-unit-aware weight from price store
+                        const kg = presentation ? item.quantity * getItemTotalWeight(item.product_id, item.presentation_id, item.with_brand) : 0
                         
                         return (
                           <TableRow key={item.id}>
