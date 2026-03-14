@@ -148,15 +148,18 @@ export function PreciosContent() {
                   <TableHead>Marca</TableHead>
                   <TableHead>Categoría</TableHead>
                   <TableHead>Unidad de venta</TableHead>
-                  <TableHead className="text-right">Contenido por unidad de venta</TableHead>
                   <TableHead className="text-right">Kilos totales</TableHead>
                   <TableHead className="text-right">Precio por unidad de venta</TableHead>
+                  <TableHead className="text-right">Precio por kg</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredPrices.map(price => {
                   const product = PRODUCTS.find(p => p.id === price.product_id)
                   const presentation = PRESENTATIONS.find(p => p.id === price.presentation_id)
+                  const precioPerKg = price.total_weight_per_sales_unit_kg > 0 
+                    ? price.unit_price_for_sales_unit / price.total_weight_per_sales_unit_kg 
+                    : 0
                   return (
                     <TableRow key={price.id}>
                       <TableCell className="font-medium">{product?.name || 'N/A'}</TableCell>
@@ -164,9 +167,6 @@ export function PreciosContent() {
                       <TableCell>{price.with_brand ? 'Con marca' : 'Sin marca'}</TableCell>
                       <TableCell>{PRICE_CATEGORY_LABELS[price.price_category]}</TableCell>
                       <TableCell>{price.sales_unit_type === 'funda' ? 'Funda' : 'Unidad'}</TableCell>
-                      <TableCell className="text-right">
-                        {price.units_per_sales_unit} {price.units_per_sales_unit === 1 ? 'bolsa/pote' : 'bolsas'}
-                      </TableCell>
                       <TableCell className="text-right">{price.total_weight_per_sales_unit_kg} kg</TableCell>
                       <TableCell className="text-right">
                         <Input
@@ -177,6 +177,7 @@ export function PreciosContent() {
                           step="1"
                         />
                       </TableCell>
+                      <TableCell className="text-right font-medium">{formatCurrency(precioPerKg)}</TableCell>
                     </TableRow>
                   )
                 })}

@@ -62,7 +62,7 @@ function generatePresentations(): Presentation[] {
       presentations.push({
         id: `pres-${idCounter++}`,
         product_id: product.id,
-        name: `Bolsa ${weight} kg - Con marca`,
+        name: `Bolsa ${weight} kg`,
         type: 'bolsa',
         weight_kg: weight,
         with_brand: true,
@@ -74,7 +74,7 @@ function generatePresentations(): Presentation[] {
       presentations.push({
         id: `pres-${idCounter++}`,
         product_id: product.id,
-        name: `Bolsa ${weight} kg - Sin marca`,
+        name: `Bolsa ${weight} kg`,
         type: 'bolsa',
         weight_kg: weight,
         with_brand: false,
@@ -90,7 +90,7 @@ function generatePresentations(): Presentation[] {
         presentations.push({
           id: `pres-${idCounter++}`,
           product_id: product.id,
-          name: `Pote ${weight} kg - Con marca`,
+          name: `Pote ${weight} kg`,
           type: 'pote',
           weight_kg: weight,
           with_brand: true,
@@ -102,7 +102,7 @@ function generatePresentations(): Presentation[] {
         presentations.push({
           id: `pres-${idCounter++}`,
           product_id: product.id,
-          name: `Pote ${weight} kg - Sin marca`,
+          name: `Pote ${weight} kg`,
           type: 'pote',
           weight_kg: weight,
           with_brand: false,
