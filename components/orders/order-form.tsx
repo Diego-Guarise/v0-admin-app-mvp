@@ -28,7 +28,7 @@ import {
   TableRow,
   TableFooter,
 } from '@/components/ui/table'
-import { ArrowLeft, Plus, Trash2, Save, AlertTriangle, UserPlus, Package, Scale, Lock, ExternalLink } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Save, AlertTriangle, UserPlus, Package, Scale, Lock, ExternalLink, Copy } from 'lucide-react'
 import { PRODUCTS, PRESENTATIONS, ORDERS, formatCurrency, formatWeight } from '@/lib/mock-data'
 import { getAllClients } from '@/lib/client-store'
 import { getAllVendors } from '@/lib/vendor-store'
@@ -199,6 +199,28 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
   // Remove item
   const removeItem = (id: string) => {
     setItems(items.filter(item => item.id !== id))
+  }
+
+  // Duplicate item
+  const duplicateItem = (id: string) => {
+    const itemToDuplicate = items.find(item => item.id === id)
+    if (!itemToDuplicate) return
+    
+    const duplicatedItem: OrderItemForm = {
+      id: `temp-${Date.now()}`,
+      product_id: itemToDuplicate.product_id,
+      presentation_id: itemToDuplicate.presentation_id,
+      with_brand: itemToDuplicate.with_brand,
+      quantity: itemToDuplicate.quantity,
+      unit_price: itemToDuplicate.unit_price,
+      manual_price: itemToDuplicate.manual_price,
+    }
+    
+    // Find the index of the current item and insert after it
+    const currentIndex = items.findIndex(item => item.id === id)
+    const newItems = [...items]
+    newItems.splice(currentIndex + 1, 0, duplicatedItem)
+    setItems(newItems)
   }
 
   // Update item and auto-recalculate price if not manual
@@ -610,13 +632,13 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-muted/30">
-                        <TableHead>Producto</TableHead>
-                        <TableHead>Presentación</TableHead>
-                        <TableHead className="text-center">Con marca</TableHead>
-                        <TableHead className="w-24">Cantidad</TableHead>
-                        <TableHead className="w-32">Precio unitario</TableHead>
-                        <TableHead className="text-right">Subtotal</TableHead>
-                        <TableHead className="w-12"></TableHead>
+                        <TableHead className="w-40">Producto</TableHead>
+                        <TableHead className="w-40">Presentación</TableHead>
+                        <TableHead className="text-center w-16">Marca</TableHead>
+                        <TableHead className="w-20">Cantidad</TableHead>
+                        <TableHead className="w-28">Precio</TableHead>
+                        <TableHead className="text-right w-24">Subtotal</TableHead>
+                        <TableHead className="w-16"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -629,7 +651,7 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
                         const kg = presentation ? item.quantity * getItemTotalWeight(item.product_id, item.presentation_id, item.with_brand) : 0
                         
                         return (
-                          <TableRow key={item.id}>
+                          <TableRow key={item.id} className="hover:bg-muted/30 transition-colors">
                             <TableCell>
                               <Select 
                                 value={item.product_id} 
@@ -664,7 +686,7 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
                                   }))
                                 }}
                               >
-                                <SelectTrigger className="w-40">
+                                <SelectTrigger className="w-40 h-9">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -681,7 +703,7 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
                                 value={item.presentation_id} 
                                 onValueChange={(v) => updateItem(item.id, 'presentation_id', v)}
                               >
-                                <SelectTrigger className="w-40">
+                                <SelectTrigger className="w-40 h-9">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -695,27 +717,28 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
                             </TableCell>
                             <TableCell className="text-center">
                               {potesAlwaysBranded ? (
-                                <div className="flex items-center justify-center gap-2">
-                                  <Lock className="h-4 w-4 text-muted-foreground" />
+                                <div className="flex items-center justify-center gap-1">
+                                  <Lock className="h-3.5 w-3.5 text-amber-600" />
                                   <span className="text-xs font-semibold">Sí</span>
                                 </div>
                               ) : (
                                 <Switch
                                   checked={item.with_brand}
                                   onCheckedChange={(v) => updateItem(item.id, 'with_brand', v)}
+                                  className="scale-75"
                                 />
                               )}
                             </TableCell>
                             <TableCell>
-                              <div className="space-y-1">
+                              <div className="space-y-0.5">
                                 <Input
                                   type="number"
                                   min="1"
                                   value={item.quantity}
                                   onChange={(e) => updateItem(item.id, 'quantity', parseInt(e.target.value) || 0)}
-                                  className="w-20"
+                                  className="w-20 h-9 text-center"
                                 />
-                                <p className="text-xs text-muted-foreground">{formatWeight(kg)}</p>
+                                <p className="text-xs text-muted-foreground text-center">{formatWeight(kg)}</p>
                               </div>
                             </TableCell>
                             <TableCell>
@@ -726,22 +749,35 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
                                 value={item.unit_price}
                                 onChange={(e) => updateItem(item.id, 'unit_price', parseFloat(e.target.value) || 0)}
                                 readOnly={!manualPrice}
-                                className={`w-32 ${manualPrice ? '' : 'bg-muted cursor-default'} ${manualPrice ? 'border-amber-300 bg-amber-50' : ''}`}
+                                className={`w-28 h-9 ${manualPrice ? 'border-amber-300 bg-amber-50' : 'bg-muted cursor-default'}`}
                               />
                             </TableCell>
-                            <TableCell className="text-right font-semibold">
+                            <TableCell className="text-right font-semibold text-sm">
                               {formatCurrency(item.quantity * item.unit_price)}
                             </TableCell>
                             <TableCell>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                onClick={() => removeItem(item.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <div className="flex gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
+                                  onClick={() => duplicateItem(item.id)}
+                                  title="Duplicar renglón"
+                                >
+                                  <Copy className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  onClick={() => removeItem(item.id)}
+                                  title="Eliminar renglón"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         )
