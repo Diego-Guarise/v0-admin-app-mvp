@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { PageHeader } from '@/components/page-header'
 import { StatCard } from '@/components/stat-card'
@@ -21,7 +21,8 @@ import {
   Cylinder,
   Tag,
   Scale,
-  ArrowUpRight
+  ArrowUpRight,
+  ChevronDown
 } from 'lucide-react'
 import { 
   PRODUCTS,
@@ -61,6 +62,18 @@ const SAMPLE_PRICES: Record<string, Record<number, number>> = {
 }
 
 export function CostosDashboard() {
+  const [expandedBreakdowns, setExpandedBreakdowns] = useState<Set<string>>(new Set())
+
+  // Toggle breakdown expansion
+  const toggleBreakdown = (key: string) => {
+    const newSet = new Set(expandedBreakdowns)
+    if (newSet.has(key)) {
+      newSet.delete(key)
+    } else {
+      newSet.add(key)
+    }
+    setExpandedBreakdowns(newSet)
+  }
   // Calculate stats
   const stats = useMemo(() => {
     const activeInsumos = INGREDIENT_INPUTS.filter(i => i.status === 'activo').length
@@ -98,6 +111,13 @@ export function CostosDashboard() {
       sellingPrice: number
       marginOverPrice: number
       markupOverCost: number
+      breakdown: {
+        product_cost_per_kg: number
+        product_cost_for_weight: number
+        envase_cost: number
+        etiqueta_cost: number
+        total_cost: number
+      }
     }> = []
 
     PRODUCTS.filter(p => p.active).forEach(product => {
@@ -142,6 +162,13 @@ export function CostosDashboard() {
             sellingPrice,
             marginOverPrice: margins.margin_over_price,
             markupOverCost: margins.markup_over_cost,
+            breakdown: {
+              product_cost_per_kg: costBreakdown.product_cost_per_kg,
+              product_cost_for_weight: costBreakdown.product_cost_for_weight,
+              envase_cost: costBreakdown.envase_cost,
+              etiqueta_cost: costBreakdown.etiqueta_cost,
+              total_cost: costBreakdown.total_cost,
+            }
           })
         })
       })
@@ -349,52 +376,115 @@ export function CostosDashboard() {
                               ? 'text-amber-600' 
                               : 'text-red-600'
 
+                          const breakdownKey = `${product.id}-${pc.type}-${pc.weight_kg}-${pc.with_brand}`
+                          const isExpanded = expandedBreakdowns.has(breakdownKey)
+
                           return (
-                            <tr key={idx} className="border-b border-border/50 last:border-0">
-                              <td className="py-2">
-                                <div className="flex items-center gap-2">
-                                  {pc.type === 'bolsa' ? (
-                                    <Box className="h-4 w-4 text-amber-600" />
-                                  ) : (
-                                    <Cylinder className="h-4 w-4 text-blue-600" />
-                                  )}
-                                  <span className="capitalize">{pc.type}</span>
-                                  <Badge variant="secondary" className="text-xs">
-                                    {pc.weight_kg} kg
-                                  </Badge>
-                                </div>
-                              </td>
-                              <td className="py-2 text-right font-mono">
-                                {formatCurrencyDecimal(pc.cost)}
-                              </td>
-                              <td className="py-2 text-right font-mono font-semibold">
-                                {pc.sellingPrice > 0 
-                                  ? formatCurrency(pc.sellingPrice) 
-                                  : <span className="text-muted-foreground">-</span>
-                                }
-                              </td>
-                              <td className="py-2 text-right">
-                                {pc.sellingPrice > 0 ? (
-                                  <div className={`flex items-center justify-end gap-1 ${marginColor}`}>
-                                    <MarginIcon className="h-3 w-3" />
-                                    <span className="font-semibold">
-                                      {formatPercent(pc.marginOverPrice)}
-                                    </span>
+                            <>
+                              <tr key={idx} className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
+                                <td className="py-2">
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => toggleBreakdown(breakdownKey)}
+                                      className="p-0 hover:bg-muted rounded transition-colors"
+                                      title="Ver desglose de costo"
+                                    >
+                                      <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                    </button>
+                                    {pc.type === 'bolsa' ? (
+                                      <Box className="h-4 w-4 text-amber-600" />
+                                    ) : (
+                                      <Cylinder className="h-4 w-4 text-blue-600" />
+                                    )}
+                                    <span className="capitalize">{pc.type}</span>
+                                    <Badge variant="secondary" className="text-xs">
+                                      {pc.weight_kg} kg
+                                    </Badge>
                                   </div>
-                                ) : (
-                                  <span className="text-muted-foreground">-</span>
-                                )}
-                              </td>
-                              <td className="py-2 text-right">
-                                {pc.sellingPrice > 0 ? (
-                                  <span className={`font-semibold ${marginColor}`}>
-                                    {formatPercent(pc.markupOverCost)}
-                                  </span>
-                                ) : (
-                                  <span className="text-muted-foreground">-</span>
-                                )}
-                              </td>
-                            </tr>
+                                </td>
+                                <td className="py-2 text-right font-mono">
+                                  {formatCurrencyDecimal(pc.cost)}
+                                </td>
+                                <td className="py-2 text-right font-mono font-semibold">
+                                  {pc.sellingPrice > 0 
+                                    ? formatCurrency(pc.sellingPrice) 
+                                    : <span className="text-muted-foreground">-</span>
+                                  }
+                                </td>
+                                <td className="py-2 text-right">
+                                  {pc.sellingPrice > 0 ? (
+                                    <div className={`flex items-center justify-end gap-1 ${marginColor}`}>
+                                      <MarginIcon className="h-3 w-3" />
+                                      <span className="font-semibold">
+                                        {formatPercent(pc.marginOverPrice)}
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-muted-foreground">-</span>
+                                  )}
+                                </td>
+                                <td className="py-2 text-right">
+                                  {pc.sellingPrice > 0 ? (
+                                    <span className={`font-semibold ${marginColor}`}>
+                                      {formatPercent(pc.markupOverCost)}
+                                    </span>
+                                  ) : (
+                                    <span className="text-muted-foreground">-</span>
+                                  )}
+                                </td>
+                              </tr>
+                              {/* Cost Breakdown Row */}
+                              {isExpanded && (
+                                <tr className="border-b border-border/30 bg-blue-50/40">
+                                  <td colSpan={5} className="py-4 px-4">
+                                    <div className="space-y-3 ml-6">
+                                      <h4 className="font-semibold text-sm text-foreground">Desglose de costo</h4>
+                                      
+                                      {/* Product base cost */}
+                                      <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground">
+                                          Producto base ({pc.breakdown.product_cost_per_kg > 0 ? formatCurrencyDecimal(pc.breakdown.product_cost_per_kg) : '0'}/kg × {pc.weight_kg} kg)
+                                        </span>
+                                        <span className="font-mono font-medium">
+                                          {formatCurrencyDecimal(pc.breakdown.product_cost_for_weight)}
+                                        </span>
+                                      </div>
+
+                                      {/* Envase cost */}
+                                      {pc.breakdown.envase_cost > 0 && (
+                                        <div className="flex items-center justify-between text-sm">
+                                          <span className="text-muted-foreground">Envase</span>
+                                          <span className="font-mono font-medium">
+                                            {formatCurrencyDecimal(pc.breakdown.envase_cost)}
+                                          </span>
+                                        </div>
+                                      )}
+
+                                      {/* Etiqueta cost */}
+                                      {pc.breakdown.etiqueta_cost > 0 && (
+                                        <div className="flex items-center justify-between text-sm">
+                                          <span className="text-muted-foreground">Etiqueta</span>
+                                          <span className="font-mono font-medium">
+                                            {formatCurrencyDecimal(pc.breakdown.etiqueta_cost)}
+                                          </span>
+                                        </div>
+                                      )}
+
+                                      {/* Separator */}
+                                      <div className="border-t border-border/50 my-2"></div>
+
+                                      {/* Total */}
+                                      <div className="flex items-center justify-between text-sm font-semibold">
+                                        <span>Costo total</span>
+                                        <span className="font-mono text-primary">
+                                          {formatCurrencyDecimal(pc.breakdown.total_cost)}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </>
                           )
                         })}
                       </tbody>
