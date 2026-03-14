@@ -14,13 +14,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { AlertTriangle, Save, RotateCcw } from 'lucide-react'
 import { getAllPrices, savePrices, resetPrices } from '@/lib/price-store'
 import { PRODUCTS, PRESENTATIONS, formatCurrency } from '@/lib/mock-data'
@@ -62,148 +55,191 @@ export function PreciosContent() {
     }
   }
 
+  // Get unique product names for filter pills
+  const productOptions = [
+    { value: 'all', label: 'Todos' },
+    ...PRODUCTS.map(p => ({ value: p.id, label: p.name }))
+  ]
+
+  const categoryOptions = [
+    { value: 'all', label: 'Todas' },
+    ...Object.entries(PRICE_CATEGORY_LABELS).map(([k, v]) => ({ value: k, label: v }))
+  ]
+
+  const brandOptions = [
+    { value: 'all', label: 'Todas' },
+    { value: 'con', label: 'Con marca' },
+    { value: 'sin', label: 'Sin marca' },
+  ]
+
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Lista de Precios"
-        description="Gestiona los precios de venta de todos los productos"
-      />
+    <div className="min-h-screen bg-background">
+      <div className="mx-auto max-w-7xl px-6 py-8">
+        <PageHeader
+          title="Lista de Precios"
+          description="Gestiona los precios de venta de todos los productos"
+        />
 
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Filtros</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="space-y-2">
-              <Label>Producto</Label>
-              <Select value={filterProduct} onValueChange={setFilterProduct}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {PRODUCTS.map(p => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Categoría</Label>
-              <Select value={filterCategory} onValueChange={(v) => setFilterCategory(v as any)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {Object.entries(PRICE_CATEGORY_LABELS).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>{v}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Marca</Label>
-              <Select value={filterBrand} onValueChange={(v) => setFilterBrand(v as any)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="con">Con marca</SelectItem>
-                  <SelectItem value="sin">Sin marca</SelectItem>
-                </SelectContent>
-              </Select>
+        {/* Quick Filters */}
+        <div className="space-y-6">
+          {/* Product Filter */}
+          <div className="space-y-3">
+            <Label className="text-sm font-semibold">Producto</Label>
+            <div className="flex flex-wrap gap-2">
+              {productOptions.map(option => (
+                <Button
+                  key={option.value}
+                  variant={filterProduct === option.value ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setFilterProduct(option.value)}
+                  className="rounded-full"
+                >
+                  {option.label}
+                </Button>
+              ))}
             </div>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Price Table */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle>{filteredPrices.length} precios</CardTitle>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleReset} size="sm">
-              <RotateCcw className="h-4 w-4 mr-2" />
-              Resetear
-            </Button>
-            {hasChanges && (
-              <Button onClick={handleSave} size="sm">
-                <Save className="h-4 w-4 mr-2" />
-                Guardar cambios
-              </Button>
-            )}
+          {/* Category Filter */}
+          <div className="space-y-3">
+            <Label className="text-sm font-semibold">Categoría</Label>
+            <div className="flex flex-wrap gap-2">
+              {categoryOptions.map(option => (
+                <Button
+                  key={option.value}
+                  variant={filterCategory === option.value ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setFilterCategory(option.value as any)}
+                  className="rounded-full"
+                >
+                  {option.label}
+                </Button>
+              ))}
+            </div>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Producto</TableHead>
-                  <TableHead>Presentación</TableHead>
-                  <TableHead>Marca</TableHead>
-                  <TableHead>Categoría</TableHead>
-                  <TableHead>Unidad de venta</TableHead>
-                  <TableHead className="text-right">Kilos totales</TableHead>
-                  <TableHead className="text-right">Precio por unidad de venta</TableHead>
-                  <TableHead className="text-right">Precio por kg</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredPrices.map(price => {
-                  const product = PRODUCTS.find(p => p.id === price.product_id)
-                  const presentation = PRESENTATIONS.find(p => p.id === price.presentation_id)
-                  const precioPerKg = price.total_weight_per_sales_unit_kg > 0 
-                    ? price.unit_price_for_sales_unit / price.total_weight_per_sales_unit_kg 
-                    : 0
-                  return (
-                    <TableRow key={price.id}>
-                      <TableCell className="font-medium">{product?.name || 'N/A'}</TableCell>
-                      <TableCell>{presentation?.name || 'N/A'}</TableCell>
-                      <TableCell>{price.with_brand ? 'Con marca' : 'Sin marca'}</TableCell>
-                      <TableCell>{PRICE_CATEGORY_LABELS[price.price_category]}</TableCell>
-                      <TableCell>{price.sales_unit_type === 'funda' ? 'Funda' : 'Unidad'}</TableCell>
-                      <TableCell className="text-right">{price.total_weight_per_sales_unit_kg} kg</TableCell>
-                      <TableCell className="text-right">
-                        <Input
-                          type="number"
-                          value={price.unit_price_for_sales_unit}
-                          onChange={(e) => handlePriceChange(price.id, parseFloat(e.target.value) || 0)}
-                          className="w-24 text-right"
-                          step="1"
-                        />
-                      </TableCell>
-                      <TableCell className="text-right font-medium">{formatCurrency(precioPerKg)}</TableCell>
+
+          {/* Brand Filter */}
+          <div className="space-y-3">
+            <Label className="text-sm font-semibold">Marca</Label>
+            <div className="flex flex-wrap gap-2">
+              {brandOptions.map(option => (
+                <Button
+                  key={option.value}
+                  variant={filterBrand === option.value ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setFilterBrand(option.value as any)}
+                  className="rounded-full"
+                >
+                  {option.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {/* Price Table */}
+          <Card className="mt-8">
+            <CardHeader className="border-b bg-muted/50">
+              <div className="flex flex-row items-center justify-between">
+                <CardTitle className="text-lg">{filteredPrices.length} precios</CardTitle>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={handleReset} size="sm">
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Resetear
+                  </Button>
+                  {hasChanges && (
+                    <Button onClick={handleSave} size="sm">
+                      <Save className="h-4 w-4 mr-2" />
+                      Guardar cambios
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-b-2 bg-muted/70 hover:bg-muted/70">
+                      <TableHead className="font-semibold">Producto</TableHead>
+                      <TableHead className="font-semibold">Presentación</TableHead>
+                      <TableHead className="font-semibold">Marca</TableHead>
+                      <TableHead className="font-semibold">Categoría</TableHead>
+                      <TableHead className="font-semibold">Unidad de venta</TableHead>
+                      <TableHead className="text-right font-semibold">Kilos totales</TableHead>
+                      <TableHead className="text-right font-semibold">Precio por unidad de venta</TableHead>
+                      <TableHead className="text-right font-semibold">Precio por kg</TableHead>
                     </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </div>
-          {filteredPrices.length === 0 && (
-            <div className="flex items-center justify-center py-8 text-muted-foreground">
-              No hay precios que cumplan los filtros
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredPrices.map((price, index) => {
+                      const product = PRODUCTS.find(p => p.id === price.product_id)
+                      const presentation = PRESENTATIONS.find(p => p.id === price.presentation_id)
+                      const precioPerKg = price.total_weight_per_sales_unit_kg > 0 
+                        ? price.unit_price_for_sales_unit / price.total_weight_per_sales_unit_kg 
+                        : 0
+                      return (
+                        <TableRow 
+                          key={price.id}
+                          className={`hover:bg-accent/50 transition-colors ${index % 2 === 0 ? 'bg-background' : 'bg-muted/30'}`}
+                        >
+                          <TableCell className="font-semibold text-foreground">{product?.name || 'N/A'}</TableCell>
+                          <TableCell className="text-sm">{presentation?.name || 'N/A'}</TableCell>
+                          <TableCell>
+                            <span className={`inline-block rounded-full px-2.5 py-1 text-xs font-medium ${
+                              price.with_brand 
+                                ? 'bg-blue-100 text-blue-700' 
+                                : 'bg-gray-100 text-gray-700'
+                            }`}>
+                              {price.with_brand ? 'Con marca' : 'Sin marca'}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-sm">{PRICE_CATEGORY_LABELS[price.price_category]}</TableCell>
+                          <TableCell>
+                            <span className="inline-block rounded-full px-2.5 py-1 text-xs font-medium bg-primary/10 text-primary">
+                              {price.sales_unit_type === 'funda' ? 'Funda' : 'Unidad'}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right text-sm">{price.total_weight_per_sales_unit_kg} kg</TableCell>
+                          <TableCell className="text-right">
+                            <Input
+                              type="number"
+                              value={price.unit_price_for_sales_unit}
+                              onChange={(e) => handlePriceChange(price.id, parseFloat(e.target.value) || 0)}
+                              className="w-24 text-right"
+                              step="1"
+                            />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <span className="font-bold text-primary">{formatCurrency(precioPerKg)}</span>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+              {filteredPrices.length === 0 && (
+                <div className="flex items-center justify-center py-12 text-muted-foreground">
+                  No hay precios que cumplan los filtros
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-      {hasChanges && (
-        <Card className="border-amber-200 bg-amber-50">
-          <CardContent className="flex items-center gap-3 pt-6">
-            <AlertTriangle className="h-5 w-5 text-amber-600" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-amber-900">Cambios sin guardar</p>
-              <p className="text-sm text-amber-700">Los cambios en los precios no se aplicarán hasta que los guardes</p>
-            </div>
-            <Button onClick={handleSave} size="sm">Guardar ahora</Button>
-          </CardContent>
-        </Card>
-      )}
+          {hasChanges && (
+            <Card className="border-amber-200 bg-amber-50">
+              <CardContent className="flex items-center gap-3 pt-6">
+                <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-amber-900">Cambios sin guardar</p>
+                  <p className="text-sm text-amber-700">Los cambios en los precios no se aplicarán hasta que los guardes</p>
+                </div>
+                <Button onClick={handleSave} size="sm">Guardar ahora</Button>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
