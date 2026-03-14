@@ -63,6 +63,7 @@ const SAMPLE_PRICES: Record<string, Record<number, number>> = {
 
 export function CostosDashboard() {
   const [expandedBreakdowns, setExpandedBreakdowns] = useState<Set<string>>(new Set())
+  const [editingCosts, setEditingCosts] = useState<Record<string, { manual: string; bundle: string }>>({})
 
   // Toggle breakdown expansion
   const toggleBreakdown = (key: string) => {
@@ -73,6 +74,22 @@ export function CostosDashboard() {
       newSet.add(key)
     }
     setExpandedBreakdowns(newSet)
+  }
+
+  // Update manual extra cost
+  const updateManualExtraCost = (key: string, value: string) => {
+    setEditingCosts(prev => ({
+      ...prev,
+      [key]: { ...prev[key] || { manual: '', bundle: '' }, manual: value }
+    }))
+  }
+
+  // Update bundle manual extra cost
+  const updateBundleExtraCost = (key: string, value: string) => {
+    setEditingCosts(prev => ({
+      ...prev,
+      [key]: { ...prev[key] || { manual: '', bundle: '' }, bundle: value }
+    }))
   }
   // Calculate stats
   const stats = useMemo(() => {
@@ -445,13 +462,13 @@ export function CostosDashboard() {
                               {isExpanded && (
                                 <tr className="border-b border-border/30 bg-blue-50/40">
                                   <td colSpan={5} className="py-4 px-4">
-                                    <div className="space-y-3 ml-6">
+                                    <div className="space-y-4 ml-6">
                                       <h4 className="font-semibold text-sm text-foreground">Desglose de costo</h4>
                                       
                                       {/* Product base cost */}
                                       <div className="flex items-center justify-between text-sm">
                                         <span className="text-muted-foreground">
-                                          Producto base ({pc.breakdown.product_cost_per_kg > 0 ? formatCurrencyDecimal(pc.breakdown.product_cost_per_kg) : '0'}/kg × {pc.weight_kg} kg)
+                                          Producto base ({formatCurrencyDecimal(pc.breakdown.product_cost_per_kg)}/kg × {pc.weight_kg} kg)
                                         </span>
                                         <span className="font-mono font-medium">
                                           {formatCurrencyDecimal(pc.breakdown.product_cost_for_weight)}
@@ -478,15 +495,33 @@ export function CostosDashboard() {
                                         </div>
                                       )}
 
-                                      {/* Manual extra cost */}
-                                      {pc.breakdown.manual_extra_cost && pc.breakdown.manual_extra_cost > 0 && (
-                                        <div className="flex items-center justify-between text-sm">
-                                          <span className="text-muted-foreground">Costo extra manual</span>
-                                          <span className="font-mono font-medium">
-                                            {formatCurrencyDecimal(pc.breakdown.manual_extra_cost)}
-                                          </span>
-                                        </div>
-                                      )}
+                                      {/* Manual extra cost - EDITABLE */}
+                                      {(() => {
+                                        const costKey = breakdownKey
+                                        const currentManualCost = editingCosts[costKey]?.manual !== undefined 
+                                          ? parseFloat(editingCosts[costKey].manual) || 0
+                                          : (pc.breakdown.manual_extra_cost ?? 0)
+                                        
+                                        return (
+                                          <div className="flex items-center justify-between text-sm bg-amber-50/50 p-2 rounded border border-amber-100">
+                                            <label className="text-muted-foreground">Costo extra manual</label>
+                                            <div className="flex items-center gap-2">
+                                              <input
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                value={editingCosts[costKey]?.manual ?? (pc.breakdown.manual_extra_cost ?? '')}
+                                                onChange={(e) => updateManualExtraCost(costKey, e.target.value)}
+                                                className="w-20 px-2 py-1 text-sm text-right font-mono border border-border rounded bg-white"
+                                                placeholder="0"
+                                              />
+                                              <span className="text-muted-foreground text-xs">
+                                                {currentManualCost > 0 ? formatCurrencyDecimal(currentManualCost) : '—'}
+                                              </span>
+                                            </div>
+                                          </div>
+                                        )
+                                      })()}
 
                                       {/* Separator */}
                                       <div className="border-t border-border/50 my-2"></div>
@@ -495,7 +530,14 @@ export function CostosDashboard() {
                                       <div className="flex items-center justify-between text-sm font-semibold">
                                         <span>Costo total unitario</span>
                                         <span className="font-mono text-primary">
-                                          {formatCurrencyDecimal(pc.breakdown.total_cost)}
+                                          {(() => {
+                                            const costKey = breakdownKey
+                                            const manualCost = editingCosts[costKey]?.manual !== undefined 
+                                              ? parseFloat(editingCosts[costKey].manual) || 0
+                                              : (pc.breakdown.manual_extra_cost ?? 0)
+                                            const totalWithManual = pc.breakdown.product_cost_for_weight + pc.breakdown.envase_cost + pc.breakdown.etiqueta_cost + manualCost
+                                            return formatCurrencyDecimal(totalWithManual)
+                                          })()}
                                         </span>
                                       </div>
 
@@ -512,24 +554,42 @@ export function CostosDashboard() {
                                             </div>
 
                                             {/* Bundle base cost */}
-                                            <div className="flex items-center justify-between text-sm mt-2">
+                                            <div className="flex items-center justify-between text-sm mt-3">
                                               <span className="text-muted-foreground">
-                                                Costo unidades ({pc.breakdown.total_cost} × {pc.units_per_bundle})
+                                                Costo unidades ({formatCurrencyDecimal(pc.breakdown.total_cost)} × {pc.units_per_bundle})
                                               </span>
                                               <span className="font-mono font-medium">
                                                 {formatCurrencyDecimal(pc.breakdown.total_cost * pc.units_per_bundle)}
                                               </span>
                                             </div>
 
-                                            {/* Bundle extra cost */}
-                                            {pc.bundle_manual_extra_cost && pc.bundle_manual_extra_cost > 0 && (
-                                              <div className="flex items-center justify-between text-sm mt-2">
-                                                <span className="text-muted-foreground">Costo extra funda</span>
-                                                <span className="font-mono font-medium">
-                                                  {formatCurrencyDecimal(pc.bundle_manual_extra_cost)}
-                                                </span>
-                                              </div>
-                                            )}
+                                            {/* Bundle extra cost - EDITABLE */}
+                                            {(() => {
+                                              const costKey = breakdownKey
+                                              const currentBundleCost = editingCosts[costKey]?.bundle !== undefined 
+                                                ? parseFloat(editingCosts[costKey].bundle) || 0
+                                                : (pc.bundle_manual_extra_cost ?? 0)
+                                              
+                                              return (
+                                                <div className="flex items-center justify-between text-sm mt-2 bg-amber-50/50 p-2 rounded border border-amber-100">
+                                                  <label className="text-muted-foreground">Costo extra funda</label>
+                                                  <div className="flex items-center gap-2">
+                                                    <input
+                                                      type="number"
+                                                      step="0.01"
+                                                      min="0"
+                                                      value={editingCosts[costKey]?.bundle ?? (pc.bundle_manual_extra_cost ?? '')}
+                                                      onChange={(e) => updateBundleExtraCost(costKey, e.target.value)}
+                                                      className="w-20 px-2 py-1 text-sm text-right font-mono border border-border rounded bg-white"
+                                                      placeholder="0"
+                                                    />
+                                                    <span className="text-muted-foreground text-xs">
+                                                      {currentBundleCost > 0 ? formatCurrencyDecimal(currentBundleCost) : '—'}
+                                                    </span>
+                                                  </div>
+                                                </div>
+                                              )
+                                            })()}
 
                                             {/* Separator */}
                                             <div className="border-t border-border/30 my-2"></div>
@@ -538,9 +598,18 @@ export function CostosDashboard() {
                                             <div className="flex items-center justify-between text-sm font-semibold">
                                               <span>Costo total por funda</span>
                                               <span className="font-mono text-primary">
-                                                {formatCurrencyDecimal(
-                                                  (pc.breakdown.total_cost * pc.units_per_bundle) + (pc.bundle_manual_extra_cost ?? 0)
-                                                )}
+                                                {(() => {
+                                                  const costKey = breakdownKey
+                                                  const manualCost = editingCosts[costKey]?.manual !== undefined 
+                                                    ? parseFloat(editingCosts[costKey].manual) || 0
+                                                    : (pc.breakdown.manual_extra_cost ?? 0)
+                                                  const bundleCost = editingCosts[costKey]?.bundle !== undefined 
+                                                    ? parseFloat(editingCosts[costKey].bundle) || 0
+                                                    : (pc.bundle_manual_extra_cost ?? 0)
+                                                  const totalWithManual = pc.breakdown.product_cost_for_weight + pc.breakdown.envase_cost + pc.breakdown.etiqueta_cost + manualCost
+                                                  const bundleTotal = (totalWithManual * pc.units_per_bundle) + bundleCost
+                                                  return formatCurrencyDecimal(bundleTotal)
+                                                })()}
                                               </span>
                                             </div>
                                           </div>
