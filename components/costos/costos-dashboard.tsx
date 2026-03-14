@@ -35,35 +35,18 @@ import {
   formatCurrencyDecimal,
   formatPercent
 } from '@/lib/mock-data'
-import { calculateProfitMargins } from '@/lib/types'
+import { calculateProfitMargins, PRICE_CATEGORY_LABELS } from '@/lib/types'
+import { getPriceByKey } from '@/lib/price-store'
+import type { PriceCategory } from '@/lib/types'
 
 // Sample selling prices for profit calculation (would come from price list in production)
-const SAMPLE_PRICES: Record<string, Record<number, number>> = {
-  'prod-1': { // Enduido
-    1: 45,
-    2: 85,
-    5: 195,
-    10: 380,
-    20: 720,
-    1.7: 75,
-    7: 290,
-    18: 680,
-  },
-  'prod-2': { // Masilla
-    1: 50,
-    2: 95,
-    5: 220,
-    10: 420,
-    20: 800,
-    1.7: 85,
-    7: 320,
-    18: 750,
-  },
-}
+const SAMPLE_PRICES: Record<string, Record<number, number>> = {}
 
 export function CostosDashboard() {
   const [expandedBreakdowns, setExpandedBreakdowns] = useState<Set<string>>(new Set())
   const [editingCosts, setEditingCosts] = useState<Record<string, { manual: string; bundle: string }>>({})
+  const [selectedBrand, setSelectedBrand] = useState<'con' | 'sin'>('con')
+  const [selectedCategory, setSelectedCategory] = useState<PriceCategory>('barraca')
 
   // Toggle breakdown expansion
   const toggleBreakdown = (key: string) => {
@@ -117,17 +100,17 @@ export function CostosDashboard() {
     })
   }, [])
 
-  // Calculate presentation costs with margins
+  // Calculate presentation costs with margins - uses prices from price store
   const presentationCosts = useMemo(() => {
     const costs: Array<{
       product: typeof PRODUCTS[0]
+      presentationId: string
       type: 'bolsa' | 'pote'
       weight_kg: number
       with_brand: boolean
       cost: number
       sellingPrice: number
       marginOverPrice: number
-      markupOverCost: number
       units_per_bundle?: number
       bundle_manual_extra_cost?: number
       manual_extra_cost?: number
@@ -142,47 +125,35 @@ export function CostosDashboard() {
     }> = []
 
     PRODUCTS.filter(p => p.active).forEach(product => {
-      const costPerKg = calculateProductCostPerKg(product.id)
-      const prices = SAMPLE_PRICES[product.id] || {}
-
-      // Get unique weight/type combinations
-      const combinations = new Set<string>()
-      PRESENTATIONS.filter(p => p.product_id === product.id && p.active).forEach(pres => {
-        combinations.add(`${pres.type}-${pres.weight_kg}`)
-      })
-
-      combinations.forEach(combo => {
-        const [type, weightStr] = combo.split('-')
-        const weight = parseFloat(weightStr)
-        
-        ;[true, false].forEach(withBrand => {
-          // Find the actual presentation
-          const presentation = PRESENTATIONS.find(
-            p => p.product_id === product.id && 
-                 p.type === type && 
-                 p.weight_kg === weight && 
-                 p.with_brand === withBrand
-          )
-          
-          if (!presentation) return
-          
-          // Use the new helper that properly calculates costs with etiqueta per product+type
+      // Only get presentations matching the selected brand
+      PRESENTATIONS
+        .filter(p => p.product_id === product.id && p.active && p.with_brand === (selectedBrand === 'con'))
+        .forEach(presentation => {
+          // Use the helper that properly calculates costs
           const costBreakdown = calculatePresentationCost(presentation, product.id)
-          const sellingPrice = prices[weight] || 0
           
+          // Get price from price store based on selected category
+          const priceItem = getPriceByKey(
+            product.id,
+            presentation.id,
+            presentation.with_brand,
+            selectedCategory
+          )
+          const sellingPrice = priceItem?.unit_price_for_sales_unit || 0
+
           const margins = sellingPrice > 0 
             ? calculateProfitMargins(sellingPrice, costBreakdown.total_cost)
             : { margin_over_price: 0, markup_over_cost: 0 }
 
           costs.push({
             product,
-            type: type as 'bolsa' | 'pote',
-            weight_kg: weight,
-            with_brand: withBrand,
+            presentationId: presentation.id,
+            type: presentation.type as 'bolsa' | 'pote',
+            weight_kg: presentation.weight_kg,
+            with_brand: presentation.with_brand,
             cost: costBreakdown.total_cost,
             sellingPrice,
             marginOverPrice: margins.margin_over_price,
-            markupOverCost: margins.markup_over_cost,
             units_per_bundle: presentation.units_per_bundle,
             bundle_manual_extra_cost: presentation.bundle_manual_extra_cost,
             manual_extra_cost: presentation.manual_extra_cost,
@@ -196,7 +167,6 @@ export function CostosDashboard() {
             }
           })
         })
-      })
     })
 
     return costs.sort((a, b) => {
@@ -205,7 +175,7 @@ export function CostosDashboard() {
       if (a.weight_kg !== b.weight_kg) return a.weight_kg - b.weight_kg
       return a.with_brand ? -1 : 1
     })
-  }, [])
+  }, [selectedBrand, selectedCategory])
 
   // Navigation links
   const navLinks = [
@@ -352,9 +322,60 @@ export function CostosDashboard() {
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
+            {/* Brand and Category Selectors */}
+            <div className="space-y-3 pb-4 border-b border-border">
+              {/* Brand Selector */}
+              <div>
+                <label className="text-sm font-medium text-muted-foreground mb-2 block">Marca</label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setSelectedBrand('con')}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                      selectedBrand === 'con'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    }`}
+                  >
+                    Con marca
+                  </button>
+                  <button
+                    onClick={() => setSelectedBrand('sin')}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                      selectedBrand === 'sin'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    }`}
+                  >
+                    Sin marca
+                  </button>
+                </div>
+              </div>
+
+              {/* Category Selector */}
+              <div>
+                <label className="text-sm font-medium text-muted-foreground mb-2 block">Categoría</label>
+                <div className="flex flex-wrap gap-2">
+                  {(['barraca', 'distribuidor', 'oferta', 'consumidor_final'] as const).map(category => (
+                    <button
+                      key={category}
+                      onClick={() => setSelectedCategory(category)}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                        selectedCategory === category
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                      }`}
+                    >
+                      {PRICE_CATEGORY_LABELS[category]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Products Loop */}
             {PRODUCTS.filter(p => p.active).map(product => {
               const productPresentations = presentationCosts.filter(
-                pc => pc.product.id === product.id && pc.with_brand
+                pc => pc.product.id === product.id
               )
               
               return (
@@ -364,7 +385,12 @@ export function CostosDashboard() {
                       product.type === 'enduido' ? 'text-blue-600' : 'text-emerald-600'
                     }`} />
                     <h3 className="font-semibold">{product.name}</h3>
-                    <Badge variant="outline" className="text-xs">Con marca</Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {selectedBrand === 'con' ? 'Con marca' : 'Sin marca'}
+                    </Badge>
+                    <Badge variant="secondary" className="text-xs">
+                      {PRICE_CATEGORY_LABELS[selectedCategory]}
+                    </Badge>
                   </div>
 
                   <div className="overflow-x-auto">
@@ -377,12 +403,6 @@ export function CostosDashboard() {
                           <th className="text-right py-2 font-medium">
                             <span className="flex items-center justify-end gap-1">
                               Margen s/precio
-                              <ArrowUpRight className="h-3 w-3 text-muted-foreground" />
-                            </span>
-                          </th>
-                          <th className="text-right py-2 font-medium">
-                            <span className="flex items-center justify-end gap-1">
-                              Markup s/costo
                               <ArrowUpRight className="h-3 w-3 text-muted-foreground" />
                             </span>
                           </th>
@@ -448,20 +468,11 @@ export function CostosDashboard() {
                                     <span className="text-muted-foreground">-</span>
                                   )}
                                 </td>
-                                <td className="py-2 text-right">
-                                  {pc.sellingPrice > 0 ? (
-                                    <span className={`font-semibold ${marginColor}`}>
-                                      {formatPercent(pc.markupOverCost)}
-                                    </span>
-                                  ) : (
-                                    <span className="text-muted-foreground">-</span>
-                                  )}
-                                </td>
                               </tr>
                               {/* Cost Breakdown Row */}
                               {isExpanded && (
                                 <tr className="border-b border-border/30 bg-blue-50/40">
-                                  <td colSpan={5} className="py-4 px-4">
+                                  <td colSpan={4} className="py-4 px-4">
                                     <div className="space-y-4 ml-6">
                                       <h4 className="font-semibold text-sm text-foreground">Desglose de costo</h4>
                                       
