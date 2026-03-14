@@ -6,7 +6,7 @@ import { OrderForm } from '@/components/orders/order-form'
 
 export default function NuevoPedidoPage() {
   const searchParams = useSearchParams()
-  const clientId = searchParams.get('client')
+  const clientId = searchParams.get('preSelectedClient') || searchParams.get('client')
 
   return (
     <AdminLayout>

@@ -73,6 +73,8 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
   const [orderDate, setOrderDate] = useState(order?.order_date || new Date().toISOString().split('T')[0])
   const [promisedDate, setPromisedDate] = useState(order?.promised_date || '')
   const [clientId, setClientId] = useState(order?.client_id || preSelectedClientId || '')
+  const [clientSearch, setClientSearch] = useState('')
+  const [showClientDropdown, setShowClientDropdown] = useState(false)
   const [vendorId, setVendorId] = useState(order?.vendor_id || 'none')
   const [priceCategory, setPriceCategory] = useState<PriceCategory>(order?.price_category || 'barraca')
   const [notes, setNotes] = useState(order?.notes || '')
@@ -116,6 +118,31 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
     getAllClients().find(c => c.id === clientId), 
     [clientId]
   )
+
+  // Filter clients based on search
+  const filteredClients = useMemo(() => {
+    if (!clientSearch.trim()) return activeClients
+    const searchLower = clientSearch.toLowerCase()
+    return activeClients.filter(client =>
+      (client.name?.toLowerCase().includes(searchLower)) ||
+      (client.company?.toLowerCase().includes(searchLower)) ||
+      (client.email?.toLowerCase().includes(searchLower)) ||
+      (client.phone?.toLowerCase().includes(searchLower)) ||
+      (client.rut?.toLowerCase().includes(searchLower))
+    )
+  }, [clientSearch, activeClients])
+
+  // When preSelectedClientId changes, find and set the client, and clear search
+  useEffect(() => {
+    if (preSelectedClientId && !clientId) {
+      const preSelectedClient = activeClients.find(c => c.id === preSelectedClientId)
+      if (preSelectedClient) {
+        setClientId(preSelectedClientId)
+        setClientSearch('')
+        setShowClientDropdown(false)
+      }
+    }
+  }, [preSelectedClientId, activeClients, clientId])
 
   // Add new item with sensible defaults
   const addItem = () => {
@@ -355,25 +382,45 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex gap-4">
-                <div className="flex-1">
+                <div className="flex-1 relative">
                   <Label htmlFor="client" className="sr-only">Cliente</Label>
-                  <Select value={clientId} onValueChange={setClientId} required>
-                    <SelectTrigger id="client" className="h-12">
-                      <SelectValue placeholder="Seleccionar cliente..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {activeClients.map((client) => (
-                        <SelectItem key={client.id} value={client.id}>
-                          <div className="flex flex-col items-start">
-                            <span className="font-medium">{client.name}</span>
-                            {client.company && (
-                              <span className="text-xs text-muted-foreground">{client.company}</span>
+                  <Input
+                    id="client"
+                    placeholder="Buscar cliente por nombre, empresa, email, teléfono o RUT..."
+                    value={clientSearch || (selectedClient?.name ? `${selectedClient.name}${selectedClient.company ? ` (${selectedClient.company})` : ''}` : '')}
+                    onChange={(e) => {
+                      setClientSearch(e.target.value)
+                      setShowClientDropdown(true)
+                    }}
+                    onFocus={() => setShowClientDropdown(true)}
+                    className="h-12"
+                  />
+                  {showClientDropdown && (
+                    <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-background border border-input rounded-md shadow-md max-h-48 overflow-y-auto">
+                      {filteredClients.length > 0 ? (
+                        filteredClients.map((client) => (
+                          <button
+                            key={client.id}
+                            type="button"
+                            onClick={() => {
+                              setClientId(client.id)
+                              setClientSearch('')
+                              setShowClientDropdown(false)
+                            }}
+                            className="w-full text-left px-4 py-2 hover:bg-accent hover:text-accent-foreground transition-colors border-b last:border-b-0"
+                          >
+                            <div className="font-medium">{client.name}</div>
+                            {client.company && <div className="text-xs text-muted-foreground">{client.company}</div>}
+                            {(client.email || client.phone) && (
+                              <div className="text-xs text-muted-foreground">{[client.email, client.phone].filter(Boolean).join(' • ')}</div>
                             )}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-4 py-2 text-sm text-muted-foreground">No se encontraron clientes</div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <Link href="/clientes/nuevo?from=pedido">
                   <Button type="button" variant="outline" className="h-12">

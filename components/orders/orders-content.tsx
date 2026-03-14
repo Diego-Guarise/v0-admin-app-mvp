@@ -118,9 +118,10 @@ export function OrdersContent() {
       if (invoiceFilter === 'with' && !order.has_invoice) return false
       if (invoiceFilter === 'without' && order.has_invoice) return false
 
-      // Date range filter
+      // Date range filter - normalize comparison using string comparison (YYYY-MM-DD format)
       if (dateRange.from && dateRange.to) {
         const orderDate = order.order_date
+        // String comparison works correctly for YYYY-MM-DD format
         if (orderDate < dateRange.from || orderDate > dateRange.to) return false
       }
 
