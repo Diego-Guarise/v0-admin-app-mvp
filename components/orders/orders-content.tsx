@@ -24,10 +24,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Card, CardContent } from '@/components/ui/card'
-import { Plus, Search, ShoppingCart, Eye, Edit, X, Package, Scale } from 'lucide-react'
+import { Plus, Search, ShoppingCart, Eye, Edit, X, Package, Scale, ChevronDown } from 'lucide-react'
 import { formatCurrency, formatDate, formatWeight } from '@/lib/mock-data'
-import { getAllOrders } from '@/lib/order-store'
+import { getAllOrders, saveOrder } from '@/lib/order-store'
 import { getAllClients } from '@/lib/client-store'
 import { getAllVendors } from '@/lib/vendor-store'
 import type { OrderStatus, PaymentStatus } from '@/lib/types'
@@ -47,6 +53,7 @@ export function OrdersContent() {
   const [dateFilter, setDateFilter] = useState<'today' | 'week' | 'month' | 'last-month' | 'custom'>('month')
   const [customFromDate, setCustomFromDate] = useState('')
   const [customToDate, setCustomToDate] = useState('')
+  const [orders, setOrders] = useState<any[]>(getAllOrders())
 
   // Helper to get date range based on filter
   const getDateRange = () => {
@@ -90,7 +97,7 @@ export function OrdersContent() {
   // Filter orders
   const filteredOrders = useMemo(() => {
     const dateRange = getDateRange()
-    return getAllOrders().filter(order => {
+    return orders.filter(order => {
       // Search filter
       if (search) {
         const searchLower = search.toLowerCase()
@@ -134,7 +141,7 @@ export function OrdersContent() {
       // Fallback: created_at descending
       return b.created_at.localeCompare(a.created_at)
     })
-  }, [search, statusFilter, paymentFilter, clientFilter, vendorFilter, invoiceFilter, dateFilter, customFromDate, customToDate])
+  }, [search, statusFilter, paymentFilter, clientFilter, vendorFilter, invoiceFilter, dateFilter, customFromDate, customToDate, orders])
 
   const clearFilters = () => {
     setSearch('')
@@ -146,6 +153,18 @@ export function OrdersContent() {
     setDateFilter('month')
     setCustomFromDate('')
     setCustomToDate('')
+  }
+
+  // Handle order status change
+  const handleStatusChange = (orderId: string, newStatus: OrderStatus) => {
+    const orderToUpdate = orders.find(o => o.id === orderId)
+    if (!orderToUpdate) return
+
+    const updatedOrder = { ...orderToUpdate, status: newStatus }
+    saveOrder(updatedOrder)
+    
+    // Update local state for immediate UI reflection
+    setOrders(orders.map(o => o.id === orderId ? updatedOrder : o))
   }
 
   const hasFilters = search || statusFilter !== 'all' || paymentFilter !== 'all' || clientFilter !== 'all' || vendorFilter !== 'all' || invoiceFilter !== 'all' || dateFilter !== 'month'
@@ -327,11 +346,11 @@ export function OrdersContent() {
                     <TableHead>Cliente</TableHead>
                     <TableHead>Vendedor</TableHead>
                     <TableHead className="text-right">Subtotal</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead className="text-center">Total</TableHead>
                     <TableHead className="text-center">Fac</TableHead>
-                    <TableHead>Pedido</TableHead>
-                    <TableHead>Cobro</TableHead>
-                    <TableHead className="w-24">Acciones</TableHead>
+                    <TableHead className="text-center">Pedido</TableHead>
+                    <TableHead className="text-center">Cobro</TableHead>
+                    <TableHead className="text-center">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -359,7 +378,7 @@ export function OrdersContent() {
                       <TableCell className="text-right font-medium text-muted-foreground">
                         {formatCurrency(order.subtotal)}
                       </TableCell>
-                      <TableCell className="text-right font-bold">
+                      <TableCell className="text-center font-bold">
                         {formatCurrency(order.total)}
                       </TableCell>
                       <TableCell className="text-center font-medium">
@@ -369,14 +388,32 @@ export function OrdersContent() {
                           <span className="text-gray-400">—</span>
                         )}
                       </TableCell>
-                      <TableCell>
-                        <StatusBadge status={order.status} type="order" size="sm" showDot />
+                      <TableCell className="text-center">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className="inline-flex items-center gap-1 hover:opacity-80 transition-opacity">
+                              <StatusBadge status={order.status} type="order" size="sm" showDot />
+                              <ChevronDown className="h-3 w-3" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="center">
+                            {Object.entries(ORDER_STATUS_LABELS).map(([value, label]) => (
+                              <DropdownMenuItem 
+                                key={value}
+                                onClick={() => handleStatusChange(order.id, value as OrderStatus)}
+                                className={order.status === value ? 'bg-accent' : ''}
+                              >
+                                {label}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-center">
                         <StatusBadge status={order.payment_status} type="payment" size="sm" showDot />
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center justify-center gap-1">
                           <Link href={`/pedidos/${order.id}`}>
                             <Button variant="ghost" size="icon" className="h-8 w-8">
                               <Eye className="h-4 w-4" />
