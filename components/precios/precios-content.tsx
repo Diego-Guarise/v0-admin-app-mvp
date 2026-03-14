@@ -14,11 +14,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { AlertTriangle, Save } from 'lucide-react'
+import { AlertTriangle, Save, ArrowUp, ArrowDown } from 'lucide-react'
 import { getAllPrices, savePrices } from '@/lib/price-store'
 import { PRODUCTS, PRESENTATIONS, formatCurrency } from '@/lib/mock-data'
 import { PRICE_CATEGORY_LABELS } from '@/lib/types'
 import type { PriceListItem, PriceCategory } from '@/lib/types'
+
+type SortKey = 'product' | 'presentation' | 'category' | 'kilos' | 'price' | 'pricePerKg' | null
+type SortOrder = 'asc' | 'desc' | null
 
 export function PreciosContent() {
   const [prices, setPrices] = useState<PriceListItem[]>(getAllPrices())
@@ -26,16 +29,72 @@ export function PreciosContent() {
   const [filterCategory, setFilterCategory] = useState<PriceCategory | 'all'>('all')
   const [filterBrand, setFilterBrand] = useState<'all' | 'con' | 'sin'>('all')
   const [hasChanges, setHasChanges] = useState(false)
+  const [sortKey, setSortKey] = useState<SortKey>(null)
+  const [sortOrder, setSortOrder] = useState<SortOrder>(null)
 
   const filteredPrices = useMemo(() => {
-    return prices.filter(p => {
+    let result = prices.filter(p => {
       if (filterProduct !== 'all' && p.product_id !== filterProduct) return false
       if (filterCategory !== 'all' && p.price_category !== filterCategory) return false
       if (filterBrand === 'con' && !p.with_brand) return false
       if (filterBrand === 'sin' && p.with_brand) return false
       return true
     })
-  }, [prices, filterProduct, filterCategory, filterBrand])
+
+    // Apply sorting
+    if (sortKey && sortOrder) {
+      result = [...result].sort((a, b) => {
+        let aVal: any = ''
+        let bVal: any = ''
+
+        switch (sortKey) {
+          case 'product': {
+            const prodA = PRODUCTS.find(p => p.id === a.product_id)
+            const prodB = PRODUCTS.find(p => p.id === b.product_id)
+            aVal = prodA?.name || ''
+            bVal = prodB?.name || ''
+            break
+          }
+          case 'presentation': {
+            const presA = PRESENTATIONS.find(p => p.id === a.presentation_id)
+            const presB = PRESENTATIONS.find(p => p.id === b.presentation_id)
+            aVal = presA?.name || ''
+            bVal = presB?.name || ''
+            break
+          }
+          case 'category':
+            aVal = a.price_category
+            bVal = b.price_category
+            break
+          case 'kilos':
+            aVal = a.total_weight_per_sales_unit_kg
+            bVal = b.total_weight_per_sales_unit_kg
+            break
+          case 'price':
+            aVal = a.unit_price_for_sales_unit
+            bVal = b.unit_price_for_sales_unit
+            break
+          case 'pricePerKg':
+            aVal = a.total_weight_per_sales_unit_kg > 0 ? a.unit_price_for_sales_unit / a.total_weight_per_sales_unit_kg : 0
+            bVal = b.total_weight_per_sales_unit_kg > 0 ? b.unit_price_for_sales_unit / b.total_weight_per_sales_unit_kg : 0
+            break
+        }
+
+        if (typeof aVal === 'string') {
+          aVal = aVal.toLowerCase()
+          bVal = (bVal as string).toLowerCase()
+        }
+
+        if (sortOrder === 'asc') {
+          return aVal > bVal ? 1 : aVal < bVal ? -1 : 0
+        } else {
+          return aVal < bVal ? 1 : aVal > bVal ? -1 : 0
+        }
+      })
+    }
+
+    return result
+  }, [prices, filterProduct, filterCategory, filterBrand, sortKey, sortOrder])
 
   const handlePriceChange = (id: string, newPrice: number) => {
     setPrices(prices.map(p => p.id === id ? { ...p, unit_price_for_sales_unit: newPrice } : p))
@@ -45,6 +104,31 @@ export function PreciosContent() {
   const handleSave = () => {
     savePrices(prices)
     setHasChanges(false)
+  }
+
+  const handleSort = (key: SortKey) => {
+    // If clicking the same column, cycle through sort orders
+    if (sortKey === key) {
+      if (sortOrder === null) {
+        setSortOrder('asc')
+      } else if (sortOrder === 'asc') {
+        setSortOrder('desc')
+      } else {
+        setSortKey(null)
+        setSortOrder(null)
+      }
+    } else {
+      // New column - start with ascending
+      setSortKey(key)
+      setSortOrder('asc')
+    }
+  }
+
+  const renderSortIcon = (key: SortKey) => {
+    if (sortKey !== key) return null
+    if (sortOrder === 'asc') return <ArrowUp className="h-4 w-4 ml-1 inline" />
+    if (sortOrder === 'desc') return <ArrowDown className="h-4 w-4 ml-1 inline" />
+    return null
   }
 
   // Get unique product names for filter pills
@@ -146,16 +230,28 @@ export function PreciosContent() {
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-background">
-                      <TableHead className="font-semibold">Producto</TableHead>
-                      <TableHead className="font-semibold">Presentación</TableHead>
+                  <TableHeader className="sticky top-0 z-10 bg-background">
+                    <TableRow className="hover:bg-background border-b">
+                      <TableHead className="font-semibold cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => handleSort('product')}>
+                        Producto {renderSortIcon('product')}
+                      </TableHead>
+                      <TableHead className="font-semibold cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => handleSort('presentation')}>
+                        Presentación {renderSortIcon('presentation')}
+                      </TableHead>
                       <TableHead className="font-semibold">Marca</TableHead>
-                      <TableHead className="font-semibold">Categoría</TableHead>
+                      <TableHead className="font-semibold cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => handleSort('category')}>
+                        Categoría {renderSortIcon('category')}
+                      </TableHead>
                       <TableHead className="text-center font-semibold">Unidad de venta</TableHead>
-                      <TableHead className="text-center font-semibold">Kilos totales</TableHead>
-                      <TableHead className="text-center font-semibold">Precio por unidad de venta</TableHead>
-                      <TableHead className="text-center font-semibold">Precio por kg</TableHead>
+                      <TableHead className="text-center font-semibold cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => handleSort('kilos')}>
+                        Kilos totales {renderSortIcon('kilos')}
+                      </TableHead>
+                      <TableHead className="text-center font-semibold cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => handleSort('price')}>
+                        Precio por unidad de venta {renderSortIcon('price')}
+                      </TableHead>
+                      <TableHead className="text-center font-semibold cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => handleSort('pricePerKg')}>
+                        Precio por kg {renderSortIcon('pricePerKg')}
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
