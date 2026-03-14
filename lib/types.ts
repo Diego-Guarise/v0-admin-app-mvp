@@ -138,7 +138,9 @@ export interface IngredientInput {
   id: string
   name: string
   category: IngredientCategory
-  unit_of_measure: UnitOfMeasure
+  unit_of_measure: UnitOfMeasure // Unit of use (base unit for formulas)
+  purchase_unit_of_measure?: UnitOfMeasure // Unit in which ingredient is purchased
+  quantity_per_purchase_unit?: number // How many units of use are contained in one purchase unit (e.g., 14 bolsas per kg)
   description?: string
   notes?: string
   status: IngredientStatus
@@ -154,14 +156,17 @@ export interface IngredientCost {
   date: string
   provider?: string
   quantity: number
-  unit_of_measure: UnitOfMeasure
-  total_amount: number
+  unit_of_measure: UnitOfMeasure // Purchase unit (how it was bought)
+  total_amount: number // Total cost paid
   has_invoice: boolean
   // Calculated fields
   amount_without_iva: number
   iva: number
-  unit_cost_with_iva: number
-  unit_cost_without_iva: number
+  unit_cost_with_iva: number // Cost per purchase unit with IVA
+  unit_cost_without_iva: number // Cost per purchase unit without IVA
+  // New calculated field for real unit cost (per unit of use)
+  real_unit_cost_without_iva?: number // Cost per unit of use (automatically calculated: unit_cost_without_iva / quantity_per_purchase_unit)
+  real_unit_cost_with_iva?: number // Cost per unit of use with IVA (automatically calculated)
   notes?: string
   created_at: string
   updated_at: string

@@ -224,7 +224,9 @@ export const INGREDIENT_INPUTS: IngredientInput[] = [
     id: 'ins-9',
     name: 'Bolsa plástica 1 kg',
     category: 'envase',
-    unit_of_measure: 'unidad',
+    unit_of_measure: 'unidad', // Uses bolsas
+    purchase_unit_of_measure: 'kg', // Purchased by kg
+    quantity_per_purchase_unit: 14, // 1 kg of bolsas contains 14 individual bolsas
     status: 'activo',
     created_at: '2022-01-01T00:00:00Z',
     updated_at: '2025-01-15T10:00:00Z'
@@ -234,6 +236,8 @@ export const INGREDIENT_INPUTS: IngredientInput[] = [
     name: 'Bolsa plástica 2 kg',
     category: 'envase',
     unit_of_measure: 'unidad',
+    purchase_unit_of_measure: 'kg',
+    quantity_per_purchase_unit: 8, // 1 kg contains 8 bolsas of 2kg
     status: 'activo',
     created_at: '2022-01-01T00:00:00Z',
     updated_at: '2025-01-15T10:00:00Z'
@@ -243,6 +247,8 @@ export const INGREDIENT_INPUTS: IngredientInput[] = [
     name: 'Bolsa plástica 5 kg',
     category: 'envase',
     unit_of_measure: 'unidad',
+    purchase_unit_of_measure: 'kg',
+    quantity_per_purchase_unit: 3, // 1 kg contains 3 bolsas
     status: 'activo',
     created_at: '2022-01-01T00:00:00Z',
     updated_at: '2025-01-15T10:00:00Z'
@@ -252,6 +258,8 @@ export const INGREDIENT_INPUTS: IngredientInput[] = [
     name: 'Bolsa plástica 10 kg',
     category: 'envase',
     unit_of_measure: 'unidad',
+    purchase_unit_of_measure: 'kg',
+    quantity_per_purchase_unit: 2, // 1 kg contains 2 bolsas
     status: 'activo',
     created_at: '2022-01-01T00:00:00Z',
     updated_at: '2025-01-15T10:00:00Z'
@@ -261,6 +269,8 @@ export const INGREDIENT_INPUTS: IngredientInput[] = [
     name: 'Bolsa plástica 20 kg',
     category: 'envase',
     unit_of_measure: 'unidad',
+    purchase_unit_of_measure: 'kg',
+    quantity_per_purchase_unit: 1, // 1 kg contains 1 bolsa (simplified for 20kg bolsas)
     status: 'activo',
     created_at: '2022-01-01T00:00:00Z',
     updated_at: '2025-01-15T10:00:00Z'
@@ -270,6 +280,8 @@ export const INGREDIENT_INPUTS: IngredientInput[] = [
     name: 'Pote plástico 1.7 kg',
     category: 'envase',
     unit_of_measure: 'unidad',
+    purchase_unit_of_measure: 'funda', // Purchased by funda
+    quantity_per_purchase_unit: 40, // 1 funda contains 40 potes
     status: 'activo',
     created_at: '2022-01-01T00:00:00Z',
     updated_at: '2025-01-15T10:00:00Z'
@@ -279,6 +291,8 @@ export const INGREDIENT_INPUTS: IngredientInput[] = [
     name: 'Pote plástico 7 kg',
     category: 'envase',
     unit_of_measure: 'unidad',
+    purchase_unit_of_measure: 'funda',
+    quantity_per_purchase_unit: 25, // 1 funda contains 25 potes
     status: 'activo',
     created_at: '2022-01-01T00:00:00Z',
     updated_at: '2025-01-15T10:00:00Z'
@@ -288,9 +302,12 @@ export const INGREDIENT_INPUTS: IngredientInput[] = [
     name: 'Pote plástico 18 kg',
     category: 'envase',
     unit_of_measure: 'unidad',
+    purchase_unit_of_measure: 'funda',
+    quantity_per_purchase_unit: 15, // 1 funda contains 15 potes
     status: 'activo',
     created_at: '2022-01-01T00:00:00Z',
     updated_at: '2025-01-15T10:00:00Z'
+  },
   },
   // Etiquetas - Configurable per product + packaging type
   // Enduido solo tiene bolsas, Masilla tiene bolsas y potes
@@ -299,6 +316,8 @@ export const INGREDIENT_INPUTS: IngredientInput[] = [
     name: 'Etiqueta Enduido bolsas',
     category: 'etiqueta',
     unit_of_measure: 'unidad',
+    purchase_unit_of_measure: 'unidad', // Simple case: purchased by unit (no conversion needed)
+    quantity_per_purchase_unit: 1, // 1 etiqueta = 1 etiqueta
     description: 'Etiqueta autoadhesiva para bolsas de Enduido Interior',
     status: 'activo',
     created_at: '2022-01-01T00:00:00Z',
@@ -309,6 +328,8 @@ export const INGREDIENT_INPUTS: IngredientInput[] = [
     name: 'Etiqueta Masilla bolsas',
     category: 'etiqueta',
     unit_of_measure: 'unidad',
+    purchase_unit_of_measure: 'unidad',
+    quantity_per_purchase_unit: 1,
     description: 'Etiqueta autoadhesiva para bolsas de Masilla para Yeso',
     status: 'activo',
     created_at: '2022-01-01T00:00:00Z',
@@ -319,6 +340,8 @@ export const INGREDIENT_INPUTS: IngredientInput[] = [
     name: 'Etiqueta Masilla potes',
     category: 'etiqueta',
     unit_of_measure: 'unidad',
+    purchase_unit_of_measure: 'unidad',
+    quantity_per_purchase_unit: 1,
     description: 'Etiqueta autoadhesiva para potes de Masilla para Yeso',
     status: 'activo',
     created_at: '2022-01-01T00:00:00Z',
@@ -342,10 +365,24 @@ function createIngredientCost(
   notes?: string
 ): IngredientCost {
   const calculated = calculateIngredientCostIVA(total_amount, has_invoice, quantity)
+  const insumo = INGREDIENT_INPUTS.find(i => i.id === insumo_id)
+  
+  // Calculate real unit cost (cost per unit of use)
+  // If the insumo has purchase unit info, calculate cost per unit of use
+  // Otherwise, use the regular unit cost
+  let real_unit_cost_without_iva = calculated.unit_cost_without_iva
+  let real_unit_cost_with_iva = calculated.unit_cost_with_iva
+  
+  if (insumo && insumo.quantity_per_purchase_unit && insumo.quantity_per_purchase_unit > 1) {
+    // Insumo is purchased in bulk - convert to cost per unit of use
+    real_unit_cost_without_iva = calculated.unit_cost_without_iva / insumo.quantity_per_purchase_unit
+    real_unit_cost_with_iva = calculated.unit_cost_with_iva / insumo.quantity_per_purchase_unit
+  }
+  
   return {
     id,
     insumo_id,
-    insumo: INGREDIENT_INPUTS.find(i => i.id === insumo_id),
+    insumo,
     date,
     provider,
     quantity,
@@ -353,6 +390,8 @@ function createIngredientCost(
     total_amount,
     has_invoice,
     ...calculated,
+    real_unit_cost_without_iva,
+    real_unit_cost_with_iva,
     notes,
     created_at: date + 'T10:00:00Z',
     updated_at: date + 'T10:00:00Z'
@@ -587,7 +626,10 @@ export function calculateProductCostPerKg(productId: string): number {
     if (latestCost && insumo) {
       const formulaUnit = insumo.unit_of_measure
       const costUnit = latestCost.unit_of_measure
-      const unitCost = latestCost.unit_cost_without_iva
+      
+      // Use real unit cost if available (for supplies purchased in bulk)
+      // Otherwise use regular unit cost
+      const unitCost = latestCost.real_unit_cost_without_iva || latestCost.unit_cost_without_iva
       
       // Check if units are compatible
       if (!areUnitsCompatible(formulaUnit, costUnit)) {
@@ -642,7 +684,8 @@ export function getEnvaseCost(presentationType: 'bolsa' | 'pote', weightKg: numb
   if (!insumoId) return 0
   
   const latestCost = getLatestIngredientCost(insumoId)
-  return latestCost?.unit_cost_without_iva || 0
+  // Use real unit cost if available (for bulk purchases), otherwise use regular unit cost
+  return latestCost?.real_unit_cost_without_iva || latestCost?.unit_cost_without_iva || 0
 }
 
 // ============================================
@@ -668,7 +711,8 @@ export function getEtiquetaCostForPresentation(
   if (!insumoId) return 0
   
   const latestCost = getLatestIngredientCost(insumoId)
-  return latestCost?.unit_cost_without_iva || 0
+  // Use real unit cost if available, otherwise use regular unit cost
+  return latestCost?.real_unit_cost_without_iva || latestCost?.unit_cost_without_iva || 0
 }
 
 // Legacy helper for backward compatibility
