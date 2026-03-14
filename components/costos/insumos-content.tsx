@@ -154,13 +154,38 @@ export function InsumosContent() {
                 <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                   {insumos.map(insumo => {
                     const latestCost = getLatestIngredientCost(insumo.id)
+                    
+                    // Helper function to get natural name for envase items
+                    const getEnvaseName = (name: string): string => {
+                      if (name.includes('Bolsa')) return 'bolsa'
+                      if (name.includes('Pote')) return 'pote'
+                      return 'unidad'
+                    }
+                    
                     // Safe check: only show purchase unit info if all required fields exist
                     const hasPurchaseUnit = !!(
                       insumo.purchase_unit_of_measure && 
-                      insumo.quantity_per_purchase_unit && 
-                      insumo.quantity_per_purchase_unit > 1 &&
-                      latestCost?.real_unit_cost_without_iva
+                      insumo.quantity_per_purchase_unit &&
+                      insumo.quantity_per_purchase_unit >= 1 &&
+                      (insumo.category === 'envase' || insumo.category === 'etiqueta')
                     )
+                    
+                    // Get natural text for purchase description
+                    const getPurchaseText = () => {
+                      if (!hasPurchaseUnit) return null
+                      
+                      const envaseType = getEnvaseName(insumo.name)
+                      const qty = insumo.quantity_per_purchase_unit
+                      const purchaseUnit = insumo.purchase_unit_of_measure
+                      
+                      // Format: "14 bolsas por kg" or "40 potes por funda"
+                      const qtyText = qty === 1 ? `1 ${envaseType}` : `${qty} ${envaseType}${qty !== 1 ? 's' : ''}`
+                      const unitText = purchaseUnit === 'kg' ? 'kg' : purchaseUnit === 'funda' ? 'funda' : purchaseUnit
+                      
+                      return `${qtyText} por ${unitText}`
+                    }
+                    
+                    const purchaseText = getPurchaseText()
                     
                     return (
                       <Card key={insumo.id} className="shadow-sm hover:shadow-md transition-all">
@@ -181,12 +206,12 @@ export function InsumosContent() {
                             />
                           </div>
 
-                          {/* Purchase unit info - only show if all data exists */}
-                          {hasPurchaseUnit && insumo.purchase_unit_of_measure && (
+                          {/* Purchase unit info - natural language for envases */}
+                          {purchaseText && (
                             <div className="bg-blue-50 rounded p-2 my-2">
                               <p className="text-xs text-blue-900">
                                 <span className="font-semibold">Compra: </span>
-                                {insumo.quantity_per_purchase_unit} {UNIT_OF_MEASURE_LABELS[insumo.unit_of_measure]} por {UNIT_OF_MEASURE_LABELS[insumo.purchase_unit_of_measure]}
+                                {purchaseText}
                               </p>
                             </div>
                           )}
@@ -209,7 +234,7 @@ export function InsumosContent() {
                                         por {UNIT_OF_MEASURE_ABBR[insumo.unit_of_measure]}
                                       </p>
                                       <p className="text-xs text-muted-foreground mt-1 pt-1 border-t">
-                                        Compra: {formatCurrencyDecimal(latestCost.unit_cost_without_iva)} por {insumo.purchase_unit_of_measure ? UNIT_OF_MEASURE_ABBR[insumo.purchase_unit_of_measure] : 'unidad'}
+                                        Compra: {formatCurrencyDecimal(latestCost.unit_cost_without_iva)} por {insumo.purchase_unit_of_measure === 'kg' ? 'kg' : insumo.purchase_unit_of_measure === 'funda' ? 'funda' : 'un'}
                                       </p>
                                     </>
                                   ) : (
