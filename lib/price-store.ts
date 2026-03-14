@@ -153,7 +153,9 @@ function getSeedPrices(): PriceListItem[] {
   const end1kg = PRESENTATIONS.find(p => p.product_id === 'prod-1' && p.weight_kg === 1 && p.type === 'bolsa')
   if (end1kg) {
     // Sold by funda (20 units = 20 kg)
+    // Restricted for consumidor_final category
     categories.forEach(cat => {
+      if (cat === 'consumidor_final') return // Skip this category
       brands.forEach(brand => {
         const basePrice = brand ? 30 : 25
         const catMultiplier = cat === 'barraca' ? 1 : cat === 'distribuidor' ? 0.88 : cat === 'oferta' ? 0.8 : 1.4
@@ -167,7 +169,9 @@ function getSeedPrices(): PriceListItem[] {
   const end2kg = PRESENTATIONS.find(p => p.product_id === 'prod-1' && p.weight_kg === 2 && p.type === 'bolsa')
   if (end2kg) {
     // Sold by funda (10 units = 20 kg)
+    // Restricted for consumidor_final category
     categories.forEach(cat => {
+      if (cat === 'consumidor_final') return // Skip this category
       brands.forEach(brand => {
         const basePrice = brand ? 52 : 45
         const catMultiplier = cat === 'barraca' ? 1 : cat === 'distribuidor' ? 0.89 : cat === 'oferta' ? 0.8 : 1.38
@@ -219,7 +223,9 @@ function getSeedPrices(): PriceListItem[] {
   // ===== MASILLA - Bolsa 1kg =====
   const mas1kg = PRESENTATIONS.find(p => p.product_id === 'prod-2' && p.weight_kg === 1 && p.type === 'bolsa')
   if (mas1kg) {
+    // Restricted for consumidor_final category
     categories.forEach(cat => {
+      if (cat === 'consumidor_final') return // Skip this category
       brands.forEach(brand => {
         const basePrice = brand ? 28 : 22
         const catMultiplier = cat === 'barraca' ? 1 : cat === 'distribuidor' ? 0.91 : cat === 'oferta' ? 0.82 : 1.41
@@ -232,7 +238,9 @@ function getSeedPrices(): PriceListItem[] {
   // ===== MASILLA - Bolsa 2kg =====
   const mas2kg = PRESENTATIONS.find(p => p.product_id === 'prod-2' && p.weight_kg === 2 && p.type === 'bolsa')
   if (mas2kg) {
+    // Restricted for consumidor_final category
     categories.forEach(cat => {
+      if (cat === 'consumidor_final') return // Skip this category
       brands.forEach(brand => {
         const basePrice = brand ? 48 : 40
         const catMultiplier = cat === 'barraca' ? 1 : cat === 'distribuidor' ? 0.9 : cat === 'oferta' ? 0.8 : 1.4
@@ -284,7 +292,9 @@ function getSeedPrices(): PriceListItem[] {
   // ===== MASILLA - Pote 1.7kg (always branded) =====
   const masPote17 = PRESENTATIONS.find(p => p.product_id === 'prod-2' && p.weight_kg === 1.7 && p.type === 'pote')
   if (masPote17) {
+    // Restricted for consumidor_final category
     categories.forEach(cat => {
+      if (cat === 'consumidor_final') return // Skip this category
       const basePrice = cat === 'barraca' ? 55 : cat === 'distribuidor' ? 48 : cat === 'oferta' ? 42 : 75
       prices.push(createPrice(masilla, masPote17, true, cat, basePrice, 'unidad', 1))
     })

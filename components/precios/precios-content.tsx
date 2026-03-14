@@ -14,8 +14,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { AlertTriangle, Save, RotateCcw } from 'lucide-react'
-import { getAllPrices, savePrices, resetPrices } from '@/lib/price-store'
+import { AlertTriangle, Save } from 'lucide-react'
+import { getAllPrices, savePrices } from '@/lib/price-store'
 import { PRODUCTS, PRESENTATIONS, formatCurrency } from '@/lib/mock-data'
 import { PRICE_CATEGORY_LABELS } from '@/lib/types'
 import type { PriceListItem, PriceCategory } from '@/lib/types'
@@ -45,14 +45,6 @@ export function PreciosContent() {
   const handleSave = () => {
     savePrices(prices)
     setHasChanges(false)
-  }
-
-  const handleReset = () => {
-    if (confirm('¿Estás seguro de que quieres resetear todos los precios a los valores por defecto?')) {
-      resetPrices()
-      setPrices(getAllPrices())
-      setHasChanges(false)
-    }
   }
 
   // Get unique product names for filter pills
@@ -142,10 +134,6 @@ export function PreciosContent() {
               <div className="flex flex-row items-center justify-between">
                 <CardTitle className="text-lg">{filteredPrices.length} precios</CardTitle>
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={handleReset} size="sm">
-                    <RotateCcw className="h-4 w-4 mr-2" />
-                    Resetear
-                  </Button>
                   {hasChanges && (
                     <Button onClick={handleSave} size="sm">
                       <Save className="h-4 w-4 mr-2" />
