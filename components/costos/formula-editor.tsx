@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Trash2, Plus, Save } from 'lucide-react'
+import { Trash2, Plus, Save, AlertCircle } from 'lucide-react'
 import type { ProductFormula } from '@/lib/types'
 import { 
   PRODUCTS,
@@ -40,6 +40,14 @@ export function FormulaEditor({ productId, formulas, onSave }: FormulaEditorProp
   const formaulableInsumos = getFormulableInsumos()
 
   const costPerKg = useMemo(() => calculateProductCostPerKg(productId), [productId, editingFormulas])
+
+  // Detect duplicate ingredients
+  const getDuplicateInsumoIds = () => {
+    const insumoIds = editingFormulas.map(f => f.insumo_id)
+    return new Set(insumoIds.filter(id => insumoIds.indexOf(id) !== insumoIds.lastIndexOf(id)))
+  }
+
+  const duplicateInsumoIds = useMemo(() => getDuplicateInsumoIds(), [editingFormulas])
 
   const handleAddIngredient = () => {
     if (formaulableInsumos.length === 0) return
@@ -102,119 +110,177 @@ export function FormulaEditor({ productId, formulas, onSave }: FormulaEditorProp
             const latestCost = getLatestIngredientCost(formula.insumo_id)
             const unitCost = latestCost?.unit_cost_without_iva || 0
             const unit = formula.unit_of_measure || insumo?.unit_of_measure || 'kg'
+            const isDuplicate = duplicateInsumoIds.has(formula.insumo_id)
+            const hasZeroQuantity = formula.quantity_per_kg === 0
+            const ingredientCostContribution = formula.quantity_per_kg * unitCost
 
             return (
-              <div key={formula.id} className="flex items-end gap-3 p-3 bg-muted/50 rounded-lg group">
-                {isEditing ? (
-                  <>
-                    {/* Insumo Select */}
-                    <div className="flex-1 min-w-[250px]">
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                        Insumo
-                      </label>
-                      <Select value={formula.insumo_id} onValueChange={(val) => {
-                        const selectedInsumo = formaulableInsumos.find(i => i.id === val)
-                        handleUpdateFormula(formula.id, { 
-                          insumo_id: val,
-                          insumo: selectedInsumo,
-                          unit_of_measure: selectedInsumo?.unit_of_measure
-                        })
-                      }}>
-                        <SelectTrigger className="h-9">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {formaulableInsumos.map(insumo => (
-                            <SelectItem key={insumo.id} value={insumo.id}>
-                              {insumo.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Quantity Input */}
-                    <div className="w-32">
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                        Cantidad
-                      </label>
-                      <Input 
-                        type="number"
-                        min="0"
-                        step="0.001"
-                        value={formula.quantity_per_kg}
-                        onChange={(e) => handleUpdateFormula(formula.id, {
-                          quantity_per_kg: parseFloat(e.target.value) || 0
-                        })}
-                        className="h-9"
-                      />
-                    </div>
-
-                    {/* Unit Select */}
-                    <div className="w-24">
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                        Unidad
-                      </label>
-                      <Select value={unit} onValueChange={(val) => {
-                        handleUpdateFormula(formula.id, { unit_of_measure: val as any })
-                      }}>
-                        <SelectTrigger className="h-9">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="kg">kg</SelectItem>
-                          <SelectItem value="g">g</SelectItem>
-                          <SelectItem value="l">L</SelectItem>
-                          <SelectItem value="ml">ml</SelectItem>
-                          <SelectItem value="unidad">un</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Delete Button */}
-                    <Button
-                      onClick={() => handleRemoveIngredient(formula.id)}
-                      variant="ghost"
-                      size="sm"
-                      className="h-9 w-9 p-0 text-destructive hover:bg-destructive/10"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    {/* Display Mode */}
-                    <div className="flex-1 min-w-[250px]">
-                      <p className="font-medium">{insumo?.name}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="outline" className="text-xs">
-                          {insumo?.category && INGREDIENT_CATEGORY_LABELS[insumo.category as IngredientCategory]}
-                        </Badge>
-                        {formula.notes && (
-                          <span className="text-xs text-muted-foreground italic">{formula.notes}</span>
-                        )}
+              <div key={formula.id} className="space-y-2">
+                {/* Warning badges */}
+                {(isDuplicate || hasZeroQuantity) && (
+                  <div className="flex flex-wrap gap-2">
+                    {hasZeroQuantity && (
+                      <div className="flex items-center gap-1.5 px-2 py-1 text-xs bg-amber-50 border border-amber-200 rounded text-amber-700">
+                        <AlertCircle className="h-3 w-3" />
+                        Cantidad en 0
                       </div>
-                    </div>
-
-                    <div className="text-right">
-                      <p className="text-sm font-mono font-semibold">
-                        {formula.quantity_per_kg.toFixed(formula.quantity_per_kg < 1 ? 3 : 2)} {UNIT_OF_MEASURE_ABBR[unit]}
-                      </p>
-                      <p className="text-xs text-muted-foreground">por kg</p>
-                    </div>
-
-                    <Separator orientation="vertical" className="h-8" />
-
-                    <div className="text-right min-w-[80px]">
-                      <p className="text-sm font-mono font-semibold text-primary">
-                        {formatCurrencyDecimal(formula.quantity_per_kg * unitCost)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        ({formatCurrencyDecimal(unitCost)}/{UNIT_OF_MEASURE_ABBR[unit]})
-                      </p>
-                    </div>
-                  </>
+                    )}
+                    {isDuplicate && (
+                      <div className="flex items-center gap-1.5 px-2 py-1 text-xs bg-blue-50 border border-blue-200 rounded text-blue-700">
+                        <AlertCircle className="h-3 w-3" />
+                        Este ingrediente ya está en la fórmula
+                      </div>
+                    )}
+                  </div>
                 )}
+
+                {/* Main ingredient row */}
+                <div className={`flex items-end gap-3 p-4 rounded-lg group ${isDuplicate || hasZeroQuantity ? 'bg-amber-50/40 border border-amber-100/50' : 'bg-muted/50'}`}>
+                  {isEditing ? (
+                    <>
+                      {/* Insumo Select */}
+                      <div className="flex-1 min-w-[250px]">
+                        <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                          Insumo
+                        </label>
+                        <Select value={formula.insumo_id} onValueChange={(val) => {
+                          const selectedInsumo = formaulableInsumos.find(i => i.id === val)
+                          handleUpdateFormula(formula.id, { 
+                            insumo_id: val,
+                            insumo: selectedInsumo,
+                            unit_of_measure: selectedInsumo?.unit_of_measure
+                          })
+                        }}>
+                          <SelectTrigger className="h-9">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {formaulableInsumos.map(insumo => (
+                              <SelectItem key={insumo.id} value={insumo.id}>
+                                {insumo.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Quantity Input */}
+                      <div className="w-32">
+                        <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                          Cantidad
+                        </label>
+                        <Input 
+                          type="number"
+                          min="0"
+                          step="0.001"
+                          value={formula.quantity_per_kg}
+                          onChange={(e) => handleUpdateFormula(formula.id, {
+                            quantity_per_kg: parseFloat(e.target.value) || 0
+                          })}
+                          className="h-9"
+                        />
+                      </div>
+
+                      {/* Unit Select */}
+                      <div className="w-24">
+                        <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                          Unidad
+                        </label>
+                        <Select value={unit} onValueChange={(val) => {
+                          handleUpdateFormula(formula.id, { unit_of_measure: val as any })
+                        }}>
+                          <SelectTrigger className="h-9">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="kg">kg</SelectItem>
+                            <SelectItem value="g">g</SelectItem>
+                            <SelectItem value="l">L</SelectItem>
+                            <SelectItem value="ml">ml</SelectItem>
+                            <SelectItem value="unidad">un</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Observation field */}
+                      <div className="w-32">
+                        <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                          Observación
+                        </label>
+                        <Input 
+                          type="text"
+                          placeholder="ej: espesante"
+                          value={formula.notes || ''}
+                          onChange={(e) => handleUpdateFormula(formula.id, {
+                            notes: e.target.value
+                          })}
+                          className="h-9 text-xs"
+                        />
+                      </div>
+
+                      {/* Delete Button */}
+                      <Button
+                        onClick={() => handleRemoveIngredient(formula.id)}
+                        variant="ghost"
+                        size="sm"
+                        className="h-9 w-9 p-0 text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      {/* Display Mode */}
+                      <div className="flex-1 min-w-[280px]">
+                        <p className="font-medium">{insumo?.name}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="outline" className="text-xs">
+                            {insumo?.category && INGREDIENT_CATEGORY_LABELS[insumo.category as IngredientCategory]}
+                          </Badge>
+                          {formula.notes && (
+                            <Badge variant="secondary" className="text-xs">
+                              {formula.notes}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Quantity and Unit */}
+                      <div className="text-right min-w-[90px]">
+                        <p className="text-sm font-mono font-semibold">
+                          {formula.quantity_per_kg.toFixed(formula.quantity_per_kg < 1 ? 3 : 2)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {UNIT_OF_MEASURE_ABBR[unit]} por kg
+                        </p>
+                      </div>
+
+                      {/* Ingredient unit cost */}
+                      <div className="text-right min-w-[100px]">
+                        <p className="text-xs text-muted-foreground mb-1">Costo insumo</p>
+                        <p className="text-sm font-mono font-semibold">
+                          {formatCurrencyDecimal(unitCost)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          /{UNIT_OF_MEASURE_ABBR[unit]}
+                        </p>
+                      </div>
+
+                      <Separator orientation="vertical" className="h-10" />
+
+                      {/* Cost contribution */}
+                      <div className="text-right min-w-[110px]">
+                        <p className="text-xs text-muted-foreground mb-1 font-medium">Aporte al costo</p>
+                        <p className="text-sm font-mono font-bold text-primary">
+                          {formatCurrencyDecimal(ingredientCostContribution)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {((ingredientCostContribution / costPerKg) * 100).toFixed(1)}%
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             )
           })}
@@ -234,11 +300,19 @@ export function FormulaEditor({ productId, formulas, onSave }: FormulaEditorProp
         )}
 
         {/* Total Cost */}
-        <div className="flex items-center justify-between pt-4 border-t border-border bg-primary/5 p-3 rounded-lg">
-          <span className="font-semibold">Costo total por kg</span>
-          <span className="text-xl font-bold text-primary">
-            {formatCurrencyDecimal(costPerKg)}
-          </span>
+        <div className="mt-6 pt-6 border-t-2 border-border">
+          <div className="bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 p-6 rounded-lg">
+            <p className="text-sm font-medium text-muted-foreground mb-2">Resultado final</p>
+            <div className="flex items-baseline justify-between">
+              <span className="text-lg font-semibold">Costo total por kg</span>
+              <span className="text-4xl font-bold text-primary">
+                {formatCurrencyDecimal(costPerKg)}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              Calculado a partir de {editingFormulas.length} ingrediente{editingFormulas.length !== 1 ? 's' : ''} activo{editingFormulas.length !== 1 ? 's' : ''}
+            </p>
+          </div>
         </div>
 
         {/* Save/Cancel Buttons - Only in Edit Mode */}
