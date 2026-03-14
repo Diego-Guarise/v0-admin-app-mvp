@@ -308,7 +308,6 @@ export const INGREDIENT_INPUTS: IngredientInput[] = [
     created_at: '2022-01-01T00:00:00Z',
     updated_at: '2025-01-15T10:00:00Z'
   },
-  },
   // Etiquetas - Configurable per product + packaging type
   // Enduido solo tiene bolsas, Masilla tiene bolsas y potes
   {
@@ -370,10 +369,10 @@ function createIngredientCost(
   // Calculate real unit cost (cost per unit of use)
   // If the insumo has purchase unit info, calculate cost per unit of use
   // Otherwise, use the regular unit cost
-  let real_unit_cost_without_iva = calculated.unit_cost_without_iva
-  let real_unit_cost_with_iva = calculated.unit_cost_with_iva
+  let real_unit_cost_without_iva: number | undefined = undefined
+  let real_unit_cost_with_iva: number | undefined = undefined
   
-  if (insumo && insumo.quantity_per_purchase_unit && insumo.quantity_per_purchase_unit > 1) {
+  if (insumo?.purchase_unit_of_measure && insumo?.quantity_per_purchase_unit && insumo.quantity_per_purchase_unit > 1) {
     // Insumo is purchased in bulk - convert to cost per unit of use
     real_unit_cost_without_iva = calculated.unit_cost_without_iva / insumo.quantity_per_purchase_unit
     real_unit_cost_with_iva = calculated.unit_cost_with_iva / insumo.quantity_per_purchase_unit
@@ -629,7 +628,7 @@ export function calculateProductCostPerKg(productId: string): number {
       
       // Use real unit cost if available (for supplies purchased in bulk)
       // Otherwise use regular unit cost
-      const unitCost = latestCost.real_unit_cost_without_iva || latestCost.unit_cost_without_iva
+      const unitCost = latestCost.real_unit_cost_without_iva ?? latestCost.unit_cost_without_iva
       
       // Check if units are compatible
       if (!areUnitsCompatible(formulaUnit, costUnit)) {
@@ -684,8 +683,10 @@ export function getEnvaseCost(presentationType: 'bolsa' | 'pote', weightKg: numb
   if (!insumoId) return 0
   
   const latestCost = getLatestIngredientCost(insumoId)
+  if (!latestCost) return 0
+  
   // Use real unit cost if available (for bulk purchases), otherwise use regular unit cost
-  return latestCost?.real_unit_cost_without_iva || latestCost?.unit_cost_without_iva || 0
+  return latestCost.real_unit_cost_without_iva ?? latestCost.unit_cost_without_iva ?? 0
 }
 
 // ============================================
@@ -711,8 +712,10 @@ export function getEtiquetaCostForPresentation(
   if (!insumoId) return 0
   
   const latestCost = getLatestIngredientCost(insumoId)
+  if (!latestCost) return 0
+  
   // Use real unit cost if available, otherwise use regular unit cost
-  return latestCost?.real_unit_cost_without_iva || latestCost?.unit_cost_without_iva || 0
+  return latestCost.real_unit_cost_without_iva ?? latestCost.unit_cost_without_iva ?? 0
 }
 
 // Legacy helper for backward compatibility

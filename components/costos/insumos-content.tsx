@@ -154,7 +154,13 @@ export function InsumosContent() {
                 <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                   {insumos.map(insumo => {
                     const latestCost = getLatestIngredientCost(insumo.id)
-                    const hasPurchaseUnit = insumo.purchase_unit_of_measure && insumo.quantity_per_purchase_unit && insumo.quantity_per_purchase_unit > 1
+                    // Safe check: only show purchase unit info if all required fields exist
+                    const hasPurchaseUnit = !!(
+                      insumo.purchase_unit_of_measure && 
+                      insumo.quantity_per_purchase_unit && 
+                      insumo.quantity_per_purchase_unit > 1 &&
+                      latestCost?.real_unit_cost_without_iva
+                    )
                     
                     return (
                       <Card key={insumo.id} className="shadow-sm hover:shadow-md transition-all">
@@ -175,12 +181,12 @@ export function InsumosContent() {
                             />
                           </div>
 
-                          {/* Purchase unit info */}
-                          {hasPurchaseUnit && (
+                          {/* Purchase unit info - only show if all data exists */}
+                          {hasPurchaseUnit && insumo.purchase_unit_of_measure && (
                             <div className="bg-blue-50 rounded p-2 my-2">
                               <p className="text-xs text-blue-900">
                                 <span className="font-semibold">Compra: </span>
-                                {insumo.quantity_per_purchase_unit} {UNIT_OF_MEASURE_LABELS[insumo.unit_of_measure]} por {insumo.purchase_unit_of_measure}
+                                {insumo.quantity_per_purchase_unit} {UNIT_OF_MEASURE_LABELS[insumo.unit_of_measure]} por {UNIT_OF_MEASURE_LABELS[insumo.purchase_unit_of_measure]}
                               </p>
                             </div>
                           )}
@@ -203,7 +209,7 @@ export function InsumosContent() {
                                         por {UNIT_OF_MEASURE_ABBR[insumo.unit_of_measure]}
                                       </p>
                                       <p className="text-xs text-muted-foreground mt-1 pt-1 border-t">
-                                        Compra: {formatCurrencyDecimal(latestCost.unit_cost_without_iva)} por {UNIT_OF_MEASURE_ABBR[insumo.purchase_unit_of_measure || 'unidad']}
+                                        Compra: {formatCurrencyDecimal(latestCost.unit_cost_without_iva)} por {insumo.purchase_unit_of_measure ? UNIT_OF_MEASURE_ABBR[insumo.purchase_unit_of_measure] : 'unidad'}
                                       </p>
                                     </>
                                   ) : (
