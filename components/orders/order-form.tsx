@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { PageHeader } from '@/components/page-header'
@@ -101,6 +101,9 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
     }) || []
   )
 
+  // Ref for client dropdown to detect click outside
+  const clientDropdownRef = useRef<HTMLDivElement>(null)
+
   // Active clients only
   const activeClients = useMemo(() => getAllClients().filter(c => c.active), [])
 
@@ -143,6 +146,20 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
       }
     }
   }, [preSelectedClientId, activeClients, clientId])
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (clientDropdownRef.current && !clientDropdownRef.current.contains(event.target as Node)) {
+        setShowClientDropdown(false)
+      }
+    }
+
+    if (showClientDropdown) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showClientDropdown])
 
   // Add new item with sensible defaults
   const addItem = () => {
@@ -382,15 +399,26 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex gap-4">
-                <div className="flex-1 relative">
+                <div className="flex-1 relative" ref={clientDropdownRef}>
                   <Label htmlFor="client" className="sr-only">Cliente</Label>
                   <Input
                     id="client"
                     placeholder="Buscar cliente por nombre, empresa, email, teléfono o RUT..."
                     value={clientSearch || (selectedClient?.name ? `${selectedClient.name}${selectedClient.company ? ` (${selectedClient.company})` : ''}` : '')}
                     onChange={(e) => {
-                      setClientSearch(e.target.value)
-                      setShowClientDropdown(true)
+                      const newValue = e.target.value
+                      // If there's a selected client and the user starts editing text
+                      if (clientId && selectedClient) {
+                        const expectedLabel = `${selectedClient.name}${selectedClient.company ? ` (${selectedClient.company})` : ''}`
+                        // If text no longer matches the selected client, clear the selection
+                        if (newValue !== expectedLabel && newValue !== '') {
+                          setClientId('')
+                        }
+                      }
+                      setClientSearch(newValue)
+                      if (newValue.trim()) {
+                        setShowClientDropdown(true)
+                      }
                     }}
                     onFocus={() => setShowClientDropdown(true)}
                     className="h-12"
