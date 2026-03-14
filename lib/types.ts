@@ -128,6 +128,9 @@ export interface Presentation {
   type: PresentationType
   weight_kg: number
   with_brand: boolean
+  manual_extra_cost?: number // Optional: manual extra costs (e.g., outer bag, seal, double bag)
+  units_per_bundle?: number // Optional: number of units per bundle/funda
+  bundle_manual_extra_cost?: number // Optional: manual extra costs specific to bundle packaging
   active: boolean
   created_at: string
   updated_at: string

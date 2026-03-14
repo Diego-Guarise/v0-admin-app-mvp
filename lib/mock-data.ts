@@ -66,6 +66,10 @@ function generatePresentations(): Presentation[] {
         type: 'bolsa',
         weight_kg: weight,
         with_brand: true,
+        // Bundle configuration for 1kg and 2kg presentations
+        units_per_bundle: (weight === 1 || weight === 2) ? (weight === 1 ? 20 : 10) : undefined,
+        manual_extra_cost: (weight === 1 || weight === 2) ? 0.05 : undefined, // Extra cost for double bag/seal
+        bundle_manual_extra_cost: (weight === 1 || weight === 2) ? 0.10 : undefined, // Extra cost for bundle packaging
         active: true,
         created_at: '2022-01-01T00:00:00Z',
         updated_at: '2025-01-15T10:00:00Z'
@@ -78,6 +82,9 @@ function generatePresentations(): Presentation[] {
         type: 'bolsa',
         weight_kg: weight,
         with_brand: false,
+        units_per_bundle: (weight === 1 || weight === 2) ? (weight === 1 ? 20 : 10) : undefined,
+        manual_extra_cost: (weight === 1 || weight === 2) ? 0.05 : undefined,
+        bundle_manual_extra_cost: (weight === 1 || weight === 2) ? 0.10 : undefined,
         active: true,
         created_at: '2022-01-01T00:00:00Z',
         updated_at: '2025-01-15T10:00:00Z'
@@ -94,6 +101,9 @@ function generatePresentations(): Presentation[] {
           type: 'pote',
           weight_kg: weight,
           with_brand: true,
+          units_per_bundle: (weight === 1.7 || weight === 7) ? (weight === 1.7 ? 20 : 10) : undefined,
+          manual_extra_cost: (weight === 1.7 || weight === 7) ? 0.08 : undefined,
+          bundle_manual_extra_cost: (weight === 1.7 || weight === 7) ? 0.15 : undefined,
           active: true,
           created_at: '2022-01-01T00:00:00Z',
           updated_at: '2025-01-15T10:00:00Z'
@@ -106,6 +116,9 @@ function generatePresentations(): Presentation[] {
           type: 'pote',
           weight_kg: weight,
           with_brand: false,
+          units_per_bundle: (weight === 1.7 || weight === 7) ? (weight === 1.7 ? 20 : 10) : undefined,
+          manual_extra_cost: (weight === 1.7 || weight === 7) ? 0.08 : undefined,
+          bundle_manual_extra_cost: (weight === 1.7 || weight === 7) ? 0.15 : undefined,
           active: true,
           created_at: '2022-01-01T00:00:00Z',
           updated_at: '2025-01-15T10:00:00Z'
@@ -767,8 +780,11 @@ export function calculatePresentationCost(
     etiquetaCost = getEtiquetaCostForPresentation(product.type, presentation.type)
   }
   
-  // 5. Total cost
-  const totalCost = productCostForWeight + envaseCost + etiquetaCost
+  // 5. Manual extra cost (e.g., outer bag, seal, double bag)
+  const manualExtraCost = presentation.manual_extra_cost ?? 0
+  
+  // 6. Total cost per unit
+  const totalCost = productCostForWeight + envaseCost + etiquetaCost + manualExtraCost
 
   return {
     product_cost_per_kg: productCostPerKg,

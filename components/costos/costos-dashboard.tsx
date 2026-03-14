@@ -111,11 +111,15 @@ export function CostosDashboard() {
       sellingPrice: number
       marginOverPrice: number
       markupOverCost: number
+      units_per_bundle?: number
+      bundle_manual_extra_cost?: number
+      manual_extra_cost?: number
       breakdown: {
         product_cost_per_kg: number
         product_cost_for_weight: number
         envase_cost: number
         etiqueta_cost: number
+        manual_extra_cost?: number
         total_cost: number
       }
     }> = []
@@ -162,11 +166,15 @@ export function CostosDashboard() {
             sellingPrice,
             marginOverPrice: margins.margin_over_price,
             markupOverCost: margins.markup_over_cost,
+            units_per_bundle: presentation.units_per_bundle,
+            bundle_manual_extra_cost: presentation.bundle_manual_extra_cost,
+            manual_extra_cost: presentation.manual_extra_cost,
             breakdown: {
               product_cost_per_kg: costBreakdown.product_cost_per_kg,
               product_cost_for_weight: costBreakdown.product_cost_for_weight,
               envase_cost: costBreakdown.envase_cost,
               etiqueta_cost: costBreakdown.etiqueta_cost,
+              manual_extra_cost: presentation.manual_extra_cost,
               total_cost: costBreakdown.total_cost,
             }
           })
@@ -470,16 +478,74 @@ export function CostosDashboard() {
                                         </div>
                                       )}
 
+                                      {/* Manual extra cost */}
+                                      {pc.breakdown.manual_extra_cost && pc.breakdown.manual_extra_cost > 0 && (
+                                        <div className="flex items-center justify-between text-sm">
+                                          <span className="text-muted-foreground">Costo extra manual</span>
+                                          <span className="font-mono font-medium">
+                                            {formatCurrencyDecimal(pc.breakdown.manual_extra_cost)}
+                                          </span>
+                                        </div>
+                                      )}
+
                                       {/* Separator */}
                                       <div className="border-t border-border/50 my-2"></div>
 
-                                      {/* Total */}
+                                      {/* Total per unit */}
                                       <div className="flex items-center justify-between text-sm font-semibold">
-                                        <span>Costo total</span>
+                                        <span>Costo total unitario</span>
                                         <span className="font-mono text-primary">
                                           {formatCurrencyDecimal(pc.breakdown.total_cost)}
                                         </span>
                                       </div>
+
+                                      {/* Bundle information */}
+                                      {pc.units_per_bundle && pc.units_per_bundle > 1 && (
+                                        <>
+                                          <div className="border-t border-border/30 my-3 pt-3">
+                                            <h5 className="font-semibold text-sm text-foreground mb-2">Información de funda</h5>
+                                            
+                                            {/* Bundle size */}
+                                            <div className="flex items-center justify-between text-sm">
+                                              <span className="text-muted-foreground">Funda: {pc.units_per_bundle} unidades</span>
+                                              <span className="text-muted-foreground">—</span>
+                                            </div>
+
+                                            {/* Bundle base cost */}
+                                            <div className="flex items-center justify-between text-sm mt-2">
+                                              <span className="text-muted-foreground">
+                                                Costo unidades ({pc.breakdown.total_cost} × {pc.units_per_bundle})
+                                              </span>
+                                              <span className="font-mono font-medium">
+                                                {formatCurrencyDecimal(pc.breakdown.total_cost * pc.units_per_bundle)}
+                                              </span>
+                                            </div>
+
+                                            {/* Bundle extra cost */}
+                                            {pc.bundle_manual_extra_cost && pc.bundle_manual_extra_cost > 0 && (
+                                              <div className="flex items-center justify-between text-sm mt-2">
+                                                <span className="text-muted-foreground">Costo extra funda</span>
+                                                <span className="font-mono font-medium">
+                                                  {formatCurrencyDecimal(pc.bundle_manual_extra_cost)}
+                                                </span>
+                                              </div>
+                                            )}
+
+                                            {/* Separator */}
+                                            <div className="border-t border-border/30 my-2"></div>
+
+                                            {/* Total per bundle */}
+                                            <div className="flex items-center justify-between text-sm font-semibold">
+                                              <span>Costo total por funda</span>
+                                              <span className="font-mono text-primary">
+                                                {formatCurrencyDecimal(
+                                                  (pc.breakdown.total_cost * pc.units_per_bundle) + (pc.bundle_manual_extra_cost ?? 0)
+                                                )}
+                                              </span>
+                                            </div>
+                                          </div>
+                                        </>
+                                      )}
                                     </div>
                                   </td>
                                 </tr>
