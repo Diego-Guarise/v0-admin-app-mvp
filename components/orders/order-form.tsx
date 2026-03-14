@@ -397,21 +397,6 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
                   </div>
                 </div>
               )}
-
-              {/* Invoice Number Input */}
-              {hasInvoice && (
-                <div className="space-y-2">
-                  <Label htmlFor="invoiceNumber" className="text-sm font-medium">
-                    N° de Factura (opcional)
-                  </Label>
-                  <Input
-                    id="invoiceNumber"
-                    placeholder="Ej: FAC-2024-001"
-                    value={invoiceNumber}
-                    onChange={(e) => setInvoiceNumber(e.target.value)}
-                  />
-                </div>
-              )}
             </CardContent>
           </Card>
 
@@ -537,13 +522,6 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
           <Card className="shadow-sm">
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Productos del pedido</CardTitle>
-                <Button type="button" variant="outline" size="sm" onClick={addItem}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Agregar producto
-                </Button>
-              </div>
-            </CardHeader>
                 <CardTitle className="text-base">Productos del pedido</CardTitle>
                 <Button type="button" variant="outline" size="sm" onClick={addItem}>
                   <Plus className="h-4 w-4 mr-2" />
