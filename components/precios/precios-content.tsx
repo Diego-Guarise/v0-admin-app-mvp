@@ -130,7 +130,7 @@ export function PreciosContent() {
 
           {/* Price Table */}
           <Card className="mt-8">
-            <CardHeader className="border-b bg-muted/50">
+            <CardHeader className="border-b pb-4">
               <div className="flex flex-row items-center justify-between">
                 <CardTitle className="text-lg">{filteredPrices.length} precios</CardTitle>
                 <div className="flex gap-2">
@@ -147,15 +147,15 @@ export function PreciosContent() {
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-b-2 bg-muted/70 hover:bg-muted/70">
+                    <TableRow className="hover:bg-background">
                       <TableHead className="font-semibold">Producto</TableHead>
                       <TableHead className="font-semibold">Presentación</TableHead>
                       <TableHead className="font-semibold">Marca</TableHead>
                       <TableHead className="font-semibold">Categoría</TableHead>
-                      <TableHead className="font-semibold">Unidad de venta</TableHead>
-                      <TableHead className="text-right font-semibold">Kilos totales</TableHead>
-                      <TableHead className="text-right font-semibold">Precio por unidad de venta</TableHead>
-                      <TableHead className="text-right font-semibold">Precio por kg</TableHead>
+                      <TableHead className="text-center font-semibold">Unidad de venta</TableHead>
+                      <TableHead className="text-center font-semibold">Kilos totales</TableHead>
+                      <TableHead className="text-center font-semibold">Precio por unidad de venta</TableHead>
+                      <TableHead className="text-center font-semibold">Precio por kg</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -182,22 +182,22 @@ export function PreciosContent() {
                             </span>
                           </TableCell>
                           <TableCell className="text-sm">{PRICE_CATEGORY_LABELS[price.price_category]}</TableCell>
-                          <TableCell>
+                          <TableCell className="text-center">
                             <span className="inline-block rounded-full px-2.5 py-1 text-xs font-medium bg-primary/10 text-primary">
                               {price.sales_unit_type === 'funda' ? 'Funda' : 'Unidad'}
                             </span>
                           </TableCell>
-                          <TableCell className="text-right text-sm">{price.total_weight_per_sales_unit_kg} kg</TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-center text-sm">{price.total_weight_per_sales_unit_kg} kg</TableCell>
+                          <TableCell className="text-center">
                             <Input
                               type="number"
                               value={price.unit_price_for_sales_unit}
                               onChange={(e) => handlePriceChange(price.id, parseFloat(e.target.value) || 0)}
-                              className="w-24 text-right"
+                              className="w-24 text-center mx-auto"
                               step="1"
                             />
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-center">
                             <span className="font-bold text-primary">{formatCurrency(precioPerKg)}</span>
                           </TableCell>
                         </TableRow>
