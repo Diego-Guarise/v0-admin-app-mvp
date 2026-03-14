@@ -126,9 +126,10 @@ export function CostosDashboard() {
 
     PRODUCTS.filter(p => p.active).forEach(product => {
       // Only get presentations matching the selected brand
-      PRESENTATIONS
+      const filteredPresentations = PRESENTATIONS
         .filter(p => p.product_id === product.id && p.active && p.with_brand === (selectedBrand === 'con'))
-        .forEach(presentation => {
+      
+      filteredPresentations.forEach(presentation => {
           // Use the helper that properly calculates costs
           const costBreakdown = calculatePresentationCost(presentation, product.id)
           

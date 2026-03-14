@@ -150,7 +150,7 @@ function getSeedPrices(): PriceListItem[] {
   }
 
   // ===== ENDUIDO - Bolsa 1kg =====
-  const end1kg = PRESENTATIONS.find(p => p.product_id === 'prod-1' && p.weight_kg === 1 && p.type === 'bolsa')
+  const end1kg = PRESENTATIONS.find(p => p.product_id === 'prod-1' && p.weight_kg === 1 && p.type === 'bolsa' && p.with_brand === true)
   if (end1kg) {
     // Sold by funda (20 units = 20 kg)
     // Restricted for consumidor_final category
@@ -160,13 +160,17 @@ function getSeedPrices(): PriceListItem[] {
         const basePrice = brand ? 30 : 25
         const catMultiplier = cat === 'barraca' ? 1 : cat === 'distribuidor' ? 0.88 : cat === 'oferta' ? 0.8 : 1.4
         const price = Math.round(basePrice * catMultiplier * 20) // 20 units per funda
-        prices.push(createPrice(enduido, end1kg, brand, cat, price, 'funda', 20))
+        // Get the correct presentation for this brand variant
+        const presentation = PRESENTATIONS.find(p => p.product_id === 'prod-1' && p.weight_kg === 1 && p.type === 'bolsa' && p.with_brand === brand)
+        if (presentation) {
+          prices.push(createPrice(enduido, presentation, brand, cat, price, 'funda', 20))
+        }
       })
     })
   }
 
   // ===== ENDUIDO - Bolsa 2kg =====
-  const end2kg = PRESENTATIONS.find(p => p.product_id === 'prod-1' && p.weight_kg === 2 && p.type === 'bolsa')
+  const end2kg = PRESENTATIONS.find(p => p.product_id === 'prod-1' && p.weight_kg === 2 && p.type === 'bolsa' && p.with_brand === true)
   if (end2kg) {
     // Sold by funda (10 units = 20 kg)
     // Restricted for consumidor_final category
@@ -176,52 +180,65 @@ function getSeedPrices(): PriceListItem[] {
         const basePrice = brand ? 52 : 45
         const catMultiplier = cat === 'barraca' ? 1 : cat === 'distribuidor' ? 0.89 : cat === 'oferta' ? 0.8 : 1.38
         const price = Math.round(basePrice * catMultiplier * 10) // 10 units per funda
-        prices.push(createPrice(enduido, end2kg, brand, cat, price, 'funda', 10))
+        // Get the correct presentation for this brand variant
+        const presentation = PRESENTATIONS.find(p => p.product_id === 'prod-1' && p.weight_kg === 2 && p.type === 'bolsa' && p.with_brand === brand)
+        if (presentation) {
+          prices.push(createPrice(enduido, presentation, brand, cat, price, 'funda', 10))
+        }
       })
     })
   }
 
   // ===== ENDUIDO - Bolsa 5kg (sold by unit) =====
-  const end5kg = PRESENTATIONS.find(p => p.product_id === 'prod-1' && p.weight_kg === 5 && p.type === 'bolsa')
+  const end5kg = PRESENTATIONS.find(p => p.product_id === 'prod-1' && p.weight_kg === 5 && p.type === 'bolsa' && p.with_brand === true)
   if (end5kg) {
     categories.forEach(cat => {
       brands.forEach(brand => {
         const basePrice = brand ? 98 : 85
         const catMultiplier = cat === 'barraca' ? 1 : cat === 'distribuidor' ? 0.88 : cat === 'oferta' ? 0.8 : 1.35
         const price = Math.round(basePrice * catMultiplier)
-        prices.push(createPrice(enduido, end5kg, brand, cat, price, 'unidad', 1))
+        const presentation = PRESENTATIONS.find(p => p.product_id === 'prod-1' && p.weight_kg === 5 && p.type === 'bolsa' && p.with_brand === brand)
+        if (presentation) {
+          prices.push(createPrice(enduido, presentation, brand, cat, price, 'unidad', 1))
+        }
       })
     })
   }
 
   // ===== ENDUIDO - Bolsa 10kg (sold by unit) =====
-  const end10kg = PRESENTATIONS.find(p => p.product_id === 'prod-1' && p.weight_kg === 10 && p.type === 'bolsa')
+  const end10kg = PRESENTATIONS.find(p => p.product_id === 'prod-1' && p.weight_kg === 10 && p.type === 'bolsa' && p.with_brand === true)
   if (end10kg) {
     categories.forEach(cat => {
       brands.forEach(brand => {
         const basePrice = brand ? 175 : 155
         const catMultiplier = cat === 'barraca' ? 1 : cat === 'distribuidor' ? 0.89 : cat === 'oferta' ? 0.81 : 1.36
         const price = Math.round(basePrice * catMultiplier)
-        prices.push(createPrice(enduido, end10kg, brand, cat, price, 'unidad', 1))
+        const presentation = PRESENTATIONS.find(p => p.product_id === 'prod-1' && p.weight_kg === 10 && p.type === 'bolsa' && p.with_brand === brand)
+        if (presentation) {
+          prices.push(createPrice(enduido, presentation, brand, cat, price, 'unidad', 1))
+        }
       })
     })
   }
 
   // ===== ENDUIDO - Bolsa 20kg (sold by unit) =====
-  const end20kg = PRESENTATIONS.find(p => p.product_id === 'prod-1' && p.weight_kg === 20 && p.type === 'bolsa')
+  const end20kg = PRESENTATIONS.find(p => p.product_id === 'prod-1' && p.weight_kg === 20 && p.type === 'bolsa' && p.with_brand === true)
   if (end20kg) {
     categories.forEach(cat => {
       brands.forEach(brand => {
         const basePrice = brand ? 330 : 290
         const catMultiplier = cat === 'barraca' ? 1 : cat === 'distribuidor' ? 0.89 : cat === 'oferta' ? 0.81 : 1.36
         const price = Math.round(basePrice * catMultiplier)
-        prices.push(createPrice(enduido, end20kg, brand, cat, price, 'unidad', 1))
+        const presentation = PRESENTATIONS.find(p => p.product_id === 'prod-1' && p.weight_kg === 20 && p.type === 'bolsa' && p.with_brand === brand)
+        if (presentation) {
+          prices.push(createPrice(enduido, presentation, brand, cat, price, 'unidad', 1))
+        }
       })
     })
   }
 
   // ===== MASILLA - Bolsa 1kg =====
-  const mas1kg = PRESENTATIONS.find(p => p.product_id === 'prod-2' && p.weight_kg === 1 && p.type === 'bolsa')
+  const mas1kg = PRESENTATIONS.find(p => p.product_id === 'prod-2' && p.weight_kg === 1 && p.type === 'bolsa' && p.with_brand === true)
   if (mas1kg) {
     // Restricted for consumidor_final category
     categories.forEach(cat => {
@@ -230,13 +247,16 @@ function getSeedPrices(): PriceListItem[] {
         const basePrice = brand ? 28 : 22
         const catMultiplier = cat === 'barraca' ? 1 : cat === 'distribuidor' ? 0.91 : cat === 'oferta' ? 0.82 : 1.41
         const price = Math.round(basePrice * catMultiplier)
-        prices.push(createPrice(masilla, mas1kg, brand, cat, price, 'unidad', 1))
+        const presentation = PRESENTATIONS.find(p => p.product_id === 'prod-2' && p.weight_kg === 1 && p.type === 'bolsa' && p.with_brand === brand)
+        if (presentation) {
+          prices.push(createPrice(masilla, presentation, brand, cat, price, 'unidad', 1))
+        }
       })
     })
   }
 
   // ===== MASILLA - Bolsa 2kg =====
-  const mas2kg = PRESENTATIONS.find(p => p.product_id === 'prod-2' && p.weight_kg === 2 && p.type === 'bolsa')
+  const mas2kg = PRESENTATIONS.find(p => p.product_id === 'prod-2' && p.weight_kg === 2 && p.type === 'bolsa' && p.with_brand === true)
   if (mas2kg) {
     // Restricted for consumidor_final category
     categories.forEach(cat => {
@@ -245,46 +265,58 @@ function getSeedPrices(): PriceListItem[] {
         const basePrice = brand ? 48 : 40
         const catMultiplier = cat === 'barraca' ? 1 : cat === 'distribuidor' ? 0.9 : cat === 'oferta' ? 0.8 : 1.4
         const price = Math.round(basePrice * catMultiplier)
-        prices.push(createPrice(masilla, mas2kg, brand, cat, price, 'unidad', 1))
+        const presentation = PRESENTATIONS.find(p => p.product_id === 'prod-2' && p.weight_kg === 2 && p.type === 'bolsa' && p.with_brand === brand)
+        if (presentation) {
+          prices.push(createPrice(masilla, presentation, brand, cat, price, 'unidad', 1))
+        }
       })
     })
   }
 
   // ===== MASILLA - Bolsa 5kg =====
-  const mas5kg = PRESENTATIONS.find(p => p.product_id === 'prod-2' && p.weight_kg === 5 && p.type === 'bolsa')
+  const mas5kg = PRESENTATIONS.find(p => p.product_id === 'prod-2' && p.weight_kg === 5 && p.type === 'bolsa' && p.with_brand === true)
   if (mas5kg) {
     categories.forEach(cat => {
       brands.forEach(brand => {
         const basePrice = brand ? 92 : 78
         const catMultiplier = cat === 'barraca' ? 1 : cat === 'distribuidor' ? 0.89 : cat === 'oferta' ? 0.8 : 1.35
         const price = Math.round(basePrice * catMultiplier)
-        prices.push(createPrice(masilla, mas5kg, brand, cat, price, 'unidad', 1))
+        const presentation = PRESENTATIONS.find(p => p.product_id === 'prod-2' && p.weight_kg === 5 && p.type === 'bolsa' && p.with_brand === brand)
+        if (presentation) {
+          prices.push(createPrice(masilla, presentation, brand, cat, price, 'unidad', 1))
+        }
       })
     })
   }
 
   // ===== MASILLA - Bolsa 10kg =====
-  const mas10kg = PRESENTATIONS.find(p => p.product_id === 'prod-2' && p.weight_kg === 10 && p.type === 'bolsa')
+  const mas10kg = PRESENTATIONS.find(p => p.product_id === 'prod-2' && p.weight_kg === 10 && p.type === 'bolsa' && p.with_brand === true)
   if (mas10kg) {
     categories.forEach(cat => {
       brands.forEach(brand => {
         const basePrice = brand ? 162 : 140
         const catMultiplier = cat === 'barraca' ? 1 : cat === 'distribuidor' ? 0.89 : cat === 'oferta' ? 0.8 : 1.36
         const price = Math.round(basePrice * catMultiplier)
-        prices.push(createPrice(masilla, mas10kg, brand, cat, price, 'unidad', 1))
+        const presentation = PRESENTATIONS.find(p => p.product_id === 'prod-2' && p.weight_kg === 10 && p.type === 'bolsa' && p.with_brand === brand)
+        if (presentation) {
+          prices.push(createPrice(masilla, presentation, brand, cat, price, 'unidad', 1))
+        }
       })
     })
   }
 
   // ===== MASILLA - Bolsa 20kg =====
-  const mas20kg = PRESENTATIONS.find(p => p.product_id === 'prod-2' && p.weight_kg === 20 && p.type === 'bolsa')
+  const mas20kg = PRESENTATIONS.find(p => p.product_id === 'prod-2' && p.weight_kg === 20 && p.type === 'bolsa' && p.with_brand === true)
   if (mas20kg) {
     categories.forEach(cat => {
       brands.forEach(brand => {
         const basePrice = brand ? 304 : 260
         const catMultiplier = cat === 'barraca' ? 1 : cat === 'distribuidor' ? 0.9 : cat === 'oferta' ? 0.81 : 1.38
         const price = Math.round(basePrice * catMultiplier)
-        prices.push(createPrice(masilla, mas20kg, brand, cat, price, 'unidad', 1))
+        const presentation = PRESENTATIONS.find(p => p.product_id === 'prod-2' && p.weight_kg === 20 && p.type === 'bolsa' && p.with_brand === brand)
+        if (presentation) {
+          prices.push(createPrice(masilla, presentation, brand, cat, price, 'unidad', 1))
+        }
       })
     })
   }
