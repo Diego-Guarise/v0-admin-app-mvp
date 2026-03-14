@@ -15,7 +15,7 @@ import type { Client } from '@/lib/types'
 
 interface ClientFormProps {
   client?: Client
-  onSave?: () => void
+  onSave?: (clientId: string) => void
 }
 
 export function ClientForm({ client, onSave }: ClientFormProps) {
@@ -50,7 +50,7 @@ export function ClientForm({ client, onSave }: ClientFormProps) {
     }
     
     saveClient(newClient)
-    onSave?.()
+    onSave?.(newClient.id)
   }
 
   return (

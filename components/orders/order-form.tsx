@@ -375,7 +375,7 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
                     </SelectContent>
                   </Select>
                 </div>
-                <Link href="/clientes/nuevo">
+                <Link href="/clientes/nuevo?from=pedido">
                   <Button type="button" variant="outline" className="h-12">
                     <UserPlus className="h-4 w-4 mr-2" />
                     Nuevo
@@ -412,6 +412,63 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
                   />
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Order Information */}
+          <Card className="shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base">Información del pedido</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="orderDate">Fecha del pedido *</Label>
+                  <Input
+                    id="orderDate"
+                    type="date"
+                    value={orderDate}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                        setOrderDate(value)
+                      }
+                    }}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="promisedDate">Fecha prometida de entrega</Label>
+                  <Input
+                    id="promisedDate"
+                    type="date"
+                    value={promisedDate}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      if (!value || /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                        setPromisedDate(value)
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="vendor">Vendedor</Label>
+                <Select value={vendorId} onValueChange={setVendorId}>
+                  <SelectTrigger id="vendor">
+                    <SelectValue placeholder="Seleccionar vendedor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sin vendedor</SelectItem>
+                    {activeVendors.map((vendor) => (
+                      <SelectItem key={vendor.id} value={vendor.id}>
+                        {vendor.name} ({vendor.commission_percentage}%)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
               <Separator />
 
@@ -433,6 +490,21 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
                   />
                 </div>
               </div>
+
+              {/* Invoice Number Input */}
+              {hasInvoice && (
+                <div className="space-y-2">
+                  <Label htmlFor="invoiceNumber" className="text-sm font-medium">
+                    N° de Factura (opcional)
+                  </Label>
+                  <Input
+                    id="invoiceNumber"
+                    placeholder="Ej: FAC-2024-001"
+                    value={invoiceNumber}
+                    onChange={(e) => setInvoiceNumber(e.target.value)}
+                  />
+                </div>
+              )}
 
               <Separator />
 
@@ -465,6 +537,13 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
           <Card className="shadow-sm">
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Productos del pedido</CardTitle>
+                <Button type="button" variant="outline" size="sm" onClick={addItem}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Agregar producto
+                </Button>
+              </div>
+            </CardHeader>
                 <CardTitle className="text-base">Productos del pedido</CardTitle>
                 <Button type="button" variant="outline" size="sm" onClick={addItem}>
                   <Plus className="h-4 w-4 mr-2" />

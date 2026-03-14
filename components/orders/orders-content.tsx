@@ -63,7 +63,8 @@ export function OrdersContent() {
       }
       case 'month': {
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-        return { from: monthStart.toISOString().split('T')[0], to: today.toISOString().split('T')[0] }
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+        return { from: monthStart.toISOString().split('T')[0], to: monthEnd.toISOString().split('T')[0] }
       }
       case 'last-month': {
         const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0)
