@@ -25,7 +25,7 @@ export function getAllPrices(): PriceListItem[] {
 
 /**
  * Get a specific price by product, presentation, brand, and category
- * Returns null if not found - the caller should handle missing prices explicitly
+ * Returns null if not found
  */
 export function getPriceByKey(
   productId: string,
