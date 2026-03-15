@@ -17,9 +17,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { ArrowLeft, Save, Receipt, Calendar, CreditCard, RotateCcw } from 'lucide-react'
-import { EXPENSE_CATEGORIES, formatCurrency } from '@/lib/mock-data'
-import { EXPENSE_TYPE_LABELS, EXPENSE_STATUS_LABELS } from '@/lib/types'
+import { ArrowLeft, Save, Receipt, Calendar, CreditCard, RotateCcw, Package } from 'lucide-react'
+import { EXPENSE_CATEGORIES, formatCurrency, INGREDIENT_INPUTS, isProductiveExpense } from '@/lib/mock-data'
+import { EXPENSE_TYPE_LABELS, EXPENSE_STATUS_LABELS, UNIT_OF_MEASURE_ABBR, type UnitOfMeasure } from '@/lib/types'
 import type { Expense, ExpenseType, ExpenseStatus, RecurrenceFrequency } from '@/lib/types'
 
 interface ExpenseFormProps {
@@ -62,6 +62,11 @@ export function ExpenseForm({ expense }: ExpenseFormProps) {
   const [recurrenceFrequency, setRecurrenceFrequency] = useState<RecurrenceFrequency>(expense?.recurrence_frequency || 'mensual')
   const [estimatedDay, setEstimatedDay] = useState(expense?.estimated_day || 1)
   const [estimatedAmount, setEstimatedAmount] = useState(expense?.estimated_amount || 0)
+
+  // Productive purchase fields (for materia prima, envases, etiquetas)
+  const [insumoId, setInsumoId] = useState(expense?.insumo_id || '')
+  const [quantity, setQuantity] = useState(expense?.quantity || 0)
+  const [unitOfMeasure, setUnitOfMeasure] = useState<UnitOfMeasure>(expense?.unit_of_measure || 'kg')
 
   // Get subcategories for selected category
   const selectedCategory = EXPENSE_CATEGORIES.find(c => c.id === categoryId)
@@ -106,6 +111,12 @@ export function ExpenseForm({ expense }: ExpenseFormProps) {
       recurrenceFrequency,
       estimatedDay,
       estimatedAmount,
+      // Productive purchase fields
+      ...(isProductiveExpense(categoryId) && {
+        insumoId,
+        quantity,
+        unitOfMeasure,
+      }),
       calculations,
     })
     router.push('/gastos')
@@ -269,7 +280,76 @@ export function ExpenseForm({ expense }: ExpenseFormProps) {
             </CardContent>
           </Card>
 
-          {/* Expense Type */}
+          {/* Productive Purchase Fields */}
+          {isProductiveExpense(categoryId) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  Detalles de la compra productiva
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="insumo">Insumo</Label>
+                  <Select value={insumoId} onValueChange={setInsumoId}>
+                    <SelectTrigger id="insumo">
+                      <SelectValue placeholder="Seleccionar insumo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {INGREDIENT_INPUTS.map((insumo) => (
+                        <SelectItem key={insumo.id} value={insumo.id}>
+                          {insumo.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="quantity">Cantidad comprada</Label>
+                    <Input
+                      id="quantity"
+                      type="number"
+                      min="0"
+                      step="0.001"
+                      value={quantity}
+                      onChange={(e) => setQuantity(parseFloat(e.target.value) || 0)}
+                      placeholder="ej: 1000"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="unitOfMeasure">Unidad de compra</Label>
+                    <Select value={unitOfMeasure} onValueChange={(v) => setUnitOfMeasure(v as UnitOfMeasure)}>
+                      <SelectTrigger id="unitOfMeasure">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="kg">kg</SelectItem>
+                        <SelectItem value="g">g</SelectItem>
+                        <SelectItem value="l">L</SelectItem>
+                        <SelectItem value="ml">ml</SelectItem>
+                        <SelectItem value="unidad">unidad</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {quantity > 0 && amount > 0 && (
+                  <div className="bg-muted rounded-lg p-4 border border-border">
+                    <p className="text-xs text-muted-foreground mb-1">Costo unitario</p>
+                    <p className="text-2xl font-bold">
+                      {formatCurrency(calculations.amountWithoutIva / quantity)}
+                      <span className="text-sm font-normal text-muted-foreground ml-1">
+                        /{UNIT_OF_MEASURE_ABBR[unitOfMeasure]}
+                      </span>
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">

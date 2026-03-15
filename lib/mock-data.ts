@@ -814,6 +814,13 @@ export const EXPENSE_CATEGORIES: ExpenseCategory[] = [
   { id: 'cat-12', name: 'Otros', subcategories: [] },
 ]
 
+// Productive expense category IDs (these feed into Registro de costos)
+export const PRODUCTIVE_EXPENSE_CATEGORIES = ['cat-1', 'cat-2', 'cat-3']
+
+export function isProductiveExpense(categoryId: string): boolean {
+  return PRODUCTIVE_EXPENSE_CATEGORIES.includes(categoryId)
+}
+
 // ============================================
 // Clients - Clientes realistas de Uruguay
 // ============================================

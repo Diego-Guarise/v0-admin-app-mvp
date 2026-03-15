@@ -348,6 +348,10 @@ export interface Expense {
   recurrence_frequency?: RecurrenceFrequency
   estimated_day?: number
   estimated_amount?: number
+  // For productive purchases (auto-populated in Registro de costos)
+  insumo_id?: string
+  quantity?: number
+  unit_of_measure?: UnitOfMeasure
   created_at: string
   updated_at: string
 }

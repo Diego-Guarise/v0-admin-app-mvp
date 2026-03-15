@@ -33,55 +33,61 @@ import {
   Plus
 } from 'lucide-react'
 import { 
-  INGREDIENT_COSTS, 
   INGREDIENT_INPUTS,
   formatCurrencyDecimal, 
   formatDate,
-  formatNumber 
+  formatNumber,
+  EXPENSES,
+  isProductiveExpense
 } from '@/lib/mock-data'
 import { INGREDIENT_CATEGORY_LABELS, UNIT_OF_MEASURE_ABBR, type IngredientCategory } from '@/lib/types'
-import type { IngredientCost } from '@/lib/types'
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { CreateCostRegistrationModal } from './create-cost-registration-modal'
 
 export function IngredientCostsContent() {
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [invoiceFilter, setInvoiceFilter] = useState<string>('all')
-  const [showCreateModal, setShowCreateModal] = useState(false)
-  const [costs, setCosts] = useState<IngredientCost[]>(INGREDIENT_COSTS)
 
-  // Filter costs
+  // Get productive expenses (auto-populated from Gastos when user creates productive purchases)
+  const productiveExpenses = useMemo(() => {
+    return EXPENSES.filter(expense => 
+      isProductiveExpense(expense.category_id) &&
+      expense.insumo_id &&
+      expense.quantity
+    ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  }, [])
+
+  // Filter productive expenses
   const filteredCosts = useMemo(() => {
-    return costs.filter(cost => {
+    return productiveExpenses.filter(expense => {
       // Category filter
       if (categoryFilter !== 'all') {
-        const insumo = INGREDIENT_INPUTS.find(i => i.id === cost.insumo_id)
+        const insumo = INGREDIENT_INPUTS.find(i => i.id === expense.insumo_id)
         if (insumo?.category !== categoryFilter) return false
       }
 
       // Invoice filter
-      if (invoiceFilter === 'with' && !cost.has_invoice) return false
-      if (invoiceFilter === 'without' && cost.has_invoice) return false
+      if (invoiceFilter === 'with' && !expense.has_invoice) return false
+      if (invoiceFilter === 'without' && expense.has_invoice) return false
 
       // Search filter
       if (search) {
         const searchLower = search.toLowerCase()
         return (
-          cost.insumo?.name.toLowerCase().includes(searchLower) ||
-          cost.provider?.toLowerCase().includes(searchLower) ||
-          cost.notes?.toLowerCase().includes(searchLower)
+          (expense.category?.name.toLowerCase().includes(searchLower)) ||
+          (expense.supplier?.toLowerCase().includes(searchLower)) ||
+          (expense.notes?.toLowerCase().includes(searchLower))
         )
       }
 
       return true
-    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  }, [search, categoryFilter, invoiceFilter, costs])
+    })
+  }, [search, categoryFilter, invoiceFilter, productiveExpenses])
 
   // Stats
   const stats = useMemo(() => {
@@ -89,7 +95,7 @@ export function IngredientCostsContent() {
     const withoutInvoice = filteredCosts.filter(c => !c.has_invoice)
     return {
       total: filteredCosts.length,
-      totalAmount: filteredCosts.reduce((sum, c) => sum + c.total_amount, 0),
+      totalAmount: filteredCosts.reduce((sum, c) => sum + c.amount, 0),
       totalIVA: filteredCosts.reduce((sum, c) => sum + c.iva, 0),
       withInvoice: withInvoice.length,
       withoutInvoice: withoutInvoice.length,
@@ -108,13 +114,15 @@ export function IngredientCostsContent() {
           </Link>
           <PageHeader 
             title="Registro de Costos"
-            description="Historial de compras de insumos con desglose de IVA"
+            description="Compras de insumos registradas automáticamente desde Gastos"
           />
         </div>
-        <Button onClick={() => setShowCreateModal(true)} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Nueva compra
-        </Button>
+        <Link href="/gastos/nuevo">
+          <Button className="gap-2">
+            <Plus className="h-4 w-4" />
+            Registrar compra
+          </Button>
+        </Link>
       </div>
 
       {/* Stats */}
@@ -229,79 +237,83 @@ export function IngredientCostsContent() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCosts.map(cost => (
-                  <TableRow key={cost.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{formatDate(cost.date)}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{cost.insumo?.name}</p>
-                        <Badge variant="outline" className="text-xs mt-0.5">
-                          {cost.insumo?.category && INGREDIENT_CATEGORY_LABELS[cost.insumo.category as IngredientCategory]}
-                        </Badge>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {cost.provider ? (
-                        <div className="flex items-center gap-1">
-                          <Building className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-sm">{cost.provider}</span>
+                {filteredCosts.map(expense => {
+                  const insumo = INGREDIENT_INPUTS.find(i => i.id === expense.insumo_id)
+                  const unitCost = insumo && expense.quantity ? expense.amount_without_iva / expense.quantity : 0
+                  return (
+                    <TableRow key={expense.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm">{formatDate(expense.date)}</span>
                         </div>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      {formatNumber(cost.quantity, 0)} {UNIT_OF_MEASURE_ABBR[cost.unit_of_measure]}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {cost.has_invoice ? (
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <FileText className="h-4 w-4 text-emerald-600 mx-auto" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            Con factura - IVA deducible
-                          </TooltipContent>
-                        </Tooltip>
-                      ) : (
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <FileX className="h-4 w-4 text-slate-400 mx-auto" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            Sin factura - Sin IVA
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right font-mono font-semibold">
-                      {formatCurrencyDecimal(cost.total_amount)}
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      {formatCurrencyDecimal(cost.amount_without_iva)}
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      {cost.iva > 0 ? (
-                        <span className="text-emerald-600">{formatCurrencyDecimal(cost.iva)}</span>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <p className="font-mono font-semibold text-primary">
-                        {formatCurrencyDecimal(cost.unit_cost_without_iva)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        /{UNIT_OF_MEASURE_ABBR[cost.unit_of_measure]}
-                      </p>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{insumo?.name}</p>
+                          <Badge variant="outline" className="text-xs mt-0.5">
+                            {insumo?.category && INGREDIENT_CATEGORY_LABELS[insumo.category as IngredientCategory]}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {expense.supplier ? (
+                          <div className="flex items-center gap-1">
+                            <Building className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-sm">{expense.supplier}</span>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {formatNumber(expense.quantity || 0, 0)} {expense.unit_of_measure && UNIT_OF_MEASURE_ABBR[expense.unit_of_measure]}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {expense.has_invoice ? (
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <FileText className="h-4 w-4 text-emerald-600 mx-auto" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              Con factura - IVA deducible
+                            </TooltipContent>
+                          </Tooltip>
+                        ) : (
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <FileX className="h-4 w-4 text-slate-400 mx-auto" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              Sin factura - Sin IVA
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right font-mono font-semibold">
+                        {formatCurrencyDecimal(expense.amount)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {formatCurrencyDecimal(expense.amount_without_iva)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {expense.iva > 0 ? (
+                          <span className="text-emerald-600">{formatCurrencyDecimal(expense.iva)}</span>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <p className="font-mono font-semibold text-primary">
+                          {formatCurrencyDecimal(unitCost)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          /{expense.unit_of_measure && UNIT_OF_MEASURE_ABBR[expense.unit_of_measure]}
+                        </p>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
               </TableBody>
             </Table>
           </TooltipProvider>
@@ -313,15 +325,6 @@ export function IngredientCostsContent() {
           )}
         </CardContent>
       </Card>
-
-      {/* Create Cost Modal */}
-      <CreateCostRegistrationModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onCreateCost={(newCost) => {
-          setCosts(prev => [newCost, ...prev])
-        }}
-      />
     </div>
   )
 }
