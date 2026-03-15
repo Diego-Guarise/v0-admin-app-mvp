@@ -35,6 +35,9 @@ export function ExpensesContent() {
   const [typeFilter, setTypeFilter] = useState<ExpenseType | 'all'>('all')
   const [statusFilter, setStatusFilter] = useState<ExpenseStatus | 'all'>('all')
   const [invoiceFilter, setInvoiceFilter] = useState<string>('all')
+  const [dateFromFilter, setDateFromFilter] = useState('')
+  const [dateToFilter, setDateToFilter] = useState('')
+  const [monthFilter, setMonthFilter] = useState('')
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [isHydrated, setIsHydrated] = useState(false)
 
@@ -77,6 +80,13 @@ export function ExpensesContent() {
       if (invoiceFilter === 'with' && !expense.has_invoice) return false
       if (invoiceFilter === 'without' && expense.has_invoice) return false
 
+      // Date range filter
+      if (dateFromFilter && expense.date < dateFromFilter) return false
+      if (dateToFilter && expense.date > dateToFilter) return false
+
+      // Month filter (YYYY-MM format)
+      if (monthFilter && !expense.date.startsWith(monthFilter)) return false
+
       return true
     }).sort((a, b) => {
       // Sort by date DESC, then created_at DESC as tie-breaker
@@ -84,7 +94,7 @@ export function ExpensesContent() {
       if (dateCompare !== 0) return dateCompare
       return b.created_at.localeCompare(a.created_at)
     })
-  }, [search, categoryFilter, typeFilter, statusFilter, invoiceFilter, expenses])
+  }, [search, categoryFilter, typeFilter, statusFilter, invoiceFilter, dateFromFilter, dateToFilter, monthFilter, expenses])
 
   const clearFilters = () => {
     setSearch('')
@@ -92,9 +102,12 @@ export function ExpensesContent() {
     setTypeFilter('all')
     setStatusFilter('all')
     setInvoiceFilter('all')
+    setDateFromFilter('')
+    setDateToFilter('')
+    setMonthFilter('')
   }
 
-  const hasFilters = search || categoryFilter !== 'all' || typeFilter !== 'all' || statusFilter !== 'all' || invoiceFilter !== 'all'
+  const hasFilters = search || categoryFilter !== 'all' || typeFilter !== 'all' || statusFilter !== 'all' || invoiceFilter !== 'all' || dateFromFilter || dateToFilter || monthFilter
 
   // Calculate totals
   const totals = useMemo(() => {
@@ -198,6 +211,37 @@ export function ExpensesContent() {
                   <SelectItem value="without">Sin factura</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Date Filters */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t">
+              <div>
+                <label className="text-sm font-medium text-muted-foreground mb-2 block">Desde</label>
+                <Input
+                  type="date"
+                  value={dateFromFilter}
+                  onChange={(e) => setDateFromFilter(e.target.value)}
+                  placeholder="Fecha desde"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground mb-2 block">Hasta</label>
+                <Input
+                  type="date"
+                  value={dateToFilter}
+                  onChange={(e) => setDateToFilter(e.target.value)}
+                  placeholder="Fecha hasta"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground mb-2 block">Mes</label>
+                <Input
+                  type="month"
+                  value={monthFilter}
+                  onChange={(e) => setMonthFilter(e.target.value)}
+                  placeholder="Mes"
+                />
+              </div>
             </div>
           </div>
         </CardContent>

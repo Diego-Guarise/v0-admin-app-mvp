@@ -308,7 +308,14 @@ export function ExpenseForm({ expense }: ExpenseFormProps) {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="insumo">Insumo</Label>
-                  <Select value={insumoId} onValueChange={setInsumoId}>
+                  <Select value={insumoId} onValueChange={(val) => {
+                    setInsumoId(val)
+                    // Auto-populate unit of measure based on selected insumo
+                    const selectedInsumo = INGREDIENT_INPUTS.find(i => i.id === val)
+                    if (selectedInsumo) {
+                      setUnitOfMeasure(selectedInsumo.unit_of_measure as UnitOfMeasure)
+                    }
+                  }}>
                     <SelectTrigger id="insumo">
                       <SelectValue placeholder="Seleccionar insumo" />
                     </SelectTrigger>

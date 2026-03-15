@@ -277,6 +277,7 @@ function getSeedPrices(): PriceListItem[] {
   const mas1kgUnbranded = PRESENTATIONS.find(p => p.product_id === 'prod-2' && p.weight_kg === 1 && p.type === 'bolsa' && p.with_brand === false)
   
   if (mas1kgBranded && mas1kgUnbranded) {
+    // Sold by funda (20 units = 20 kg) - same as Enduido
     // Restricted for consumidor_final category
     categories.forEach(cat => {
       if (cat === 'consumidor_final') return // Skip this category
@@ -284,16 +285,16 @@ function getSeedPrices(): PriceListItem[] {
       const brandedPrice = (() => {
         const basePrice = 28
         const catMultiplier = cat === 'barraca' ? 1 : cat === 'distribuidor' ? 0.91 : cat === 'oferta' ? 0.82 : 1.41
-        return Math.round(basePrice * catMultiplier)
+        return Math.round(basePrice * catMultiplier * 20) // 20 units per funda
       })()
-      prices.push(createPrice(masilla, mas1kgBranded, true, cat, brandedPrice, 'unidad', 1))
+      prices.push(createPrice(masilla, mas1kgBranded, true, cat, brandedPrice, 'funda', 20))
       
       const unbrandedPrice = (() => {
         const basePrice = 22
         const catMultiplier = cat === 'barraca' ? 1 : cat === 'distribuidor' ? 0.91 : cat === 'oferta' ? 0.82 : 1.41
-        return Math.round(basePrice * catMultiplier)
+        return Math.round(basePrice * catMultiplier * 20) // 20 units per funda
       })()
-      prices.push(createPrice(masilla, mas1kgUnbranded, false, cat, unbrandedPrice, 'unidad', 1))
+      prices.push(createPrice(masilla, mas1kgUnbranded, false, cat, unbrandedPrice, 'funda', 20))
     })
   }
 
@@ -302,23 +303,17 @@ function getSeedPrices(): PriceListItem[] {
   const mas2kgUnbranded = PRESENTATIONS.find(p => p.product_id === 'prod-2' && p.weight_kg === 2 && p.type === 'bolsa' && p.with_brand === false)
   
   if (mas2kgBranded && mas2kgUnbranded) {
+    // Sold by funda (10 units = 20 kg) - same as Enduido
     // Restricted for consumidor_final category
     categories.forEach(cat => {
       if (cat === 'consumidor_final') return // Skip this category
       
-      const brandedPrice = (() => {
-        const basePrice = 48
-        const catMultiplier = cat === 'barraca' ? 1 : cat === 'distribuidor' ? 0.9 : cat === 'oferta' ? 0.8 : 1.4
-        return Math.round(basePrice * catMultiplier)
-      })()
-      prices.push(createPrice(masilla, mas2kgBranded, true, cat, brandedPrice, 'unidad', 1))
-      
       const unbrandedPrice = (() => {
         const basePrice = 40
         const catMultiplier = cat === 'barraca' ? 1 : cat === 'distribuidor' ? 0.9 : cat === 'oferta' ? 0.8 : 1.4
-        return Math.round(basePrice * catMultiplier)
+        return Math.round(basePrice * catMultiplier * 10) // 10 units per funda
       })()
-      prices.push(createPrice(masilla, mas2kgUnbranded, false, cat, unbrandedPrice, 'unidad', 1))
+      prices.push(createPrice(masilla, mas2kgUnbranded, false, cat, unbrandedPrice, 'funda', 10))
     })
   }
 

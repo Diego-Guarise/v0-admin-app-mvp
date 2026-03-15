@@ -46,7 +46,7 @@ const SAMPLE_PRICES: Record<string, Record<number, number>> = {}
 
 export function CostosDashboard() {
   const [expandedBreakdowns, setExpandedBreakdowns] = useState<Set<string>>(new Set())
-  const [editingCosts, setEditingCosts] = useState<Record<string, { manual: string; bundle: string }>>({})
+  const [editingCosts, setEditingCosts] = useState<Record<string, { manual: string; bundle: string; envase: string; etiqueta: string }>>({})
   const [selectedBrand, setSelectedBrand] = useState<'con' | 'sin'>('con')
   const [selectedCategory, setSelectedCategory] = useState<PriceCategory>('barraca')
   const [persistedExpenses, setPersistedExpenses] = useState<Expense[]>([])
@@ -78,7 +78,7 @@ export function CostosDashboard() {
   const updateManualExtraCost = (key: string, value: string) => {
     setEditingCosts(prev => ({
       ...prev,
-      [key]: { ...prev[key] || { manual: '', bundle: '' }, manual: value }
+      [key]: { ...prev[key] || { manual: '', bundle: '', envase: '', etiqueta: '' }, manual: value }
     }))
   }
 
@@ -86,7 +86,23 @@ export function CostosDashboard() {
   const updateBundleExtraCost = (key: string, value: string) => {
     setEditingCosts(prev => ({
       ...prev,
-      [key]: { ...prev[key] || { manual: '', bundle: '' }, bundle: value }
+      [key]: { ...prev[key] || { manual: '', bundle: '', envase: '', etiqueta: '' }, bundle: value }
+    }))
+  }
+
+  // Update envase cost
+  const updateEnvaseCost = (key: string, value: string) => {
+    setEditingCosts(prev => ({
+      ...prev,
+      [key]: { ...prev[key] || { manual: '', bundle: '', envase: '', etiqueta: '' }, envase: value }
+    }))
+  }
+
+  // Update etiqueta cost
+  const updateEtiquetaCost = (key: string, value: string) => {
+    setEditingCosts(prev => ({
+      ...prev,
+      [key]: { ...prev[key] || { manual: '', bundle: '', envase: '', etiqueta: '' }, etiqueta: value }
     }))
   }
   // Calculate stats from persisted expenses
@@ -506,25 +522,61 @@ export function CostosDashboard() {
                                         </span>
                                       </div>
 
-                                      {/* Envase cost */}
-                                      {pc.breakdown.envase_cost > 0 && (
-                                        <div className="flex items-center justify-between text-sm">
-                                          <span className="text-muted-foreground">Envase</span>
-                                          <span className="font-mono font-medium">
-                                            {formatCurrencyDecimal(pc.breakdown.envase_cost)}
-                                          </span>
-                                        </div>
-                                      )}
+                                      {/* Envase cost - EDITABLE */}
+                                      {(() => {
+                                        const costKey = breakdownKey
+                                        const currentEnvaseCost = editingCosts[costKey]?.envase !== undefined 
+                                          ? parseFloat(editingCosts[costKey].envase) || 0
+                                          : (pc.breakdown.envase_cost ?? 0)
+                                        
+                                        return (
+                                          <div className="flex items-center justify-between text-sm bg-blue-50/50 p-2 rounded border border-blue-100">
+                                            <label className="text-muted-foreground">Costo envase</label>
+                                            <div className="flex items-center gap-2">
+                                              <input
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                value={editingCosts[costKey]?.envase ?? (pc.breakdown.envase_cost ?? '')}
+                                                onChange={(e) => updateEnvaseCost(costKey, e.target.value)}
+                                                className="w-20 px-2 py-1 text-sm text-right font-mono border border-border rounded bg-white"
+                                                placeholder="0"
+                                              />
+                                              <span className="text-muted-foreground text-xs">
+                                                {currentEnvaseCost > 0 ? formatCurrencyDecimal(currentEnvaseCost) : '—'}
+                                              </span>
+                                            </div>
+                                          </div>
+                                        )
+                                      })()}
 
-                                      {/* Etiqueta cost */}
-                                      {pc.breakdown.etiqueta_cost > 0 && (
-                                        <div className="flex items-center justify-between text-sm">
-                                          <span className="text-muted-foreground">Etiqueta</span>
-                                          <span className="font-mono font-medium">
-                                            {formatCurrencyDecimal(pc.breakdown.etiqueta_cost)}
-                                          </span>
-                                        </div>
-                                      )}
+                                      {/* Etiqueta cost - EDITABLE */}
+                                      {(() => {
+                                        const costKey = breakdownKey
+                                        const currentEtiquetaCost = editingCosts[costKey]?.etiqueta !== undefined 
+                                          ? parseFloat(editingCosts[costKey].etiqueta) || 0
+                                          : (pc.breakdown.etiqueta_cost ?? 0)
+                                        
+                                        return (
+                                          <div className="flex items-center justify-between text-sm bg-emerald-50/50 p-2 rounded border border-emerald-100">
+                                            <label className="text-muted-foreground">Costo etiqueta</label>
+                                            <div className="flex items-center gap-2">
+                                              <input
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                value={editingCosts[costKey]?.etiqueta ?? (pc.breakdown.etiqueta_cost ?? '')}
+                                                onChange={(e) => updateEtiquetaCost(costKey, e.target.value)}
+                                                className="w-20 px-2 py-1 text-sm text-right font-mono border border-border rounded bg-white"
+                                                placeholder="0"
+                                              />
+                                              <span className="text-muted-foreground text-xs">
+                                                {currentEtiquetaCost > 0 ? formatCurrencyDecimal(currentEtiquetaCost) : '—'}
+                                              </span>
+                                            </div>
+                                          </div>
+                                        )
+                                      })()}
 
                                       {/* Manual extra cost - EDITABLE */}
                                       {(() => {
@@ -566,7 +618,13 @@ export function CostosDashboard() {
                                             const manualCost = editingCosts[costKey]?.manual !== undefined 
                                               ? parseFloat(editingCosts[costKey].manual) || 0
                                               : (pc.breakdown.manual_extra_cost ?? 0)
-                                            const totalWithManual = pc.breakdown.product_cost_for_weight + pc.breakdown.envase_cost + pc.breakdown.etiqueta_cost + manualCost
+                                            const envaseCost = editingCosts[costKey]?.envase !== undefined 
+                                              ? parseFloat(editingCosts[costKey].envase) || 0
+                                              : (pc.breakdown.envase_cost ?? 0)
+                                            const etiquetaCost = editingCosts[costKey]?.etiqueta !== undefined 
+                                              ? parseFloat(editingCosts[costKey].etiqueta) || 0
+                                              : (pc.breakdown.etiqueta_cost ?? 0)
+                                            const totalWithManual = pc.breakdown.product_cost_for_weight + envaseCost + etiquetaCost + manualCost
                                             return formatCurrencyDecimal(totalWithManual)
                                           })()}
                                         </span>
@@ -634,10 +692,16 @@ export function CostosDashboard() {
                                                   const manualCost = editingCosts[costKey]?.manual !== undefined 
                                                     ? parseFloat(editingCosts[costKey].manual) || 0
                                                     : (pc.breakdown.manual_extra_cost ?? 0)
+                                                  const envaseCost = editingCosts[costKey]?.envase !== undefined 
+                                                    ? parseFloat(editingCosts[costKey].envase) || 0
+                                                    : (pc.breakdown.envase_cost ?? 0)
+                                                  const etiquetaCost = editingCosts[costKey]?.etiqueta !== undefined 
+                                                    ? parseFloat(editingCosts[costKey].etiqueta) || 0
+                                                    : (pc.breakdown.etiqueta_cost ?? 0)
                                                   const bundleCost = editingCosts[costKey]?.bundle !== undefined 
                                                     ? parseFloat(editingCosts[costKey].bundle) || 0
                                                     : (pc.bundle_manual_extra_cost ?? 0)
-                                                  const totalWithManual = pc.breakdown.product_cost_for_weight + pc.breakdown.envase_cost + pc.breakdown.etiqueta_cost + manualCost
+                                                  const totalWithManual = pc.breakdown.product_cost_for_weight + envaseCost + etiquetaCost + manualCost
                                                   const bundleTotal = (totalWithManual * pc.units_per_bundle) + bundleCost
                                                   return formatCurrencyDecimal(bundleTotal)
                                                 })()}
