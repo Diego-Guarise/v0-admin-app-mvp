@@ -63,8 +63,23 @@ export function CostosDashboard() {
     }
   }, [])
 
-  // Toggle breakdown expansion
-  const toggleBreakdown = (key: string) => {
+  // Helper: Check if a presentation is sold per bundle (funda)
+  const isSoldPerBundle = (product: typeof PRODUCTS[0], presentation: typeof PRESENTATIONS[0]): boolean => {
+    // For Enduido Interior and Masilla para Yeso: 1kg and 2kg are sold per funda
+    if ((product.id === 'prod-1' || product.id === 'prod-2') && 
+        (presentation.weight_kg === 1 || presentation.weight_kg === 2) &&
+        presentation.type === 'bolsa') {
+      return true
+    }
+    return false
+  }
+
+  // Helper: Get bundle multiplier (how many units in one funda)
+  const getBundleMultiplier = (weight_kg: number): number => {
+    if (weight_kg === 1) return 20
+    if (weight_kg === 2) return 10
+    return 1
+  }
     const newSet = new Set(expandedBreakdowns)
     if (newSet.has(key)) {
       newSet.delete(key)
@@ -149,6 +164,7 @@ export function CostosDashboard() {
       units_per_bundle?: number
       bundle_manual_extra_cost?: number
       manual_extra_cost?: number
+      isSoldByBundle: boolean
       breakdown: {
         product_cost_per_kg: number
         product_cost_for_weight: number
@@ -177,8 +193,16 @@ export function CostosDashboard() {
           )
           const sellingPrice = priceItem?.unit_price_for_sales_unit || 0
 
+          // Check if this presentation is sold per bundle (funda)
+          const soldByBundle = isSoldPerBundle(product, presentation)
+          
+          // For bundle presentations, multiply the unit cost by the bundle size
+          const displayCost = soldByBundle 
+            ? costBreakdown.total_cost * getBundleMultiplier(presentation.weight_kg)
+            : costBreakdown.total_cost
+
           const margins = sellingPrice > 0 
-            ? calculateProfitMargins(sellingPrice, costBreakdown.total_cost)
+            ? calculateProfitMargins(sellingPrice, displayCost)
             : { margin_over_price: 0, markup_over_cost: 0 }
 
           costs.push({
@@ -187,12 +211,13 @@ export function CostosDashboard() {
             type: presentation.type as 'bolsa' | 'pote',
             weight_kg: presentation.weight_kg,
             with_brand: presentation.with_brand,
-            cost: costBreakdown.total_cost,
+            cost: displayCost,
             sellingPrice,
             marginOverPrice: margins.margin_over_price,
             units_per_bundle: presentation.units_per_bundle,
             bundle_manual_extra_cost: presentation.bundle_manual_extra_cost,
             manual_extra_cost: presentation.manual_extra_cost,
+            isSoldByBundle: soldByBundle,
             breakdown: {
               product_cost_per_kg: costBreakdown.product_cost_per_kg,
               product_cost_for_weight: costBreakdown.product_cost_for_weight,
@@ -481,6 +506,11 @@ export function CostosDashboard() {
                                     <Badge variant="secondary" className="text-xs">
                                       {pc.weight_kg} kg
                                     </Badge>
+                                    {pc.isSoldByBundle && (
+                                      <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
+                                        por funda ({getBundleMultiplier(pc.weight_kg)} unidades)
+                                      </Badge>
+                                    )}
                                   </div>
                                 </td>
                                 <td className="py-2 text-right font-mono">
@@ -622,6 +652,39 @@ export function CostosDashboard() {
                                               ? parseFloat(editingCosts[costKey].envase) || 0
                                               : (pc.breakdown.envase_cost ?? 0)
                                             const etiquetaCost = editingCosts[costKey]?.etiqueta !== undefined 
+                                              ? parseFloat(editingCosts[costKey].etiqueta) || 0
+                                              : (pc.breakdown.etiqueta_cost ?? 0)
+                                            const totalWithManual = pc.breakdown.product_cost_for_weight + envaseCost + etiquetaCost + manualCost
+                                            return formatCurrencyDecimal(totalWithManual)
+                                          })()}
+                                        </span>
+                                      </div>
+
+                                      {/* Bundle cost (only for funda presentations) */}
+                                      {pc.isSoldByBundle && (
+                                        <div className="bg-amber-50/70 border border-amber-200 rounded p-3">
+                                          <div className="flex items-center justify-between text-sm font-semibold">
+                                            <span className="text-amber-900">Costo total por funda ({getBundleMultiplier(pc.weight_kg)} unidades)</span>
+                                            <span className="font-mono text-amber-700">
+                                              {(() => {
+                                                const costKey = breakdownKey
+                                                const manualCost = editingCosts[costKey]?.manual !== undefined 
+                                                  ? parseFloat(editingCosts[costKey].manual) || 0
+                                                  : (pc.breakdown.manual_extra_cost ?? 0)
+                                                const envaseCost = editingCosts[costKey]?.envase !== undefined 
+                                                  ? parseFloat(editingCosts[costKey].envase) || 0
+                                                  : (pc.breakdown.envase_cost ?? 0)
+                                                const etiquetaCost = editingCosts[costKey]?.etiqueta !== undefined 
+                                                  ? parseFloat(editingCosts[costKey].etiqueta) || 0
+                                                  : (pc.breakdown.etiqueta_cost ?? 0)
+                                                const totalPerUnit = pc.breakdown.product_cost_for_weight + envaseCost + etiquetaCost + manualCost
+                                                const bundleTotal = totalPerUnit * getBundleMultiplier(pc.weight_kg)
+                                                return formatCurrencyDecimal(bundleTotal)
+                                              })()}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      )} 
                                               ? parseFloat(editingCosts[costKey].etiqueta) || 0
                                               : (pc.breakdown.etiqueta_cost ?? 0)
                                             const totalWithManual = pc.breakdown.product_cost_for_weight + envaseCost + etiquetaCost + manualCost
