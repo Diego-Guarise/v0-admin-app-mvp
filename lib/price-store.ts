@@ -308,6 +308,13 @@ function getSeedPrices(): PriceListItem[] {
     categories.forEach(cat => {
       if (cat === 'consumidor_final') return // Skip this category
       
+      const brandedPrice = (() => {
+        const basePrice = 48
+        const catMultiplier = cat === 'barraca' ? 1 : cat === 'distribuidor' ? 0.9 : cat === 'oferta' ? 0.8 : 1.4
+        return Math.round(basePrice * catMultiplier * 10) // 10 units per funda
+      })()
+      prices.push(createPrice(masilla, mas2kgBranded, true, cat, brandedPrice, 'funda', 10))
+      
       const unbrandedPrice = (() => {
         const basePrice = 40
         const catMultiplier = cat === 'barraca' ? 1 : cat === 'distribuidor' ? 0.9 : cat === 'oferta' ? 0.8 : 1.4

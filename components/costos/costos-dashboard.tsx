@@ -37,6 +37,7 @@ import {
 } from '@/lib/mock-data'
 import { calculateProfitMargins, PRICE_CATEGORY_LABELS } from '@/lib/types'
 import { getPriceByKey } from '@/lib/price-store'
+import { isSoldPerBundle, getBundleMultiplier } from '@/lib/pricing'
 import { getExpenses, initializeExpenses } from '@/lib/expenses-store'
 import { EXPENSES } from '@/lib/mock-data'
 import type { PriceCategory, Expense } from '@/lib/types'
@@ -62,24 +63,6 @@ export function CostosDashboard() {
       setPersistedExpenses(EXPENSES)
     }
   }, [])
-
-  // Helper: Check if a presentation is sold per bundle (funda)
-  const isSoldPerBundle = (product: typeof PRODUCTS[0], presentation: typeof PRESENTATIONS[0]): boolean => {
-    // For Enduido Interior and Masilla para Yeso: 1kg and 2kg are sold per funda
-    if ((product.id === 'prod-1' || product.id === 'prod-2') && 
-        (presentation.weight_kg === 1 || presentation.weight_kg === 2) &&
-        presentation.type === 'bolsa') {
-      return true
-    }
-    return false
-  }
-
-  // Helper: Get bundle multiplier (how many units in one funda)
-  const getBundleMultiplier = (weight_kg: number): number => {
-    if (weight_kg === 1) return 20
-    if (weight_kg === 2) return 10
-    return 1
-  }
 
   // Toggle breakdown expansion
   const toggleBreakdown = (key: string) => {
@@ -196,8 +179,8 @@ export function CostosDashboard() {
           )
           const sellingPrice = priceItem?.unit_price_for_sales_unit || 0
 
-          // Check if this presentation is sold per bundle (funda)
-          const soldByBundle = isSoldPerBundle(product, presentation)
+          // Check if this presentation is sold per bundle (funda) - using unified logic
+          const soldByBundle = isSoldPerBundle(product.id, presentation.weight_kg, presentation.type as 'bolsa' | 'pote')
           
           // For bundle presentations, multiply the unit cost by the bundle size
           const displayCost = soldByBundle 

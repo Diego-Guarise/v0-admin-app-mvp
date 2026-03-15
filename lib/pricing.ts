@@ -58,6 +58,42 @@ export function lookupUnitPrice(
 }
 
 /**
+ * SINGLE SOURCE OF TRUTH: Determine if a presentation is sold per bundle (funda)
+ * Applied consistently across Pedidos and Costos
+ * 
+ * Rule:
+ * - Enduido Interior: Bolsa 1kg and 2kg sold per funda (20kg total per sales unit)
+ * - Masilla para Yeso: Bolsa 1kg and 2kg sold per funda (20kg total per sales unit)
+ * - All other presentations: sold per unit
+ */
+export function isSoldPerBundle(productId: string, weight: number, type: 'bolsa' | 'pote'): boolean {
+  // Only bolsas can be sold per bundle
+  if (type !== 'bolsa') return false
+  
+  // Enduido Interior (prod-1): 1kg and 2kg are fundas
+  if (productId === 'prod-1' && (weight === 1 || weight === 2)) {
+    return true
+  }
+  
+  // Masilla para Yeso (prod-2): 1kg and 2kg are fundas
+  if (productId === 'prod-2' && (weight === 1 || weight === 2)) {
+    return true
+  }
+  
+  return false
+}
+
+/**
+ * Get bundle multiplier: how many units in one funda
+ * Only applicable for presentations sold per bundle
+ */
+export function getBundleMultiplier(weight: number): number {
+  if (weight === 1) return 20  // 1kg bolsa × 20 = 20kg funda
+  if (weight === 2) return 10  // 2kg bolsa × 10 = 20kg funda
+  return 1 // Not a bundle
+}
+
+/**
  * Check if potes must always be branded for a product
  * Rule: Potes are always branded for Masilla
  */

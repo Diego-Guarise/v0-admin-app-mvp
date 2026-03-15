@@ -33,7 +33,7 @@ import { PRODUCTS, PRESENTATIONS, ORDERS, formatCurrency, formatWeight } from '@
 import { getAllClients } from '@/lib/client-store'
 import { getAllVendors } from '@/lib/vendor-store'
 import { PRICE_CATEGORY_LABELS, ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS, COMMISSION_STATUS_LABELS } from '@/lib/types'
-import { isPotesAlwaysBranded, getPriceDetailsFromStore } from '@/lib/pricing'
+import { isPotesAlwaysBranded, getPriceDetailsFromStore, isSoldPerBundle } from '@/lib/pricing'
 import { getAllPrices } from '@/lib/price-store'
 import { saveOrder, getOrderById, getAllOrders } from '@/lib/order-store'
 import type { Order, PriceCategory, OrderStatus, PaymentStatus, CommissionStatus } from '@/lib/types'
