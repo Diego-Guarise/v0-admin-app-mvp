@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState, useMemo } from 'react'
 import { PageHeader } from '@/components/page-header'
 import { StatCard } from '@/components/stat-card'
 import { StatusBadge } from '@/components/status-badge'
@@ -19,7 +20,6 @@ import {
   ArrowRight
 } from 'lucide-react'
 import { 
-  DASHBOARD_STATS, 
   ORDERS, 
   formatCurrency, 
   formatDate,
@@ -29,9 +29,39 @@ import {
   getUpcomingExpenses,
   getRecurrentExpenses,
 } from '@/lib/mock-data'
+import { calculateRealDashboardStats } from '@/lib/dashboard-stats'
+import type { DashboardStats } from '@/lib/types'
 import Link from 'next/link'
 
 export function DashboardContent() {
+  // Calculate real dashboard stats from persistent stores
+  const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [isHydrated, setIsHydrated] = useState(false)
+
+  // Calculate stats once on client mount
+  useEffect(() => {
+    // Get real data from stores
+    const realStats = calculateRealDashboardStats()
+    setStats(realStats)
+    setIsHydrated(true)
+    
+    console.log('[v0] Dashboard stats updated from real data:', realStats)
+  }, [])
+
+  // Use real stats if available, fallback to defaults while loading
+  const dashboardStats = useMemo(() => {
+    if (!stats) {
+      return {
+        monthly_sales_without_iva: 0,
+        monthly_sales_with_iva: 0,
+        monthly_expenses: 0,
+        enduido_kg_sold: 0,
+        masilla_kg_sold: 0,
+      }
+    }
+    return stats
+  }, [stats])
+
   const ordersEnProduccion = getOrdersByStatus('en_produccion')
   const ordersFinalizados = getOrdersByStatus('finalizado')
   const ordersEntregados = getOrdersByStatus('entregado')
@@ -39,31 +69,31 @@ export function DashboardContent() {
   const upcomingExpenses = getUpcomingExpenses()
   const recurrentExpenses = getRecurrentExpenses()
 
-  // Calculate margin
-  const margin = DASHBOARD_STATS.monthly_sales_without_iva - DASHBOARD_STATS.monthly_expenses
+  // Calculate margin from real data
+  const margin = dashboardStats.monthly_sales_without_iva - dashboardStats.monthly_expenses
   const marginPositive = margin >= 0
 
   return (
     <div className="px-4 lg:px-6 py-6 space-y-6">
       <PageHeader 
         title="Dashboard"
-        description="Centro de control - Marzo 2025"
+        description="Centro de control - Datos en tiempo real"
       />
 
       {/* Primary KPIs - 2 large cards for sales */}
       <div className="grid gap-4 md:grid-cols-2">
         <StatCard
           title="Ventas del mes (sin IVA)"
-          value={formatCurrency(DASHBOARD_STATS.monthly_sales_without_iva)}
-          subtitle="Base imponible marzo 2025"
+          value={formatCurrency(dashboardStats.monthly_sales_without_iva)}
+          subtitle={`Base imponible ${new Date().toLocaleString('es-UY', { month: 'long', year: 'numeric' })}`}
           icon={DollarSign}
           variant="primary"
           size="lg"
         />
         <StatCard
           title="Ventas del mes (con IVA)"
-          value={formatCurrency(DASHBOARD_STATS.monthly_sales_with_iva)}
-          subtitle="Facturado marzo 2025"
+          value={formatCurrency(dashboardStats.monthly_sales_with_iva)}
+          subtitle={`Facturado ${new Date().toLocaleString('es-UY', { month: 'long', year: 'numeric' })}`}
           icon={DollarSign}
           variant="default"
           size="lg"
@@ -74,8 +104,8 @@ export function DashboardContent() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Gastos del mes"
-          value={formatCurrency(DASHBOARD_STATS.monthly_expenses)}
-          subtitle="Marzo 2025"
+          value={formatCurrency(dashboardStats.monthly_expenses)}
+          subtitle={`${new Date().toLocaleString('es-UY', { month: 'long', year: 'numeric' })}`}
           icon={TrendingDown}
           variant="warning"
         />
@@ -88,15 +118,15 @@ export function DashboardContent() {
         />
         <StatCard
           title="Enduido vendido"
-          value={formatWeight(DASHBOARD_STATS.enduido_kg_sold)}
-          subtitle="Marzo 2025"
+          value={formatWeight(dashboardStats.enduido_kg_sold)}
+          subtitle={`${new Date().toLocaleString('es-UY', { month: 'long', year: 'numeric' })}`}
           icon={Package}
           variant="info"
         />
         <StatCard
           title="Masilla vendida"
-          value={formatWeight(DASHBOARD_STATS.masilla_kg_sold)}
-          subtitle="Marzo 2025"
+          value={formatWeight(dashboardStats.masilla_kg_sold)}
+          subtitle={`${new Date().toLocaleString('es-UY', { month: 'long', year: 'numeric' })}`}
           icon={Scale}
           variant="info"
         />
