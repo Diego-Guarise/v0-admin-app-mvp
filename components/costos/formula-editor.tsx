@@ -50,10 +50,8 @@ export function FormulaEditor({ productId, formulas, onSave }: FormulaEditorProp
     try {
       const expenses = getExpenses()
       setPersistedExpenses(expenses)
-      const productiveCount = expenses.filter(e => isProductiveExpense(e.category_id) && e.insumo_id && e.quantity).length
-      console.log('[v0] Formula editor loaded persisted expenses:', expenses.length, 'total,', productiveCount, 'productive')
-    } catch (error) {
-      console.warn('[v0] Error loading persisted expenses:', error)
+    } catch {
+      // Silently ignore - will use mock data if store unavailable
     }
   }, [])
 
@@ -66,14 +64,17 @@ export function FormulaEditor({ productId, formulas, onSave }: FormulaEditorProp
         exp.quantity &&
         exp.quantity > 0
       )
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .sort((a, b) => {
+        // Sort by date DESC, then created_at DESC as tie-breaker
+        const dateCompare = new Date(b.date).getTime() - new Date(a.date).getTime()
+        if (dateCompare !== 0) return dateCompare
+        return b.created_at.localeCompare(a.created_at)
+      })
     
     if (productiveExpenses.length === 0) return undefined
     
     const latestExp = productiveExpenses[0]
     const unitCost = latestExp.amount_without_iva / (latestExp.quantity || 1)
-    
-    console.log('[v0] Getting cost for insumo', insumoId, '- found', productiveExpenses.length, 'expenses, latest cost:', unitCost, '/', latestExp.unit_of_measure)
     
     return {
       insumo_id: insumoId,

@@ -1,18 +1,50 @@
+'use client'
+
+import { useEffect, useState, use } from 'react'
+import { useRouter } from 'next/navigation'
 import { AdminLayout } from '@/components/admin-layout'
 import { ExpenseDetail } from '@/components/expenses/expense-detail'
-import { notFound } from 'next/navigation'
 import { EXPENSES } from '@/lib/mock-data'
+import { getExpenses, initializeExpenses } from '@/lib/expenses-store'
+import type { Expense } from '@/lib/types'
 
 interface ExpenseDetailPageProps {
   params: Promise<{ id: string }>
 }
 
-export default async function ExpenseDetailPage({ params }: ExpenseDetailPageProps) {
-  const { id } = await params
-  const expense = EXPENSES.find(e => e.id === id)
+export default function ExpenseDetailPage({ params }: ExpenseDetailPageProps) {
+  const { id } = use(params)
+  const router = useRouter()
+  const [expense, setExpense] = useState<Expense | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    let expenses = getExpenses()
+    if (expenses.length === 0) {
+      initializeExpenses(EXPENSES)
+      expenses = EXPENSES
+    }
+    const found = expenses.find(e => e.id === id)
+    if (!found) {
+      router.replace('/404')
+    } else {
+      setExpense(found)
+    }
+    setIsLoading(false)
+  }, [id, router])
+
+  if (isLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+        </div>
+      </AdminLayout>
+    )
+  }
 
   if (!expense) {
-    notFound()
+    return null
   }
 
   return (

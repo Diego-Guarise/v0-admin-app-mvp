@@ -78,7 +78,12 @@ export function ExpensesContent() {
       if (invoiceFilter === 'without' && expense.has_invoice) return false
 
       return true
-    }).sort((a, b) => b.date.localeCompare(a.date))
+    }).sort((a, b) => {
+      // Sort by date DESC, then created_at DESC as tie-breaker
+      const dateCompare = new Date(b.date).getTime() - new Date(a.date).getTime()
+      if (dateCompare !== 0) return dateCompare
+      return b.created_at.localeCompare(a.created_at)
+    })
   }, [search, categoryFilter, typeFilter, statusFilter, invoiceFilter, expenses])
 
   const clearFilters = () => {
@@ -270,7 +275,7 @@ export function ExpensesContent() {
                         <StatusBadge status={expense.expense_type} type="expenseType" size="sm" showDot />
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-1">
                           <Link href={`/gastos/${expense.id}`}>
                             <Button variant="ghost" size="icon" className="h-8 w-8">
                               <Eye className="h-4 w-4" />

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { PageHeader } from '@/components/page-header'
 import { StatusBadge } from '@/components/status-badge'
@@ -16,10 +16,24 @@ import {
   Layers,
   Tag
 } from 'lucide-react'
-import { PRODUCTS, PRESENTATIONS, calculateProductCostPerKg, formatCurrency } from '@/lib/mock-data'
+import { PRODUCTS, PRESENTATIONS, calculateProductCostPerKg, formatCurrency, EXPENSES } from '@/lib/mock-data'
+import { getExpenses, initializeExpenses } from '@/lib/expenses-store'
+import type { Expense } from '@/lib/types'
 
 export function ProductsContent() {
   const [showInactive, setShowInactive] = useState(false)
+  const [persistedExpenses, setPersistedExpenses] = useState<Expense[]>([])
+
+  // Load persisted expenses on mount for real-time cost calculations
+  useEffect(() => {
+    const expenses = getExpenses()
+    if (expenses.length > 0) {
+      setPersistedExpenses(expenses)
+    } else {
+      initializeExpenses(EXPENSES)
+      setPersistedExpenses(EXPENSES)
+    }
+  }, [])
 
   // Filter products
   const filteredProducts = useMemo(() => {
@@ -65,7 +79,7 @@ export function ProductsContent() {
       {/* Products Grid */}
       <div className="grid gap-6 md:grid-cols-2">
         {filteredProducts.map((product) => {
-          const costPerKg = calculateProductCostPerKg(product.id)
+          const costPerKg = calculateProductCostPerKg(product.id, undefined, persistedExpenses)
           const grouped = getGroupedPresentations(product.id)
           const totalPresentations = getProductPresentations(product.id).length
 

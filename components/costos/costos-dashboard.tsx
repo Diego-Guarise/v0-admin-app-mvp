@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, Fragment } from 'react'
+import { useMemo, useState, Fragment, useEffect } from 'react'
 import Link from 'next/link'
 import { PageHeader } from '@/components/page-header'
 import { StatCard } from '@/components/stat-card'
@@ -37,7 +37,9 @@ import {
 } from '@/lib/mock-data'
 import { calculateProfitMargins, PRICE_CATEGORY_LABELS } from '@/lib/types'
 import { getPriceByKey } from '@/lib/price-store'
-import type { PriceCategory } from '@/lib/types'
+import { getExpenses, initializeExpenses } from '@/lib/expenses-store'
+import { EXPENSES } from '@/lib/mock-data'
+import type { PriceCategory, Expense } from '@/lib/types'
 
 // Sample selling prices for profit calculation (would come from price list in production)
 const SAMPLE_PRICES: Record<string, Record<number, number>> = {}
@@ -47,6 +49,19 @@ export function CostosDashboard() {
   const [editingCosts, setEditingCosts] = useState<Record<string, { manual: string; bundle: string }>>({})
   const [selectedBrand, setSelectedBrand] = useState<'con' | 'sin'>('con')
   const [selectedCategory, setSelectedCategory] = useState<PriceCategory>('barraca')
+  const [persistedExpenses, setPersistedExpenses] = useState<Expense[]>([])
+
+  // Load persisted expenses on mount for real-time cost calculations
+  useEffect(() => {
+    const expenses = getExpenses()
+    if (expenses.length > 0) {
+      setPersistedExpenses(expenses)
+    } else {
+      // Initialize with defaults
+      initializeExpenses(EXPENSES)
+      setPersistedExpenses(EXPENSES)
+    }
+  }, [])
 
   // Toggle breakdown expansion
   const toggleBreakdown = (key: string) => {
@@ -74,12 +89,16 @@ export function CostosDashboard() {
       [key]: { ...prev[key] || { manual: '', bundle: '' }, bundle: value }
     }))
   }
-  // Calculate stats
+  // Calculate stats from persisted expenses
   const stats = useMemo(() => {
     const activeInsumos = INGREDIENT_INPUTS.filter(i => i.status === 'activo').length
-    const totalCostRecords = INGREDIENT_COSTS.length
-    const totalPurchases = INGREDIENT_COSTS.reduce((sum, c) => sum + c.total_amount, 0)
-    const totalIVA = INGREDIENT_COSTS.reduce((sum, c) => sum + c.iva, 0)
+    // Count productive expenses (compras de insumos)
+    const productiveExpenses = persistedExpenses.filter(e => 
+      ['cat-1', 'cat-2', 'cat-3'].includes(e.category_id) && e.insumo_id && e.quantity
+    )
+    const totalCostRecords = productiveExpenses.length
+    const totalPurchases = productiveExpenses.reduce((sum, c) => sum + c.amount, 0)
+    const totalIVA = productiveExpenses.reduce((sum, c) => sum + c.iva, 0)
     
     return {
       activeInsumos,
@@ -87,18 +106,18 @@ export function CostosDashboard() {
       totalPurchases,
       totalIVA,
     }
-  }, [])
+  }, [persistedExpenses])
 
-  // Calculate product costs
+  // Calculate product costs from persisted expenses
   const productCosts = useMemo(() => {
     return PRODUCTS.filter(p => p.active).map(product => {
-      const costPerKg = calculateProductCostPerKg(product.id)
+      const costPerKg = calculateProductCostPerKg(product.id, undefined, persistedExpenses)
       return {
         product,
         costPerKg,
       }
     })
-  }, [])
+  }, [persistedExpenses])
 
   // Calculate presentation costs with margins - uses prices from price store
   const presentationCosts = useMemo(() => {

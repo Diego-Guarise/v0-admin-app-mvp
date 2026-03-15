@@ -658,16 +658,52 @@ export function getLatestProductiveExpenseCost(insumoId: string) {
 // - Mass: kg ↔ g
 // - Volume: l ↔ ml
 // - Count: unidad (no conversion)
+// 
+// If persistedExpenses is provided, it uses that as the primary cost source.
+// Otherwise, falls back to static EXPENSES mock-data.
 // ============================================
-export function calculateProductCostPerKg(productId: string, formulas?: ProductFormula[]): number {
+export function calculateProductCostPerKg(
+  productId: string, 
+  formulas?: ProductFormula[],
+  persistedExpenses?: Expense[]
+): number {
   // Use provided formulas array or fall back to global PRODUCT_FORMULAS
   const formulasToUse = formulas ?? PRODUCT_FORMULAS.filter(f => f.product_id === productId && f.active)
   let totalCost = 0
   
+  // Helper to get cost from persisted expenses
+  const getCostFromPersistedExpenses = (insumoId: string) => {
+    const expensesToSearch = persistedExpenses ?? EXPENSES
+    const productiveExpenses = sortExpensesByRecency(
+      expensesToSearch.filter(exp => 
+        isProductiveExpense(exp.category_id) &&
+        exp.insumo_id === insumoId &&
+        exp.quantity &&
+        exp.quantity > 0
+      )
+    )
+    
+    if (productiveExpenses.length === 0) return undefined
+    
+    const latestExp = productiveExpenses[0]
+    const unitCost = latestExp.amount_without_iva / (latestExp.quantity || 1)
+    
+    return {
+      insumo_id: insumoId,
+      date: latestExp.date,
+      unit_cost_without_iva: unitCost,
+      unit_cost_with_iva: latestExp.amount / (latestExp.quantity || 1),
+      unit_of_measure: latestExp.unit_of_measure || 'kg',
+      quantity: latestExp.quantity,
+      total_amount: latestExp.amount_without_iva,
+      has_invoice: latestExp.has_invoice,
+    }
+  }
+  
   for (const formula of formulasToUse) {
     const insumo = formula.insumo || INGREDIENT_INPUTS.find(i => i.id === formula.insumo_id)
-    // First try to get cost from productive expenses (primary source)
-    let latestCost = getLatestProductiveExpenseCost(formula.insumo_id)
+    // First try to get cost from persisted/provided expenses (primary source)
+    let latestCost = getCostFromPersistedExpenses(formula.insumo_id)
     // Fall back to old INGREDIENT_COSTS if no productive expense exists
     if (!latestCost) {
       const oldCost = getLatestIngredientCost(formula.insumo_id)
@@ -861,6 +897,19 @@ export const PRODUCTIVE_EXPENSE_CATEGORIES = ['cat-1', 'cat-2', 'cat-3']
 
 export function isProductiveExpense(categoryId: string): boolean {
   return PRODUCTIVE_EXPENSE_CATEGORIES.includes(categoryId)
+}
+
+/**
+ * Sort expenses by recency: date DESC, then created_at DESC as tie-breaker
+ * Use this consistently across the app for deterministic ordering
+ */
+export function sortExpensesByRecency<T extends { date: string; created_at: string }>(expenses: T[]): T[] {
+  return [...expenses].sort((a, b) => {
+    const dateCompare = new Date(b.date).getTime() - new Date(a.date).getTime()
+    if (dateCompare !== 0) return dateCompare
+    // Same date - use created_at as tie-breaker (more recent first)
+    return b.created_at.localeCompare(a.created_at)
+  })
 }
 
 // ============================================
