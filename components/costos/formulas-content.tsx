@@ -45,8 +45,18 @@ export function FormulasContent() {
     return editingFormulas[productId] || (groupedFormulas[productId] || [])
   }
 
-  // Handle formula save
+  // Handle formula save - persist changes to PRODUCT_FORMULAS
   const handleFormulasSave = (productId: string, updatedFormulas: ProductFormula[]) => {
+    // Update the global PRODUCT_FORMULAS array with the new formulas
+    updatedFormulas.forEach(updated => {
+      const existingIndex = PRODUCT_FORMULAS.findIndex(f => f.id === updated.id)
+      if (existingIndex >= 0) {
+        // Update existing formula
+        PRODUCT_FORMULAS[existingIndex] = updated
+      }
+    })
+    
+    // Update local state for display
     setEditingFormulas(prev => ({
       ...prev,
       [productId]: updatedFormulas
@@ -75,7 +85,8 @@ export function FormulasContent() {
           if (!product) return null
 
           const displayFormulas = getDisplayFormulas(productId)
-          const costPerKg = calculateProductCostPerKg(productId)
+          // Calculate cost using display formulas (which might be edited), not just global data
+          const costPerKg = calculateProductCostPerKg(productId, displayFormulas)
 
           return (
             <div key={productId} className="space-y-4">

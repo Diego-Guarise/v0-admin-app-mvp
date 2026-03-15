@@ -627,11 +627,12 @@ export function getLatestIngredientCost(insumoId: string): IngredientCost | unde
 // - Volume: l ↔ ml
 // - Count: unidad (no conversion)
 // ============================================
-export function calculateProductCostPerKg(productId: string): number {
-  const formulas = PRODUCT_FORMULAS.filter(f => f.product_id === productId && f.active)
+export function calculateProductCostPerKg(productId: string, formulas?: ProductFormula[]): number {
+  // Use provided formulas array or fall back to global PRODUCT_FORMULAS
+  const formulasToUse = formulas ?? PRODUCT_FORMULAS.filter(f => f.product_id === productId && f.active)
   let totalCost = 0
   
-  for (const formula of formulas) {
+  for (const formula of formulasToUse) {
     const insumo = formula.insumo || INGREDIENT_INPUTS.find(i => i.id === formula.insumo_id)
     const latestCost = getLatestIngredientCost(formula.insumo_id)
     
