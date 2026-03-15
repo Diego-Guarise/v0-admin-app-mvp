@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -15,19 +15,20 @@ import {
 } from '@/components/ui/select'
 import { Trash2, Plus, Save, AlertCircle } from 'lucide-react'
 import { CreateInsumoModal } from './create-insumo-modal'
-import type { ProductFormula } from '@/lib/types'
+import type { ProductFormula, Expense } from '@/lib/types'
 import type { IngredientInput } from '@/lib/types'
 import { 
   PRODUCTS,
   INGREDIENT_INPUTS,
   getFormulableInsumos,
   formatCurrencyDecimal,
-  getLatestProductiveExpenseCost,
   getLatestIngredientCost,
   updateProductFormula,
-  createNewFormulaRow
+  createNewFormulaRow,
+  isProductiveExpense
 } from '@/lib/mock-data'
 import { UNIT_OF_MEASURE_ABBR, INGREDIENT_CATEGORY_LABELS, type IngredientCategory, areUnitsCompatible, convertUnit } from '@/lib/types'
+import { getExpenses } from '@/lib/expenses-store'
 
 interface FormulaEditorProps {
   productId: string
@@ -42,15 +43,58 @@ export function FormulaEditor({ productId, formulas, onSave }: FormulaEditorProp
   const [showCreateInsumoModal, setShowCreateInsumoModal] = useState(false)
   const [pendingFormulaRowId, setPendingFormulaRowId] = useState<string | null>(null)
   const [availableInsumos, setAvailableInsumos] = useState<IngredientInput[]>(getFormulableInsumos())
+  const [persistedExpenses, setPersistedExpenses] = useState<Expense[]>([])
 
-  // Calculate cost per kg from current editing state (not from global data)
+  // Load persisted expenses from the real source on mount
+  useEffect(() => {
+    try {
+      const expenses = getExpenses()
+      setPersistedExpenses(expenses)
+      const productiveCount = expenses.filter(e => isProductiveExpense(e.category_id) && e.insumo_id && e.quantity).length
+      console.log('[v0] Formula editor loaded persisted expenses:', expenses.length, 'total,', productiveCount, 'productive')
+    } catch (error) {
+      console.warn('[v0] Error loading persisted expenses:', error)
+    }
+  }, [])
+
+  // Helper to get latest cost for an insumo from persisted expenses
+  const getLatestProductiveExpenseCostFromPersisted = (insumoId: string) => {
+    const productiveExpenses = persistedExpenses
+      .filter(exp => 
+        isProductiveExpense(exp.category_id) &&
+        exp.insumo_id === insumoId &&
+        exp.quantity &&
+        exp.quantity > 0
+      )
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    
+    if (productiveExpenses.length === 0) return undefined
+    
+    const latestExp = productiveExpenses[0]
+    const unitCost = latestExp.amount_without_iva / (latestExp.quantity || 1)
+    
+    console.log('[v0] Getting cost for insumo', insumoId, '- found', productiveExpenses.length, 'expenses, latest cost:', unitCost, '/', latestExp.unit_of_measure)
+    
+    return {
+      insumo_id: insumoId,
+      date: latestExp.date,
+      unit_cost_without_iva: unitCost,
+      unit_cost_with_iva: latestExp.amount / (latestExp.quantity || 1),
+      unit_of_measure: latestExp.unit_of_measure || 'kg',
+      quantity: latestExp.quantity,
+      total_amount: latestExp.amount_without_iva,
+      has_invoice: latestExp.has_invoice,
+    }
+  }
+
+  // Calculate cost per kg from current editing state using persisted expenses
   const costPerKg = useMemo(() => {
     let totalCost = 0
     
     for (const formula of editingFormulas) {
       const insumo = formula.insumo || INGREDIENT_INPUTS.find(i => i.id === formula.insumo_id)
-      // First try to get cost from productive expenses (primary source)
-      let latestCost = getLatestProductiveExpenseCost(formula.insumo_id)
+      // First try to get cost from persisted productive expenses (primary source)
+      let latestCost = getLatestProductiveExpenseCostFromPersisted(formula.insumo_id)
       // Fall back to old costs if no productive expense exists
       if (!latestCost) {
         const oldCost = getLatestIngredientCost(formula.insumo_id)
@@ -92,7 +136,7 @@ export function FormulaEditor({ productId, formulas, onSave }: FormulaEditorProp
     }
     
     return totalCost
-  }, [editingFormulas])
+  }, [editingFormulas, persistedExpenses])
 
   // Detect duplicate ingredients
   const getDuplicateInsumoIds = () => {
@@ -222,8 +266,8 @@ export function FormulaEditor({ productId, formulas, onSave }: FormulaEditorProp
         <div className="space-y-3">
           {editingFormulas.map((formula, idx) => {
             const insumo = formula.insumo || INGREDIENT_INPUTS.find(i => i.id === formula.insumo_id)
-            // First try to get cost from productive expenses (primary source)
-            let latestCost = getLatestProductiveExpenseCost(formula.insumo_id)
+            // Use persisted expenses as primary source
+            let latestCost = getLatestProductiveExpenseCostFromPersisted(formula.insumo_id)
             // Fall back to old costs if no productive expense exists
             if (!latestCost) {
               const oldCost = getLatestIngredientCost(formula.insumo_id)
