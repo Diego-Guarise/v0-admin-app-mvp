@@ -29,7 +29,8 @@ import {
   FileX,
   Calendar,
   Building,
-  Info
+  Info,
+  Plus
 } from 'lucide-react'
 import { 
   INGREDIENT_COSTS, 
@@ -39,21 +40,25 @@ import {
   formatNumber 
 } from '@/lib/mock-data'
 import { INGREDIENT_CATEGORY_LABELS, UNIT_OF_MEASURE_ABBR, type IngredientCategory } from '@/lib/types'
+import type { IngredientCost } from '@/lib/types'
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { CreateCostRegistrationModal } from './create-cost-registration-modal'
 
 export function IngredientCostsContent() {
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [invoiceFilter, setInvoiceFilter] = useState<string>('all')
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [costs, setCosts] = useState<IngredientCost[]>(INGREDIENT_COSTS)
 
   // Filter costs
   const filteredCosts = useMemo(() => {
-    return INGREDIENT_COSTS.filter(cost => {
+    return costs.filter(cost => {
       // Category filter
       if (categoryFilter !== 'all') {
         const insumo = INGREDIENT_INPUTS.find(i => i.id === cost.insumo_id)
@@ -76,7 +81,7 @@ export function IngredientCostsContent() {
 
       return true
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  }, [search, categoryFilter, invoiceFilter])
+  }, [search, categoryFilter, invoiceFilter, costs])
 
   // Stats
   const stats = useMemo(() => {
@@ -94,16 +99,22 @@ export function IngredientCostsContent() {
   return (
     <div className="px-4 lg:px-6 py-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link href="/costos">
-          <Button variant="ghost" size="icon" className="h-9 w-9">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <PageHeader 
-          title="Registro de Costos"
-          description="Historial de compras de insumos con desglose de IVA"
-        />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Link href="/costos">
+            <Button variant="ghost" size="icon" className="h-9 w-9">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          </Link>
+          <PageHeader 
+            title="Registro de Costos"
+            description="Historial de compras de insumos con desglose de IVA"
+          />
+        </div>
+        <Button onClick={() => setShowCreateModal(true)} className="gap-2">
+          <Plus className="h-4 w-4" />
+          Nueva compra
+        </Button>
       </div>
 
       {/* Stats */}
@@ -302,6 +313,15 @@ export function IngredientCostsContent() {
           )}
         </CardContent>
       </Card>
+
+      {/* Create Cost Modal */}
+      <CreateCostRegistrationModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onCreateCost={(newCost) => {
+          setCosts(prev => [newCost, ...prev])
+        }}
+      />
     </div>
   )
 }
