@@ -161,6 +161,19 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
     }
   }, [showClientDropdown])
 
+  // Helper: Find the actual presentation_id variant based on product, type, weight, and brand
+  // This maps from base presentation (type+weight) to actual variant (with_brand)
+  const getPresentationVariant = (productId: string, type: 'bolsa' | 'pote', weightKg: number, withBrand: boolean): string | null => {
+    const variant = PRESENTATIONS.find(p =>
+      p.product_id === productId &&
+      p.type === type &&
+      p.weight_kg === weightKg &&
+      p.with_brand === withBrand &&
+      p.active
+    )
+    return variant?.id || null
+  }
+
   // Centralized function to resolve a complete, consistent order line state
   const resolveOrderLineState = (
     productId: string,
