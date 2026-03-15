@@ -162,15 +162,13 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
   }, [showClientDropdown])
 
   // Centralized function to resolve a complete, consistent order line state
-  // This ensures product, presentation, brand, price, and weight are always coherent
   const resolveOrderLineState = (
     productId: string,
     presentationId: string,
     withBrand: boolean,
     quantity: number,
     manualPriceMode: boolean,
-    priceCat: PriceCategory,
-    isFromPresentationChange: boolean = false // NEW: flag to indicate presentation was just selected
+    priceCat: PriceCategory
   ): {
     product_id: string
     presentation_id: string
@@ -204,7 +202,7 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
       }
     }
 
-    // Find the presentation
+    // Find the selected presentation (base presentation by type+weight)
     const presentation = PRESENTATIONS.find(p => p.id === presentationId)
     if (!presentation || presentation.product_id !== productId) {
       return {
@@ -217,52 +215,40 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
       }
     }
 
-    // CRITICAL FIX: When presentation is selected from dropdown, USE ITS ACTUAL BRAND SETTING
-    // The presentation object ALREADY has the correct with_brand value
-    // Don't try to swap presentations - the user selected THIS presentation deliberately
-    let resolvedWithBrand = presentation.with_brand
-
-    // Override: Force with_brand=true for potes (Masilla only) - but only if NOT from presentation change
-    if (!isFromPresentationChange && isPotesAlwaysBranded(productId) && presentation.type === 'pote') {
+    // Determine the correct brand setting
+    // For Masilla potes, ALWAYS use with_brand=true
+    let resolvedWithBrand = withBrand
+    if (isPotesAlwaysBranded(productId) && presentation.type === 'pote') {
       resolvedWithBrand = true
     }
 
-    // If we had to override to true for potes, find the matching presentation with brand=true
-    if (isPotesAlwaysBranded(productId) && presentation.type === 'pote' && resolvedWithBrand !== presentation.with_brand) {
-      const brandedPresentation = PRESENTATIONS.find(p =>
-        p.product_id === productId &&
-        p.type === presentation.type &&
-        p.weight_kg === presentation.weight_kg &&
-        p.with_brand === true
-      )
-      if (brandedPresentation) {
-        // Use the branded presentation instead
-        return resolveOrderLineState(
-          productId,
-          brandedPresentation.id,
-          true,
-          quantity,
-          manualPriceMode,
-          priceCat,
-          true // Mark as from presentation change to avoid infinite recursion
-        )
+    // Find the variant presentation_id for this type+weight+brand combination
+    const variantId = getPresentationVariant(productId, presentation.type, presentation.weight_kg, resolvedWithBrand)
+    if (!variantId) {
+      // No variant exists for this combination
+      return {
+        product_id: productId,
+        presentation_id: '',
+        with_brand: false,
+        unit_price: 0,
+        total_weight_kg: 0,
+        isValid: false,
       }
     }
 
-    // Now get the price using the presentation we have
+    // Get price using the variant
     let unitPrice = 0
     if (!manualPriceMode) {
-      const priceDetails = getPriceDetailsFromStore(productId, presentationId, resolvedWithBrand, priceCat)
+      const priceDetails = getPriceDetailsFromStore(productId, variantId, resolvedWithBrand, priceCat)
       if (priceDetails) {
         unitPrice = priceDetails.unit_price_for_sales_unit
       }
-      // If no price found, leave as 0 - UI should show this as warning
     }
 
     // Get total weight from price store
     const priceItem = getAllPrices().find(p =>
       p.product_id === productId &&
-      p.presentation_id === presentationId &&
+      p.presentation_id === variantId &&
       p.with_brand === resolvedWithBrand &&
       p.price_category === priceCat
     )
@@ -271,7 +257,7 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
 
     return {
       product_id: productId,
-      presentation_id: presentationId,
+      presentation_id: variantId,
       with_brand: resolvedWithBrand,
       unit_price: unitPrice,
       total_weight_kg: totalWeightKg,
@@ -280,18 +266,14 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
   }
   const addItem = () => {
     const defaultProduct = PRODUCTS.find(p => p.id === 'prod-1') || PRODUCTS[0]
-    // Find an unbranded bolsa presentation to match the default with_brand=false setting
-    const defaultPres = PRESENTATIONS.find(p => 
-      p.product_id === defaultProduct.id && 
-      p.type === 'bolsa' && 
-      p.with_brand === false
-    ) || PRESENTATIONS.find(p => p.product_id === defaultProduct.id)
+    // Get the first base presentation (deduplicated by type+weight)
+    const defaultBasePresentation = getValidPresentations(defaultProduct.id)[0]
     
-    // Resolve the line to ensure it's valid
+    // Resolve the line to ensure it's valid - start with with_brand=false
     const resolvedState = resolveOrderLineState(
       defaultProduct.id,
-      defaultPres?.id || '',
-      defaultPres?.with_brand ?? false,
+      defaultBasePresentation?.id || '',
+      false,
       1,
       manualPrice,
       priceCategory
@@ -355,15 +337,13 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
       
       // When key fields change, resolve the entire line state for consistency
       if (!manualPrice && (field === 'product_id' || field === 'presentation_id' || field === 'with_brand')) {
-        const isFromPresentationChange = field === 'presentation_id'
         const resolvedState = resolveOrderLineState(
           updatedItem.product_id,
           updatedItem.presentation_id,
           updatedItem.with_brand,
           updatedItem.quantity,
           manualPrice,
-          priceCategory,
-          isFromPresentationChange
+          priceCategory
         )
         
         updatedItem.product_id = resolvedState.product_id
@@ -376,23 +356,50 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
     }))
   }
 
-  // Get valid presentations for selected product
-  // IMPORTANT: Each type+weight combination has TWO presentations (with_brand=true and with_brand=false)
-  // Do NOT deduplicate - show both to the user so they can select the exact variant they need
-  const getValidPresentations = (productId: string) => {
-    return PRESENTATIONS.filter(p => p.product_id === productId && p.active)
-      .sort((a, b) => {
-        if (a.type !== b.type) return a.type === 'bolsa' ? -1 : 1
-        if (a.weight_kg !== b.weight_kg) return a.weight_kg - b.weight_kg
-        return a.with_brand ? -1 : 1 // branded first
-      })
+  // Helper: Get base presentation ID from variant presentation ID
+  // Maps pres-1 (Bolsa 1kg con marca) or pres-2 (Bolsa 1kg sin marca) → first base ID (pres-1)
+  const getBasePresentationId = (variantPresentationId: string, productId: string): string => {
+    const variantPres = PRESENTATIONS.find(p => p.id === variantPresentationId)
+    if (!variantPres) return variantPresentationId
+    
+    // Find the first presentation for this product/type/weight combination (the base)
+    const basePres = PRESENTATIONS.find(p =>
+      p.product_id === variantPres.product_id &&
+      p.type === variantPres.type &&
+      p.weight_kg === variantPres.weight_kg &&
+      p.active
+    )
+    
+    return basePres?.id || variantPresentationId
   }
 
-  // Format presentation label to show both weight AND brand variant
+  // Get valid presentations for selected product - DEDUPED by type+weight only
+  // This shows the base presentation list without brand variants
+  const getValidPresentations = (productId: string) => {
+    const presentations = PRESENTATIONS.filter(p => p.product_id === productId && p.active)
+    const seen = new Set<string>()
+    const deduped: typeof PRESENTATIONS = []
+    
+    presentations
+      .sort((a, b) => {
+        if (a.type !== b.type) return a.type === 'bolsa' ? -1 : 1
+        return a.weight_kg - b.weight_kg
+      })
+      .forEach(pres => {
+        const key = `${pres.type}-${pres.weight_kg}`
+        if (!seen.has(key)) {
+          seen.add(key)
+          deduped.push(pres)
+        }
+      })
+    
+    return deduped
+  }
+
+  // Format presentation label - show base presentation without brand info
   const formatPresentationLabel = (pres: typeof PRESENTATIONS[0]) => {
     const typeLabel = pres.type === 'bolsa' ? 'Bolsa' : 'Pote'
-    const brandLabel = pres.with_brand ? '(con marca)' : '(sin marca)'
-    return `${typeLabel} ${pres.weight_kg} kg ${brandLabel}`
+    return `${typeLabel} ${pres.weight_kg} kg`
   }
 
   // Helper function to get the total weight per sales unit from the price store
@@ -810,10 +817,11 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
                                     if (prevItem.id !== item.id) return prevItem
                                     
                                     // Resolve the new state with the new product and first valid presentation
+                                    // Keep current with_brand setting when switching products
                                     const resolvedState = resolveOrderLineState(
                                       v,
                                       firstPres?.id || '',
-                                      firstPres?.with_brand ?? false,
+                                      prevItem.with_brand,
                                       prevItem.quantity,
                                       prevItem.manual_price,
                                       priceCategory
@@ -843,7 +851,7 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
                             </TableCell>
                             <TableCell>
                               <Select 
-                                value={item.presentation_id} 
+                                value={getBasePresentationId(item.presentation_id, item.product_id)} 
                                 onValueChange={(v) => updateItem(item.id, 'presentation_id', v)}
                               >
                                 <SelectTrigger className="w-40 h-9">
