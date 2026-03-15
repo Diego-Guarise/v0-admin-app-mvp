@@ -684,14 +684,7 @@ export function CostosDashboard() {
                                             </span>
                                           </div>
                                         </div>
-                                      )} 
-                                              ? parseFloat(editingCosts[costKey].etiqueta) || 0
-                                              : (pc.breakdown.etiqueta_cost ?? 0)
-                                            const totalWithManual = pc.breakdown.product_cost_for_weight + envaseCost + etiquetaCost + manualCost
-                                            return formatCurrencyDecimal(totalWithManual)
-                                          })()}
-                                        </span>
-                                      </div>
+                                      )}
 
                                       {/* Bundle information */}
                                       {pc.units_per_bundle && pc.units_per_bundle > 1 && (
