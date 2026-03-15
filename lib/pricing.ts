@@ -14,26 +14,8 @@ export interface PricingEntry {
 }
 
 /**
- * Look up unit price from the editable price list
- * Falls back to legacy hardcoded prices if not found
- */
-export function lookupUnitPrice(
-  productId: string,
-  presentationType: 'bolsa' | 'pote',
-  weightKg: number,
-  withBrand: boolean,
-  priceCategory: PriceCategory
-): number {
-  // Try to get from presentations and price store
-  // This requires a different approach - we need presentation_id
-  // For now, returning 0 to indicate the caller should use the full price-store lookup
-  console.log('[v0] lookupUnitPrice called with product/weight - recommend using getPriceByKey instead')
-  return 0
-}
-
-/**
- * Get price from the editable price list by presentation ID
- * This is the recommended way to get prices
+ * Get price from the editable price list by presentation ID (RECOMMENDED)
+ * This is the primary way to get prices - directly from price store
  */
 export function getPriceFromStore(
   productId: string,
@@ -47,6 +29,7 @@ export function getPriceFromStore(
 
 /**
  * Get full price information including sales unit details
+ * This is the primary method to use for complete price information
  */
 export function getPriceDetailsFromStore(
   productId: string,
@@ -56,6 +39,22 @@ export function getPriceDetailsFromStore(
 ) {
   const priceItem = getPriceByKey(productId, presentationId, withBrand, priceCategory)
   return priceItem || null
+}
+
+/**
+ * DEPRECATED: Use getPriceDetailsFromStore() instead.
+ * This was a legacy lookup method that didn't work with the new price store structure.
+ * It now serves as a wrapper that logs a warning (for backward compatibility only).
+ */
+export function lookupUnitPrice(
+  productId: string,
+  presentationType: 'bolsa' | 'pote',
+  weightKg: number,
+  withBrand: boolean,
+  priceCategory: PriceCategory
+): number {
+  console.warn('[v0] lookupUnitPrice() is deprecated. Use getPriceDetailsFromStore() with presentation_id instead.')
+  return 0
 }
 
 /**

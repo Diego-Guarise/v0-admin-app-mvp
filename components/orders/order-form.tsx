@@ -33,7 +33,7 @@ import { PRODUCTS, PRESENTATIONS, ORDERS, formatCurrency, formatWeight } from '@
 import { getAllClients } from '@/lib/client-store'
 import { getAllVendors } from '@/lib/vendor-store'
 import { PRICE_CATEGORY_LABELS, ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS, COMMISSION_STATUS_LABELS } from '@/lib/types'
-import { lookupUnitPrice, isPotesAlwaysBranded, getPriceDetailsFromStore } from '@/lib/pricing'
+import { isPotesAlwaysBranded, getPriceDetailsFromStore } from '@/lib/pricing'
 import { getAllPrices } from '@/lib/price-store'
 import { saveOrder, getOrderById, getAllOrders } from '@/lib/order-store'
 import type { Order, PriceCategory, OrderStatus, PaymentStatus, CommissionStatus } from '@/lib/types'
@@ -168,20 +168,9 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
     
     let unitPrice = 0
     if (defaultPres) {
-      // Try to get price from price store (new approach)
+      // Get price from price store using presentation_id
       const priceDetails = getPriceDetailsFromStore(defaultProduct.id, defaultPres.id, false, priceCategory)
       unitPrice = priceDetails?.unit_price_for_sales_unit || 0
-      
-      // Fallback to legacy lookup if not found
-      if (unitPrice === 0) {
-        unitPrice = lookupUnitPrice(
-          defaultProduct.id,
-          defaultPres.type,
-          defaultPres.weight_kg,
-          false,
-          priceCategory
-        )
-      }
     }
     
     const newItem: OrderItemForm = {
@@ -239,20 +228,9 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
       // Auto-fill price when key fields change (unless manual price mode)
       if (!manualPrice && (field === 'product_id' || field === 'presentation_id' || field === 'with_brand')) {
         if (presentation) {
-          // Try to get price from price store (new approach)
+          // Get price from price store using presentation_id
           const priceDetails = getPriceDetailsFromStore(updatedItem.product_id, presentation.id, updatedItem.with_brand, priceCategory)
-          if (priceDetails && priceDetails.unit_price_for_sales_unit) {
-            updatedItem.unit_price = priceDetails.unit_price_for_sales_unit
-          } else {
-            // Fallback to legacy lookup if not found in price store
-            updatedItem.unit_price = lookupUnitPrice(
-              updatedItem.product_id,
-              presentation.type,
-              presentation.weight_kg,
-              updatedItem.with_brand,
-              priceCategory
-            )
-          }
+          updatedItem.unit_price = priceDetails?.unit_price_for_sales_unit || 0
         }
       }
       
@@ -670,15 +648,10 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
                                       if (isPotesAlwaysBranded(v) && firstPres.type === 'pote') {
                                         updatedItem.with_brand = true
                                       }
-                                      // Auto-fill price for new presentation
+                                      // Auto-fill price from price store for new presentation
                                       if (!manualPrice) {
-                                        updatedItem.unit_price = lookupUnitPrice(
-                                          v,
-                                          firstPres.type,
-                                          firstPres.weight_kg,
-                                          updatedItem.with_brand,
-                                          priceCategory
-                                        )
+                                        const priceDetails = getPriceDetailsFromStore(v, firstPres.id, updatedItem.with_brand, priceCategory)
+                                        updatedItem.unit_price = priceDetails?.unit_price_for_sales_unit || 0
                                       }
                                     }
                                     
