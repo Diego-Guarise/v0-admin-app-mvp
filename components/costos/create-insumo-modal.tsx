@@ -29,30 +29,30 @@ interface CreateInsumoModalProps {
 
 export function CreateInsumoModal({ isOpen, onClose, onCreateInsumo }: CreateInsumoModalProps) {
   const [name, setName] = useState('')
-  const [category, setCategory] = useState<IngredientCategory>('aditivo')
+  const [category, setCategory] = useState<IngredientCategory>('materia_prima')
   const [unitOfMeasure, setUnitOfMeasure] = useState<UnitOfMeasure>('kg')
-  const [price, setPrice] = useState('')
-  const [priceUnit, setPriceUnit] = useState<UnitOfMeasure>('kg')
+  const [observation, setObservation] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!name.trim() || !price.trim()) {
-      alert('Por favor completa todos los campos')
+    if (!name.trim()) {
+      alert('Por favor ingresa el nombre del insumo')
       return
     }
 
     setIsSubmitting(true)
 
     try {
-      // Create the new ingredient
+      // Create the new ingredient without price
+      const insumoId = `ins-${Date.now()}`
       const newInsumo: IngredientInput = {
         id: insumoId,
         name: name.trim(),
         category,
         unit_of_measure: unitOfMeasure,
-        description: '',
+        description: observation.trim(),
         status: 'activo',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -63,10 +63,9 @@ export function CreateInsumoModal({ isOpen, onClose, onCreateInsumo }: CreateIns
 
       // Reset form and close
       setName('')
-      setCategory('aditivo')
+      setCategory('materia_prima')
       setUnitOfMeasure('kg')
-      setPrice('')
-      setPriceUnit('kg')
+      setObservation('')
       onClose()
     } catch (error) {
       console.error('Error creating insumo:', error)
@@ -91,7 +90,7 @@ export function CreateInsumoModal({ isOpen, onClose, onCreateInsumo }: CreateIns
           <div>
             <label className="text-sm font-medium mb-1 block">Nombre del insumo *</label>
             <Input
-              placeholder="ej: Antihongo, Dispersante"
+              placeholder="ej: Carbonato de calcio, Antihongo"
               value={name}
               onChange={(e) => setName(e.target.value)}
               disabled={isSubmitting}
@@ -131,39 +130,20 @@ export function CreateInsumoModal({ isOpen, onClose, onCreateInsumo }: CreateIns
             </Select>
           </div>
 
-          {/* Price */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-sm font-medium mb-1 block">Precio de compra *</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                <Input
-                  type="number"
-                  placeholder="180"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  disabled={isSubmitting}
-                  className="pl-7"
-                  step="0.01"
-                  min="0"
-                />
-              </div>
-            </div>
+          {/* Observation (Optional) */}
+          <div>
+            <label className="text-sm font-medium mb-1 block">Observación (opcional)</label>
+            <Input
+              placeholder="ej: Premium, Concentrado"
+              value={observation}
+              onChange={(e) => setObservation(e.target.value)}
+              disabled={isSubmitting}
+            />
+          </div>
 
-            {/* Price Unit */}
-            <div>
-              <label className="text-sm font-medium mb-1 block">Unidad del precio *</label>
-              <Select value={priceUnit} onValueChange={(val) => setPriceUnit(val as UnitOfMeasure)} disabled={isSubmitting}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="kg">por kg</SelectItem>
-                  <SelectItem value="l">por L</SelectItem>
-                  <SelectItem value="unidad">por unidad</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-700">
+            <p className="font-medium mb-1">Nota sobre el costo:</p>
+            <p>El precio se registrará cuando ingrese una compra en <strong>Costos → Registro de costos</strong></p>
           </div>
         </form>
 

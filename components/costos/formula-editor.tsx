@@ -288,14 +288,24 @@ export function FormulaEditor({ productId, formulas, onSave }: FormulaEditorProp
                       </div>
 
                       {/* Ingredient unit cost */}
-                      <div className="text-right min-w-[100px]">
+                      <div className="text-right min-w-[120px]">
                         <p className="text-xs text-muted-foreground mb-1">Costo insumo</p>
-                        <p className="text-sm font-mono font-semibold">
-                          {formatCurrencyDecimal(unitCost)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          /{UNIT_OF_MEASURE_ABBR[unit]}
-                        </p>
+                        {unitCost === 0 ? (
+                          <div className="flex items-center justify-end gap-1">
+                            <span className="inline-flex px-2 py-1 bg-amber-50 border border-amber-200 rounded text-xs text-amber-700 font-medium">
+                              Sin costo cargado
+                            </span>
+                          </div>
+                        ) : (
+                          <>
+                            <p className="text-sm font-mono font-semibold">
+                              {formatCurrencyDecimal(unitCost)}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              /{UNIT_OF_MEASURE_ABBR[unit]}
+                            </p>
+                          </>
+                        )}
                       </div>
 
                       <Separator orientation="vertical" className="h-10" />
@@ -303,12 +313,20 @@ export function FormulaEditor({ productId, formulas, onSave }: FormulaEditorProp
                       {/* Cost contribution */}
                       <div className="text-right min-w-[110px]">
                         <p className="text-xs text-muted-foreground mb-1 font-medium">Aporte al costo</p>
-                        <p className="text-sm font-mono font-bold text-primary">
-                          {formatCurrencyDecimal(ingredientCostContribution)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {((ingredientCostContribution / costPerKg) * 100).toFixed(1)}%
-                        </p>
+                        {unitCost === 0 ? (
+                          <div className="flex items-center justify-end gap-1">
+                            <span className="text-sm font-mono text-muted-foreground">—</span>
+                          </div>
+                        ) : (
+                          <>
+                            <p className="text-sm font-mono font-bold text-primary">
+                              {formatCurrencyDecimal(ingredientCostContribution)}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {costPerKg > 0 ? ((ingredientCostContribution / costPerKg) * 100).toFixed(1) : '0'}%
+                            </p>
+                          </>
+                        )}
                       </div>
                     </>
                   )}
