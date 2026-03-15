@@ -14,7 +14,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Trash2, Plus, Save, AlertCircle } from 'lucide-react'
+import { CreateInsumoModal } from './create-insumo-modal'
 import type { ProductFormula } from '@/lib/types'
+import type { IngredientInput, IngredientCost } from '@/lib/types'
 import { 
   PRODUCTS,
   INGREDIENT_INPUTS,
@@ -23,7 +25,8 @@ import {
   formatCurrencyDecimal,
   getLatestIngredientCost,
   updateProductFormula,
-  createNewFormulaRow
+  createNewFormulaRow,
+  INGREDIENT_COSTS
 } from '@/lib/mock-data'
 import { UNIT_OF_MEASURE_ABBR, INGREDIENT_CATEGORY_LABELS, type IngredientCategory, areUnitsCompatible } from '@/lib/types'
 
@@ -37,7 +40,9 @@ export function FormulaEditor({ productId, formulas, onSave }: FormulaEditorProp
   const product = PRODUCTS.find(p => p.id === productId)
   const [editingFormulas, setEditingFormulas] = useState<ProductFormula[]>(formulas)
   const [isEditing, setIsEditing] = useState(false)
-  const formaulableInsumos = getFormulableInsumos()
+  const [showCreateInsumoModal, setShowCreateInsumoModal] = useState(false)
+  const [pendingFormulaRowId, setPendingFormulaRowId] = useState<string | null>(null)
+  const [availableInsumos, setAvailableInsumos] = useState<IngredientInput[]>(getFormulableInsumos())
 
   const costPerKg = useMemo(() => calculateProductCostPerKg(productId), [productId, editingFormulas])
 
@@ -50,8 +55,8 @@ export function FormulaEditor({ productId, formulas, onSave }: FormulaEditorProp
   const duplicateInsumoIds = useMemo(() => getDuplicateInsumoIds(), [editingFormulas])
 
   const handleAddIngredient = () => {
-    if (formaulableInsumos.length === 0) return
-    const newFormula = createNewFormulaRow(productId, formaulableInsumos[0].id)
+    if (availableInsumos.length === 0) return
+    const newFormula = createNewFormulaRow(productId, availableInsumos[0].id)
     setEditingFormulas([...editingFormulas, newFormula])
   }
 
@@ -77,6 +82,35 @@ export function FormulaEditor({ productId, formulas, onSave }: FormulaEditorProp
   const handleCancel = () => {
     setEditingFormulas(formulas)
     setIsEditing(false)
+  }
+
+  const handleCreateInsumo = (newInsumo: IngredientInput, newCost: Omit<IngredientCost, 'id' | 'created_at'>) => {
+    // Add the new insumo to available insumos
+    const updatedInsumos = [...availableInsumos, newInsumo]
+    setAvailableInsumos(updatedInsumos)
+
+    // Add cost to the mock data (this would normally be saved to a backend)
+    const cost: IngredientCost = {
+      ...newCost,
+      id: `ic-${Date.now()}`,
+      created_at: new Date().toISOString()
+    }
+    INGREDIENT_COSTS.push(cost)
+
+    // Add insumo to mock data (this would normally be saved to a backend)
+    INGREDIENT_INPUTS.push(newInsumo)
+
+    // Auto-select the new insumo in the formula row if one was pending
+    if (pendingFormulaRowId) {
+      handleUpdateFormula(pendingFormulaRowId, {
+        insumo_id: newInsumo.id,
+        insumo: newInsumo,
+        unit_of_measure: newInsumo.unit_of_measure
+      })
+      setPendingFormulaRowId(null)
+    }
+
+    setShowCreateInsumoModal(false)
   }
 
   if (!product) return null
@@ -144,22 +178,31 @@ export function FormulaEditor({ productId, formulas, onSave }: FormulaEditorProp
                           Insumo
                         </label>
                         <Select value={formula.insumo_id} onValueChange={(val) => {
-                          const selectedInsumo = formaulableInsumos.find(i => i.id === val)
-                          handleUpdateFormula(formula.id, { 
-                            insumo_id: val,
-                            insumo: selectedInsumo,
-                            unit_of_measure: selectedInsumo?.unit_of_measure
-                          })
+                          if (val === '__create_new__') {
+                            setPendingFormulaRowId(formula.id)
+                            setShowCreateInsumoModal(true)
+                          } else {
+                            const selectedInsumo = availableInsumos.find(i => i.id === val)
+                            handleUpdateFormula(formula.id, { 
+                              insumo_id: val,
+                              insumo: selectedInsumo,
+                              unit_of_measure: selectedInsumo?.unit_of_measure
+                            })
+                          }
                         }}>
                           <SelectTrigger className="h-9">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {formaulableInsumos.map(insumo => (
+                            {availableInsumos.map(insumo => (
                               <SelectItem key={insumo.id} value={insumo.id}>
                                 {insumo.name}
                               </SelectItem>
                             ))}
+                            <Separator className="my-2" />
+                            <SelectItem value="__create_new__" className="text-primary font-medium">
+                              + Crear nuevo insumo
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -329,5 +372,15 @@ export function FormulaEditor({ productId, formulas, onSave }: FormulaEditorProp
         )}
       </CardContent>
     </Card>
+
+    {/* Create Insumo Modal */}
+    <CreateInsumoModal
+      isOpen={showCreateInsumoModal}
+      onClose={() => {
+        setShowCreateInsumoModal(false)
+        setPendingFormulaRowId(null)
+      }}
+      onCreateInsumo={handleCreateInsumo}
+    />
   )
 }
