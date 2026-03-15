@@ -1,6 +1,8 @@
 import type { PriceListItem, PriceCategory } from './types'
 import { PRODUCTS, PRESENTATIONS } from './mock-data'
 
+const PRICE_STORE_KEY = 'fox-prices'
+
 /**
  * Check if price store needs migration (e.g., missing bundle prices)
  * Returns true if old data structure is detected
