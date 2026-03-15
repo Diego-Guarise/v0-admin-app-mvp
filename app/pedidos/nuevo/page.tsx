@@ -1,16 +1,14 @@
-'use client'
+import { Suspense } from 'react'
+import { NuevoPedidoWrapper } from './client-wrapper'
 
-import { useSearchParams } from 'next/navigation'
-import { AdminLayout } from '@/components/admin-layout'
-import { OrderForm } from '@/components/orders/order-form'
+function NuevoPedidoLoader() {
+  return <div>Cargando...</div>
+}
 
 export default function NuevoPedidoPage() {
-  const searchParams = useSearchParams()
-  const clientId = searchParams.get('preSelectedClient') || searchParams.get('client')
-
   return (
-    <AdminLayout>
-      <OrderForm preSelectedClientId={clientId || undefined} />
-    </AdminLayout>
+    <Suspense fallback={<NuevoPedidoLoader />}>
+      <NuevoPedidoWrapper />
+    </Suspense>
   )
 }
