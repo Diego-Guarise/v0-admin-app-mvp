@@ -80,6 +80,9 @@ export function CostosDashboard() {
     if (weight_kg === 2) return 10
     return 1
   }
+
+  // Toggle breakdown expansion
+  const toggleBreakdown = (key: string) => {
     const newSet = new Set(expandedBreakdowns)
     if (newSet.has(key)) {
       newSet.delete(key)
