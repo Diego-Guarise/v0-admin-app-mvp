@@ -26,7 +26,6 @@ export function getAllPrices(): PriceListItem[] {
 /**
  * Get a specific price by product, presentation, brand, and category
  * Returns null if not found - the caller should handle missing prices explicitly
- * Do NOT fall back to 0 silently - make it clear when a price is missing
  */
 export function getPriceByKey(
   productId: string,
@@ -36,27 +35,12 @@ export function getPriceByKey(
 ): PriceListItem | null {
   const allPrices = getAllPrices()
   
-  const found = allPrices.find(p =>
+  return allPrices.find(p =>
     p.product_id === productId &&
     p.presentation_id === presentationId &&
     p.with_brand === withBrand &&
     p.price_category === priceCategory
-  )
-  
-  if (!found) {
-    // Log debugging info to help identify missing price configurations
-    console.warn('[v0] Price not found:', {
-      productId,
-      presentationId,
-      withBrand,
-      priceCategory,
-      availablePricesForThisProduct: allPrices
-        .filter(p => p.product_id === productId && p.presentation_id === presentationId)
-        .map(p => ({ withBrand: p.with_brand, priceCategory: p.price_category }))
-    })
-  }
-  
-  return found || null
+  ) || null
 }
 
 /**

@@ -164,17 +164,19 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
   // Add new item with sensible defaults
   const addItem = () => {
     const defaultProduct = PRODUCTS.find(p => p.id === 'prod-1') || PRODUCTS[0]
-    const defaultPres = PRESENTATIONS.find(p => p.product_id === defaultProduct.id && p.type === 'bolsa') || PRESENTATIONS.find(p => p.product_id === defaultProduct.id)
+    // Find an unbranded bolsa presentation to match the default with_brand=false setting
+    const defaultPres = PRESENTATIONS.find(p => 
+      p.product_id === defaultProduct.id && 
+      p.type === 'bolsa' && 
+      p.with_brand === false
+    ) || PRESENTATIONS.find(p => p.product_id === defaultProduct.id)
     
     let unitPrice = 0
     if (defaultPres) {
-      // Get price from price store using presentation_id
-      const priceDetails = getPriceDetailsFromStore(defaultProduct.id, defaultPres.id, false, priceCategory)
+      // Get price from price store - use the presentation's actual brand setting
+      const priceDetails = getPriceDetailsFromStore(defaultProduct.id, defaultPres.id, defaultPres.with_brand, priceCategory)
       if (priceDetails) {
         unitPrice = priceDetails.unit_price_for_sales_unit
-      } else {
-        // Price not found - leave as 0 but log warning for debugging
-        console.warn(`[v0] Missing price for product ${defaultProduct.id}, presentation ${defaultPres.id}, with_brand=false, category=${priceCategory}`)
       }
     }
     
@@ -182,7 +184,7 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
       id: `temp-${Date.now()}`,
       product_id: defaultProduct.id,
       presentation_id: defaultPres?.id || '',
-      with_brand: false,
+      with_brand: defaultPres?.with_brand ?? false,
       quantity: 1,
       unit_price: unitPrice,
       manual_price: manualPrice,
@@ -233,14 +235,30 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
       // Auto-fill price when key fields change (unless manual price mode)
       if (!manualPrice && (field === 'product_id' || field === 'presentation_id' || field === 'with_brand')) {
         if (presentation) {
-          // Get price from price store using presentation_id
-          const priceDetails = getPriceDetailsFromStore(updatedItem.product_id, presentation.id, updatedItem.with_brand, priceCategory)
+          // When brand toggles, we need to find the presentation that matches the new brand setting
+          // Each presentation has a fixed with_brand value - we need to swap to the matching one
+          let targetPresentationId = presentation.id
+          
+          if (field === 'with_brand') {
+            // Find presentation with same product, type, weight but matching brand
+            const matchingPres = PRESENTATIONS.find(p => 
+              p.product_id === updatedItem.product_id &&
+              p.type === presentation.type &&
+              p.weight_kg === presentation.weight_kg &&
+              p.with_brand === updatedItem.with_brand
+            )
+            if (matchingPres) {
+              targetPresentationId = matchingPres.id
+              updatedItem.presentation_id = matchingPres.id
+            }
+          }
+          
+          // Get price from price store using the correct presentation_id
+          const priceDetails = getPriceDetailsFromStore(updatedItem.product_id, targetPresentationId, updatedItem.with_brand, priceCategory)
           if (priceDetails) {
             updatedItem.unit_price = priceDetails.unit_price_for_sales_unit
           } else {
-            // Price not found - leave as 0 but log warning for debugging
             updatedItem.unit_price = 0
-            console.warn(`[v0] Missing price for product ${updatedItem.product_id}, presentation ${presentation.id}, with_brand=${updatedItem.with_brand}, category=${priceCategory}`)
           }
         }
       }
@@ -552,17 +570,9 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
                       const presentation = PRESENTATIONS.find(p => p.id === item.presentation_id)
                       if (!presentation) return item
                       const priceDetails = getPriceDetailsFromStore(item.product_id, presentation.id, item.with_brand, value as PriceCategory)
-                      if (priceDetails) {
-                        return {
-                          ...item,
-                          unit_price: priceDetails.unit_price_for_sales_unit
-                        }
-                      } else {
-                        console.warn(`[v0] Missing price for product ${item.product_id}, presentation ${presentation.id}, with_brand=${item.with_brand}, category=${value}`)
-                        return {
-                          ...item,
-                          unit_price: 0
-                        }
+                      return {
+                        ...item,
+                        unit_price: priceDetails?.unit_price_for_sales_unit || 0
                       }
                     })
                   )
@@ -694,19 +704,16 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
                                     // Also update presentation to first valid one
                                     if (firstPres) {
                                       updatedItem.presentation_id = firstPres.id
-                                      // Force with_brand=true for potes
+                                      // Use the presentation's actual brand setting
+                                      updatedItem.with_brand = firstPres.with_brand
+                                      // Force with_brand=true for potes (Masilla rule)
                                       if (isPotesAlwaysBranded(v) && firstPres.type === 'pote') {
                                         updatedItem.with_brand = true
                                       }
                                       // Auto-fill price from price store for new presentation
                                       if (!manualPrice) {
                                         const priceDetails = getPriceDetailsFromStore(v, firstPres.id, updatedItem.with_brand, priceCategory)
-                                        if (priceDetails) {
-                                          updatedItem.unit_price = priceDetails.unit_price_for_sales_unit
-                                        } else {
-                                          updatedItem.unit_price = 0
-                                          console.warn(`[v0] Missing price for product ${v}, presentation ${firstPres.id}, with_brand=${updatedItem.with_brand}, category=${priceCategory}`)
-                                        }
+                                        updatedItem.unit_price = priceDetails?.unit_price_for_sales_unit || 0
                                       }
                                     }
                                     
