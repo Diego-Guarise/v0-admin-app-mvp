@@ -660,7 +660,7 @@ export function CostosDashboard() {
                                         </span>
                                       </div>
 
-                                      {/* Bundle cost (only for funda presentations) */}
+                                      {/* Bundle cost display - for funda presentations only */}
                                       {pc.isSoldByBundle && (
                                         <div className="bg-amber-50/70 border border-amber-200 rounded p-3">
                                           <div className="flex items-center justify-between text-sm font-semibold">
