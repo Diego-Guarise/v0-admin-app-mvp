@@ -170,7 +170,12 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
     if (defaultPres) {
       // Get price from price store using presentation_id
       const priceDetails = getPriceDetailsFromStore(defaultProduct.id, defaultPres.id, false, priceCategory)
-      unitPrice = priceDetails?.unit_price_for_sales_unit || 0
+      if (priceDetails) {
+        unitPrice = priceDetails.unit_price_for_sales_unit
+      } else {
+        // Price not found - leave as 0 but log warning for debugging
+        console.warn(`[v0] Missing price for product ${defaultProduct.id}, presentation ${defaultPres.id}, with_brand=false, category=${priceCategory}`)
+      }
     }
     
     const newItem: OrderItemForm = {
@@ -230,7 +235,13 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
         if (presentation) {
           // Get price from price store using presentation_id
           const priceDetails = getPriceDetailsFromStore(updatedItem.product_id, presentation.id, updatedItem.with_brand, priceCategory)
-          updatedItem.unit_price = priceDetails?.unit_price_for_sales_unit || 0
+          if (priceDetails) {
+            updatedItem.unit_price = priceDetails.unit_price_for_sales_unit
+          } else {
+            // Price not found - leave as 0 but log warning for debugging
+            updatedItem.unit_price = 0
+            console.warn(`[v0] Missing price for product ${updatedItem.product_id}, presentation ${presentation.id}, with_brand=${updatedItem.with_brand}, category=${priceCategory}`)
+          }
         }
       }
       
@@ -541,9 +552,17 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
                       const presentation = PRESENTATIONS.find(p => p.id === item.presentation_id)
                       if (!presentation) return item
                       const priceDetails = getPriceDetailsFromStore(item.product_id, presentation.id, item.with_brand, value as PriceCategory)
-                      return {
-                        ...item,
-                        unit_price: priceDetails?.unit_price_for_sales_unit || 0
+                      if (priceDetails) {
+                        return {
+                          ...item,
+                          unit_price: priceDetails.unit_price_for_sales_unit
+                        }
+                      } else {
+                        console.warn(`[v0] Missing price for product ${item.product_id}, presentation ${presentation.id}, with_brand=${item.with_brand}, category=${value}`)
+                        return {
+                          ...item,
+                          unit_price: 0
+                        }
                       }
                     })
                   )
@@ -682,7 +701,12 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
                                       // Auto-fill price from price store for new presentation
                                       if (!manualPrice) {
                                         const priceDetails = getPriceDetailsFromStore(v, firstPres.id, updatedItem.with_brand, priceCategory)
-                                        updatedItem.unit_price = priceDetails?.unit_price_for_sales_unit || 0
+                                        if (priceDetails) {
+                                          updatedItem.unit_price = priceDetails.unit_price_for_sales_unit
+                                        } else {
+                                          updatedItem.unit_price = 0
+                                          console.warn(`[v0] Missing price for product ${v}, presentation ${firstPres.id}, with_brand=${updatedItem.with_brand}, category=${priceCategory}`)
+                                        }
                                       }
                                     }
                                     
