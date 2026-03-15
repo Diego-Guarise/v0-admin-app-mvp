@@ -2,8 +2,9 @@
 
 /**
  * Dashboard Statistics Helper
- * Calculates real metrics from persisted stores (orders + expenses)
- * Not using mock data - connects to actual localStorage data
+ * Calculates REAL metrics from persisted stores (orders + expenses)
+ * - ONLY pedidos with status: 'finalizado' or 'entregado' count toward commercial metrics
+ * - No mock data, no mixing with demo orders
  */
 
 import type { DashboardStats } from '@/lib/types'
@@ -22,18 +23,23 @@ function getCurrentMonth(): string {
 
 /**
  * Calculate real dashboard stats from actual persisted data
+ * Commercial metrics (ventas, kilos) ONLY include:
+ * - Orders with status 'finalizado' or 'entregado'
+ * - Orders not cancelled ('anulado')
+ * - Orders from current month
+ * 
  * @param month - Optional month in YYYY-MM format (defaults to current month)
  */
 export function calculateRealDashboardStats(month?: string): DashboardStats {
   const targetMonth = month || getCurrentMonth()
   
   // Get all real orders and expenses from persistent stores
-  // Safely default to empty arrays if stores fail
   let allOrders = []
   let allExpenses = []
   
   try {
     allOrders = getAllOrders() || []
+    console.log('[v0] Loaded orders from store:', allOrders.length)
   } catch (error) {
     console.error('[v0] Error fetching orders:', error)
     allOrders = []
@@ -41,18 +47,25 @@ export function calculateRealDashboardStats(month?: string): DashboardStats {
   
   try {
     allExpenses = getExpenses() || []
+    console.log('[v0] Loaded expenses from store:', allExpenses.length)
   } catch (error) {
     console.error('[v0] Error fetching expenses:', error)
     allExpenses = []
   }
   
-  // Filter orders for the target month, excluding cancelled orders
-  const monthOrders = allOrders.filter(o => 
+  // CRITICAL: Filter for CLOSED orders only (finalizado or entregado)
+  // Only these count toward commercial metrics
+  const closedOrdersThisMonth = allOrders.filter(o => 
     o && 
     o.order_date && 
     o.order_date.startsWith(targetMonth) && 
-    o.status !== 'anulado'
+    (o.status === 'finalizado' || o.status === 'entregado')
   )
+  
+  console.log(`[v0] Orders in ${targetMonth}:`, {
+    total: allOrders.filter(o => o?.order_date?.startsWith(targetMonth)).length,
+    closed: closedOrdersThisMonth.length,
+  })
   
   // Filter expenses for the target month, only active ones
   const monthExpenses = allExpenses.filter(e => 
@@ -62,41 +75,63 @@ export function calculateRealDashboardStats(month?: string): DashboardStats {
     e.status === 'activo'
   )
   
-  // Calculate total product weights by type
+  // Calculate total product weights by type (ONLY from closed orders)
   let totalEnduido = 0
   let totalMasilla = 0
   
-  // Safe iteration through orders
-  monthOrders.forEach(order => {
+  closedOrdersThisMonth.forEach(order => {
     // Validate order and items exist
-    if (!order || !Array.isArray(order.items)) {
+    if (!order || !Array.isArray(order.items) || order.items.length === 0) {
       return
     }
+    
+    console.log(`[v0] Processing order ${order.id}:`, {
+      status: order.status,
+      items: order.items.length,
+    })
     
     // Sum product weights by their type
     order.items.forEach(item => {
       // Validate item structure
-      if (!item || typeof item.quantity !== 'number') {
+      if (!item) {
         return
       }
       
-      // Get weight_per_unit_kg, default to 0 if missing
+      // Get quantity (with fallback)
+      const quantity = item.quantity || 0
+      if (quantity === 0) return
+      
+      // Get weight_per_unit_kg (with fallback and debugging)
       const weightPerUnit = item.weight_per_unit_kg || 0
-      const itemTotalKg = item.quantity * weightPerUnit
+      if (weightPerUnit === 0) {
+        console.log(`[v0] Item ${item.presentation_id} has no weight (weight_per_unit_kg: ${item.weight_per_unit_kg})`)
+      }
+      
+      const itemTotalKg = quantity * weightPerUnit
       
       // Determine product type based on product_id
       // prod-1 = Enduido, prod-2 = Masilla
       if (item.product_id === 'prod-1') {
         totalEnduido += itemTotalKg
+        console.log(`[v0] Enduido: +${itemTotalKg} kg (qty: ${quantity}, weight: ${weightPerUnit})`)
       } else if (item.product_id === 'prod-2') {
         totalMasilla += itemTotalKg
+        console.log(`[v0] Masilla: +${itemTotalKg} kg (qty: ${quantity}, weight: ${weightPerUnit})`)
       }
     })
   })
   
+  console.log(`[v0] Dashboard stats for ${targetMonth}:`, {
+    sales_without_iva: closedOrdersThisMonth.reduce((sum, o) => sum + (o?.subtotal || 0), 0),
+    sales_with_iva: closedOrdersThisMonth.reduce((sum, o) => sum + (o?.total || 0), 0),
+    enduido_kg: totalEnduido,
+    masilla_kg: totalMasilla,
+    expenses: monthExpenses.reduce((sum, e) => sum + (e?.amount || 0), 0),
+  })
+  
   return {
-    monthly_sales_without_iva: monthOrders.reduce((sum, o) => sum + (o?.subtotal || 0), 0),
-    monthly_sales_with_iva: monthOrders.reduce((sum, o) => sum + (o?.total || 0), 0),
+    monthly_sales_without_iva: closedOrdersThisMonth.reduce((sum, o) => sum + (o?.subtotal || 0), 0),
+    monthly_sales_with_iva: closedOrdersThisMonth.reduce((sum, o) => sum + (o?.total || 0), 0),
     monthly_expenses: monthExpenses.reduce((sum, e) => sum + (e?.amount || 0), 0),
     enduido_kg_sold: totalEnduido,
     masilla_kg_sold: totalMasilla,
@@ -104,10 +139,27 @@ export function calculateRealDashboardStats(month?: string): DashboardStats {
 }
 
 /**
+ * Get ALL orders (any status) for current month
+ * Used by dashboard to show order status counts
+ */
+export function getAllOrdersThisMonth(month?: string) {
+  const targetMonth = month || getCurrentMonth()
+  
+  let allOrders = []
+  try {
+    allOrders = getAllOrders() || []
+  } catch (error) {
+    console.error('[v0] Error fetching orders for status counts:', error)
+  }
+  
+  return allOrders.filter(o => o && o.order_date && o.order_date.startsWith(targetMonth))
+}
+
+/**
  * Get dashboard stats with memoization support for React
- * This function can be called from both server and client components
  */
 export function getDashboardMetrics(month?: string): DashboardStats {
   return calculateRealDashboardStats(month)
 }
+
 

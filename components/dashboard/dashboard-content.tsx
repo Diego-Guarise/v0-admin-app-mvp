@@ -20,32 +20,40 @@ import {
   ArrowRight
 } from 'lucide-react'
 import { 
-  ORDERS, 
   formatCurrency, 
   formatDate,
   formatWeight,
-  getOrdersByStatus,
-  getOrdersByPaymentStatus,
   getUpcomingExpenses,
   getRecurrentExpenses,
 } from '@/lib/mock-data'
-import { calculateRealDashboardStats } from '@/lib/dashboard-stats'
-import type { DashboardStats } from '@/lib/types'
+import { calculateRealDashboardStats, getAllOrdersThisMonth } from '@/lib/dashboard-stats'
+import { getAllOrders } from '@/lib/order-store'
+import type { DashboardStats, Order } from '@/lib/types'
 import Link from 'next/link'
 
 export function DashboardContent() {
   // Calculate real dashboard stats from persistent stores
   const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [realOrders, setRealOrders] = useState<Order[]>([])
   const [isHydrated, setIsHydrated] = useState(false)
 
-  // Calculate stats once on client mount
+  // Calculate stats and get real orders once on client mount
   useEffect(() => {
     // Get real data from stores
     const realStats = calculateRealDashboardStats()
     setStats(realStats)
-    setIsHydrated(true)
     
-    console.log('[v0] Dashboard stats updated from real data:', realStats)
+    // Get all real orders for status counts and recent orders display
+    try {
+      const allOrders = getAllOrders() || []
+      setRealOrders(allOrders)
+      console.log('[v0] Dashboard loaded with real orders:', allOrders.length)
+    } catch (error) {
+      console.error('[v0] Error loading real orders:', error)
+      setRealOrders([])
+    }
+    
+    setIsHydrated(true)
   }, [])
 
   // Use real stats if available, fallback to defaults while loading
@@ -62,10 +70,19 @@ export function DashboardContent() {
     return stats
   }, [stats])
 
-  const ordersEnProduccion = getOrdersByStatus('en_produccion')
-  const ordersFinalizados = getOrdersByStatus('finalizado')
-  const ordersEntregados = getOrdersByStatus('entregado')
-  const ordersPendientesCobro = getOrdersByPaymentStatus('pendiente')
+  // Calculate order status counts from REAL data
+  const ordersEnProduccion = realOrders.filter(o => o.status === 'en_produccion').length
+  const ordersFinalizados = realOrders.filter(o => o.status === 'finalizado').length
+  const ordersEntregados = realOrders.filter(o => o.status === 'entregado').length
+  const ordersPendientesCobro = realOrders.filter(o => o.payment_status === 'pendiente').length
+  
+  // Get recent orders sorted by date (most recent first)
+  const recentOrders = useMemo(() => {
+    return [...realOrders]
+      .sort((a, b) => new Date(b.order_date).getTime() - new Date(a.order_date).getTime())
+      .slice(0, 5)
+  }, [realOrders])
+  
   const upcomingExpenses = getUpcomingExpenses()
   const recurrentExpenses = getRecurrentExpenses()
 
@@ -134,7 +151,7 @@ export function DashboardContent() {
 
       {/* Orders Summary */}
       <div className="grid gap-4 lg:grid-cols-2">
-        {/* Orders by Status */}
+        {/* Orders by Status - NOW USING REAL DATA */}
         <Card className="shadow-sm">
           <CardHeader className="pb-4">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
@@ -152,7 +169,7 @@ export function DashboardContent() {
                     </div>
                     <span className="text-sm font-medium text-amber-800">En produccion</span>
                   </div>
-                  <p className="text-3xl font-bold text-amber-700">{ordersEnProduccion.length}</p>
+                  <p className="text-3xl font-bold text-amber-700">{ordersEnProduccion}</p>
                 </div>
               </Link>
               
@@ -164,7 +181,7 @@ export function DashboardContent() {
                     </div>
                     <span className="text-sm font-medium text-blue-800">Finalizados</span>
                   </div>
-                  <p className="text-3xl font-bold text-blue-700">{ordersFinalizados.length}</p>
+                  <p className="text-3xl font-bold text-blue-700">{ordersFinalizados}</p>
                 </div>
               </Link>
               
@@ -176,7 +193,7 @@ export function DashboardContent() {
                     </div>
                     <span className="text-sm font-medium text-emerald-800">Entregados</span>
                   </div>
-                  <p className="text-3xl font-bold text-emerald-700">{ordersEntregados.length}</p>
+                  <p className="text-3xl font-bold text-emerald-700">{ordersEntregados}</p>
                 </div>
               </Link>
               
@@ -188,14 +205,14 @@ export function DashboardContent() {
                     </div>
                     <span className="text-sm font-medium text-orange-800">Pend. cobro</span>
                   </div>
-                  <p className="text-3xl font-bold text-orange-700">{ordersPendientesCobro.length}</p>
+                  <p className="text-3xl font-bold text-orange-700">{ordersPendientesCobro}</p>
                 </div>
               </Link>
             </div>
           </CardContent>
         </Card>
 
-        {/* Recent Orders */}
+        {/* Recent Orders - NOW USING REAL DATA */}
         <Card className="shadow-sm">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
@@ -209,28 +226,37 @@ export function DashboardContent() {
               </Link>
             </div>
           </CardHeader>
-          <CardContent className="space-y-2">
-            {ORDERS.slice(0, 5).map((order) => (
-              <Link 
-                key={order.id} 
-                href={`/pedidos/${order.id}`}
-                className="flex items-center justify-between p-3 rounded-xl border border-border bg-card hover:bg-accent/50 hover:border-primary/20 transition-all"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <span className="text-xs font-bold text-primary">#{order.order_number}</span>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{order.client?.name || 'Sin nombre'}</p>
-                    <p className="text-xs text-muted-foreground">{formatDate(order.order_date)}</p>
-                  </div>
-                </div>
-                <div className="text-right space-y-1">
-                  <p className="text-sm font-semibold text-foreground">{formatCurrency(order.total)}</p>
-                  <StatusBadge status={order.status} type="order" size="sm" showDot />
-                </div>
-              </Link>
-            ))}
+          <CardContent>
+            {recentOrders.length > 0 ? (
+              <div className="space-y-2">
+                {recentOrders.map((order) => (
+                  <Link 
+                    key={order.id} 
+                    href={`/pedidos/${order.id}`}
+                    className="flex items-center justify-between p-3 rounded-xl border border-border bg-card hover:bg-accent/50 hover:border-primary/20 transition-all"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                        <span className="text-xs font-bold text-primary">#{order.order_number}</span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{order.client?.name || 'Sin nombre'}</p>
+                        <p className="text-xs text-muted-foreground">{formatDate(order.order_date)}</p>
+                      </div>
+                    </div>
+                    <div className="text-right space-y-1">
+                      <p className="text-sm font-semibold text-foreground">{formatCurrency(order.total)}</p>
+                      <StatusBadge status={order.status} type="order" size="sm" showDot />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Package className="h-8 w-8 text-muted-foreground/50 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">No hay pedidos</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
