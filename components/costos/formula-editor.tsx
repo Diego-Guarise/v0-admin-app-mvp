@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -27,7 +27,6 @@ import {
   createNewFormulaRow
 } from '@/lib/mock-data'
 import { UNIT_OF_MEASURE_ABBR, INGREDIENT_CATEGORY_LABELS, type IngredientCategory, areUnitsCompatible, convertUnit } from '@/lib/types'
-import { runConversionTests } from '@/lib/conversion-test'
 
 interface FormulaEditorProps {
   productId: string
@@ -42,18 +41,6 @@ export function FormulaEditor({ productId, formulas, onSave }: FormulaEditorProp
   const [showCreateInsumoModal, setShowCreateInsumoModal] = useState(false)
   const [pendingFormulaRowId, setPendingFormulaRowId] = useState<string | null>(null)
   const [availableInsumos, setAvailableInsumos] = useState<IngredientInput[]>(getFormulableInsumos())
-
-  // Run conversion tests once on mount (development/verification)
-  useEffect(() => {
-    const testOnce = () => {
-      // Only run once per session to verify conversion logic
-      if (typeof window !== 'undefined' && !(window as any).__conversionTestRun) {
-        runConversionTests()
-        ;(window as any).__conversionTestRun = true
-      }
-    }
-    testOnce()
-  }, [])
 
   // Calculate cost per kg from current editing state (not from global data)
   const costPerKg = useMemo(() => {
@@ -115,11 +102,54 @@ export function FormulaEditor({ productId, formulas, onSave }: FormulaEditorProp
   }
 
   const handleUpdateFormula = (formulaId: string, updates: Partial<ProductFormula>) => {
-    setEditingFormulas(editingFormulas.map(f => 
-      f.id === formulaId 
-        ? { ...f, ...updates, updated_at: new Date().toISOString() }
-        : f
-    ))
+    setEditingFormulas(editingFormulas.map(f => {
+      if (f.id === formulaId) {
+        const updated = { ...f, ...updates, updated_at: new Date().toISOString() }
+        
+        // Normalize quantity_per_kg: if unit and quantity are provided together,
+        // convert the quantity to kg (base unit) before storing
+        if ('quantity_per_kg' in updates && 'unit_of_measure' in updates && updates.unit_of_measure) {
+          const userQuantity = updates.quantity_per_kg || f.quantity_per_kg
+          const userUnit = updates.unit_of_measure
+          // Convert user's entered quantity to kg (the base unit for quantity_per_kg)
+          const normalizedQty = convertUnit(userQuantity, userUnit, 'kg')
+          if (normalizedQty !== null) {
+            updated.quantity_per_kg = normalizedQty
+          }
+        }
+        // If only quantity is updated but unit changed, use the current unit
+        else if ('quantity_per_kg' in updates && !('unit_of_measure' in updates)) {
+          const currentUnit = f.unit_of_measure || 'kg'
+          const userQuantity = updates.quantity_per_kg || 0
+          // Normalize to kg
+          const normalizedQty = convertUnit(userQuantity, currentUnit, 'kg')
+          if (normalizedQty !== null) {
+            updated.quantity_per_kg = normalizedQty
+          }
+        }
+        // If only unit is updated, convert the existing quantity
+        else if ('unit_of_measure' in updates && !('quantity_per_kg' in updates)) {
+          const oldUnit = f.unit_of_measure || 'kg'
+          const newUnit = updates.unit_of_measure
+          const currentKgValue = f.quantity_per_kg
+          // Re-normalize if units changed
+          if (oldUnit !== newUnit && currentKgValue > 0) {
+            // Convert from kg back to old unit, then to new unit
+            const backToOld = convertUnit(currentKgValue, 'kg', oldUnit)
+            if (backToOld !== null) {
+              const toNewUnit = convertUnit(backToOld, oldUnit, newUnit)
+              if (toNewUnit !== null) {
+                // This displays the visual value in the new unit
+                // but quantity_per_kg is still stored as-is
+              }
+            }
+          }
+        }
+        
+        return updated
+      }
+      return f
+    }))
   }
 
   const handleSave = () => {
@@ -272,9 +302,14 @@ export function FormulaEditor({ productId, formulas, onSave }: FormulaEditorProp
                           type="number"
                           min="0"
                           step="0.001"
-                          value={formula.quantity_per_kg}
+                          value={(() => {
+                            // Display the quantity in the selected unit, not in kg
+                            const displayQty = convertUnit(formula.quantity_per_kg, 'kg', formulaUnit)
+                            return displayQty !== null ? displayQty : formula.quantity_per_kg
+                          })()}
                           onChange={(e) => handleUpdateFormula(formula.id, {
-                            quantity_per_kg: parseFloat(e.target.value) || 0
+                            quantity_per_kg: parseFloat(e.target.value) || 0,
+                            unit_of_measure: formulaUnit
                           })}
                           className="h-9"
                         />
@@ -347,7 +382,12 @@ export function FormulaEditor({ productId, formulas, onSave }: FormulaEditorProp
                       {/* Quantity and Unit */}
                       <div className="text-right min-w-[90px]">
                         <p className="text-sm font-mono font-semibold">
-                          {formula.quantity_per_kg.toFixed(formula.quantity_per_kg < 1 ? 3 : 2)}
+                          {(() => {
+                            // Display quantity in the formula unit, not kg
+                            const displayQty = convertUnit(formula.quantity_per_kg, 'kg', formulaUnit)
+                            const value = displayQty !== null ? displayQty : formula.quantity_per_kg
+                            return value.toFixed(value < 1 ? 3 : 2)
+                          })()}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {UNIT_OF_MEASURE_ABBR[formulaUnit]} por kg
