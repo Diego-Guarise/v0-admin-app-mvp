@@ -21,13 +21,12 @@ import {
   PRODUCTS,
   INGREDIENT_INPUTS,
   getFormulableInsumos,
-  calculateProductCostPerKg,
   formatCurrencyDecimal,
   getLatestIngredientCost,
   updateProductFormula,
   createNewFormulaRow
 } from '@/lib/mock-data'
-import { UNIT_OF_MEASURE_ABBR, INGREDIENT_CATEGORY_LABELS, type IngredientCategory, areUnitsCompatible } from '@/lib/types'
+import { UNIT_OF_MEASURE_ABBR, INGREDIENT_CATEGORY_LABELS, type IngredientCategory, areUnitsCompatible, convertUnit } from '@/lib/types'
 
 interface FormulaEditorProps {
   productId: string
@@ -43,7 +42,46 @@ export function FormulaEditor({ productId, formulas, onSave }: FormulaEditorProp
   const [pendingFormulaRowId, setPendingFormulaRowId] = useState<string | null>(null)
   const [availableInsumos, setAvailableInsumos] = useState<IngredientInput[]>(getFormulableInsumos())
 
-  const costPerKg = useMemo(() => calculateProductCostPerKg(productId), [productId, editingFormulas])
+  // Calculate cost per kg from current editing state (not from global data)
+  const costPerKg = useMemo(() => {
+    let totalCost = 0
+    
+    for (const formula of editingFormulas) {
+      const insumo = formula.insumo || INGREDIENT_INPUTS.find(i => i.id === formula.insumo_id)
+      const latestCost = getLatestIngredientCost(formula.insumo_id)
+      
+      if (latestCost && insumo) {
+        const formulaUnit = insumo.unit_of_measure
+        const costUnit = latestCost.unit_of_measure
+        
+        // Use real unit cost if available, otherwise use regular unit cost
+        const unitCost = latestCost.real_unit_cost_without_iva ?? latestCost.unit_cost_without_iva
+        
+        // Check if units are compatible and convert if needed
+        let ingredientCost: number
+        
+        if (formulaUnit === costUnit) {
+          // Same unit - direct calculation
+          ingredientCost = formula.quantity_per_kg * unitCost
+        } else {
+          // Convert formula quantity to cost unit
+          const convertedQty = areUnitsCompatible(formulaUnit, costUnit) 
+            ? convertUnit(formula.quantity_per_kg, formulaUnit, costUnit)
+            : null
+          
+          if (convertedQty === null) {
+            // Incompatible units - skip this ingredient
+            continue
+          }
+          ingredientCost = convertedQty * unitCost
+        }
+        
+        totalCost += ingredientCost
+      }
+    }
+    
+    return totalCost
+  }, [editingFormulas])
 
   // Detect duplicate ingredients
   const getDuplicateInsumoIds = () => {
