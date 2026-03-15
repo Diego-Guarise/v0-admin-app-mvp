@@ -22,6 +22,7 @@ import {
   INGREDIENT_INPUTS,
   getFormulableInsumos,
   formatCurrencyDecimal,
+  getLatestProductiveExpenseCost,
   getLatestIngredientCost,
   updateProductFormula,
   createNewFormulaRow
@@ -48,14 +49,24 @@ export function FormulaEditor({ productId, formulas, onSave }: FormulaEditorProp
     
     for (const formula of editingFormulas) {
       const insumo = formula.insumo || INGREDIENT_INPUTS.find(i => i.id === formula.insumo_id)
-      const latestCost = getLatestIngredientCost(formula.insumo_id)
+      // First try to get cost from productive expenses (primary source)
+      let latestCost = getLatestProductiveExpenseCost(formula.insumo_id)
+      // Fall back to old costs if no productive expense exists
+      if (!latestCost) {
+        const oldCost = getLatestIngredientCost(formula.insumo_id)
+        if (oldCost) {
+          latestCost = oldCost
+        }
+      }
       
       if (latestCost && insumo) {
         const formulaUnit = insumo.unit_of_measure
         const costUnit = latestCost.unit_of_measure
         
         // Use real unit cost if available, otherwise use regular unit cost
-        const unitCost = latestCost.real_unit_cost_without_iva ?? latestCost.unit_cost_without_iva
+        const unitCost = 'real_unit_cost_without_iva' in latestCost
+          ? (latestCost as any).real_unit_cost_without_iva ?? latestCost.unit_cost_without_iva
+          : latestCost.unit_cost_without_iva
         
         // Check if units are compatible and convert if needed
         let ingredientCost: number
@@ -211,7 +222,15 @@ export function FormulaEditor({ productId, formulas, onSave }: FormulaEditorProp
         <div className="space-y-3">
           {editingFormulas.map((formula, idx) => {
             const insumo = formula.insumo || INGREDIENT_INPUTS.find(i => i.id === formula.insumo_id)
-            const latestCost = getLatestIngredientCost(formula.insumo_id)
+            // First try to get cost from productive expenses (primary source)
+            let latestCost = getLatestProductiveExpenseCost(formula.insumo_id)
+            // Fall back to old costs if no productive expense exists
+            if (!latestCost) {
+              const oldCost = getLatestIngredientCost(formula.insumo_id)
+              if (oldCost) {
+                latestCost = oldCost
+              }
+            }
             const unitCost = latestCost?.unit_cost_without_iva || 0
             const formulaUnit = formula.unit_of_measure || insumo?.unit_of_measure || 'kg'
             const costUnit = latestCost?.unit_of_measure || formulaUnit

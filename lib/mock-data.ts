@@ -620,6 +620,38 @@ export function getLatestIngredientCost(insumoId: string): IngredientCost | unde
   return costs[0]
 }
 
+/**
+ * Get the latest cost for an insumo from productive expenses
+ * This is the primary cost source for formulas - it pulls from Gastos registrations
+ * Returns undefined if no productive purchase exists for this insumo
+ */
+export function getLatestProductiveExpenseCost(insumoId: string) {
+  const productiveExpenses = EXPENSES
+    .filter(exp => 
+      isProductiveExpense(exp.category_id) &&
+      exp.insumo_id === insumoId &&
+      exp.quantity &&
+      exp.quantity > 0
+    )
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  
+  if (productiveExpenses.length === 0) return undefined
+  
+  const latestExp = productiveExpenses[0]
+  const unitCost = latestExp.amount_without_iva / (latestExp.quantity || 1)
+  
+  return {
+    insumo_id: insumoId,
+    date: latestExp.date,
+    unit_cost_without_iva: unitCost,
+    unit_cost_with_iva: latestExp.amount / (latestExp.quantity || 1),
+    unit_of_measure: latestExp.unit_of_measure || 'kg',
+    quantity: latestExp.quantity,
+    total_amount: latestExp.amount_without_iva,
+    has_invoice: latestExp.has_invoice,
+  }
+}
+
 // ============================================
 // Helper: Calculate cost per kg for a product
 // Uses proper unit conversion within compatible families only:
@@ -634,7 +666,15 @@ export function calculateProductCostPerKg(productId: string, formulas?: ProductF
   
   for (const formula of formulasToUse) {
     const insumo = formula.insumo || INGREDIENT_INPUTS.find(i => i.id === formula.insumo_id)
-    const latestCost = getLatestIngredientCost(formula.insumo_id)
+    // First try to get cost from productive expenses (primary source)
+    let latestCost = getLatestProductiveExpenseCost(formula.insumo_id)
+    // Fall back to old INGREDIENT_COSTS if no productive expense exists
+    if (!latestCost) {
+      const oldCost = getLatestIngredientCost(formula.insumo_id)
+      if (oldCost) {
+        latestCost = oldCost
+      }
+    }
     
     if (latestCost && insumo) {
       const formulaUnit = insumo.unit_of_measure
@@ -642,7 +682,9 @@ export function calculateProductCostPerKg(productId: string, formulas?: ProductF
       
       // Use real unit cost if available (for supplies purchased in bulk)
       // Otherwise use regular unit cost
-      const unitCost = latestCost.real_unit_cost_without_iva ?? latestCost.unit_cost_without_iva
+      const unitCost = 'real_unit_cost_without_iva' in latestCost 
+        ? (latestCost as any).real_unit_cost_without_iva ?? latestCost.unit_cost_without_iva
+        : latestCost.unit_cost_without_iva
       
       // Check if units are compatible
       if (!areUnitsCompatible(formulaUnit, costUnit)) {
