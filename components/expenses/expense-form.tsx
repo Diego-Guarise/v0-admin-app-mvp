@@ -139,64 +139,73 @@ export function ExpenseForm({ expense }: ExpenseFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="px-4 lg:px-6 py-6 space-y-6">
+    <form onSubmit={handleSubmit} className="px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
       <PageHeader 
         title={isEditing ? 'Editar Gasto' : 'Nuevo Gasto'}
         description={isEditing ? 'Modifica los datos del gasto' : 'Registra un nuevo gasto'}
       >
-        <Link href={isEditing ? `/gastos/${expense.id}` : '/gastos'}>
-          <Button type="button" variant="ghost">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Cancelar
+        <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
+          <Link href={isEditing ? `/gastos/${expense.id}` : '/gastos'} className="flex-1 sm:flex-none">
+            <Button type="button" variant="ghost" className="w-full sm:w-auto">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Cancelar</span>
+              <span className="sm:hidden">Atrás</span>
+            </Button>
+          </Link>
+          <Button type="submit" className="flex-1 sm:flex-none">
+            <Save className="h-4 w-4 mr-2" />
+            <span className="hidden sm:inline">{isEditing ? 'Guardar cambios' : 'Registrar gasto'}</span>
+            <span className="sm:hidden">{isEditing ? 'Guardar' : 'Registrar'}</span>
           </Button>
-        </Link>
-        <Button type="submit">
-          <Save className="h-4 w-4 mr-2" />
-          {isEditing ? 'Guardar cambios' : 'Registrar gasto'}
-        </Button>
+        </div>
       </PageHeader>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
         {/* Main Form */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4 sm:space-y-6">
           {/* Basic Info */}
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-3 sm:pb-4">
               <CardTitle className="text-base flex items-center gap-2">
                 <Receipt className="h-4 w-4" />
                 Información básica
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="date">Fecha *</Label>
+            <CardContent className="space-y-3 sm:space-y-4">
+              <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
+                <div className="space-y-1 sm:space-y-2">
+                  <Label htmlFor="date" className="text-xs sm:text-sm">Fecha *</Label>
                   <Input
                     id="date"
                     type="date"
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
                     required
+                    className="h-9 sm:h-10 text-sm"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="accountingMonth">Mes contable *</Label>
+                <div className="space-y-1 sm:space-y-2">
+                  <Label htmlFor="accountingMonth" className="text-xs sm:text-sm">Mes contable *</Label>
                   <Input
                     id="accountingMonth"
                     type="month"
                     value={accountingMonth}
                     onChange={(e) => setAccountingMonth(e.target.value)}
                     required
+                    className="h-9 sm:h-10 text-sm"
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="concept">Concepto *</Label>
+              <div className="space-y-1 sm:space-y-2">
+                <Label htmlFor="concept" className="text-xs sm:text-sm">Concepto *</Label>
                 <Input
                   id="concept"
                   value={concept}
                   onChange={(e) => setConcept(e.target.value)}
+                  placeholder="Describe el gasto"
+                  required
+                  className="h-9 sm:h-10 text-sm"
                   placeholder="Descripción del gasto"
                   required
                 />

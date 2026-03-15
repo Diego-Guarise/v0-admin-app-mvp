@@ -250,14 +250,14 @@ export function CostosDashboard() {
   ]
 
   return (
-    <div className="px-4 lg:px-6 py-6 space-y-6">
+    <div className="px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
       <PageHeader 
         title="Costos de Producción"
         description="Gestión de insumos, fórmulas y cálculo de costos"
       />
 
       {/* Quick Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-4">
         <StatCard
           title="Insumos activos"
           value={stats.activeInsumos}
@@ -285,25 +285,25 @@ export function CostosDashboard() {
       </div>
 
       {/* Navigation Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-3 sm:gap-4 md:grid-cols-3">
         {navLinks.map(link => (
           <Link key={link.href} href={link.href}>
             <Card className="shadow-sm hover:shadow-md transition-all h-full cursor-pointer group">
-              <CardContent className="pt-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <link.icon className="h-5 w-5 text-primary" />
+              <CardContent className="pt-4 sm:pt-6">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-2 sm:gap-3 min-w-0">
+                    <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <link.icon className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                     </div>
-                    <div>
-                      <h3 className="font-semibold flex items-center gap-2">
-                        {link.title}
-                        <Badge variant="secondary" className="text-xs">{link.count}</Badge>
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-sm flex items-center gap-2 truncate">
+                        <span className="truncate">{link.title}</span>
+                        <Badge variant="secondary" className="text-xs flex-shrink-0">{link.count}</Badge>
                       </h3>
-                      <p className="text-sm text-muted-foreground mt-0.5">{link.description}</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 line-clamp-2">{link.description}</p>
                     </div>
                   </div>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                  <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground group-hover:translate-x-1 transition-transform flex-shrink-0" />
                 </div>
               </CardContent>
             </Card>
@@ -313,17 +313,17 @@ export function CostosDashboard() {
 
       {/* Cost per kg Summary */}
       <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Scale className="h-5 w-5 text-primary" />
-            Costo por Kilogramo
+        <CardHeader className="pb-3 sm:pb-4">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Scale className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+            <span className="truncate">Costo por Kilogramo</span>
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-xs sm:text-sm">
             Costo calculado de producción por kg de producto terminado
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
             {productCosts.map(({ product, costPerKg }) => (
               <div 
                 key={product.id}

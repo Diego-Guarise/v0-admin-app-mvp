@@ -122,13 +122,13 @@ export function ExpensesContent() {
   }, [filteredExpenses])
 
   return (
-    <div className="px-4 lg:px-6 py-6 space-y-6">
+    <div className="px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
       <PageHeader 
         title="Gastos"
         description={`${filteredExpenses.length} gasto${filteredExpenses.length !== 1 ? 's' : ''}`}
       >
         <Link href="/gastos/nuevo">
-          <Button>
+          <Button className="w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-2" />
             Nuevo Gasto
           </Button>
@@ -137,19 +137,115 @@ export function ExpensesContent() {
 
       {/* Filters */}
       <Card className="shadow-sm">
-        <CardContent className="pt-6">
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col sm:flex-row gap-4">
+        <CardContent className="pt-4 sm:pt-6">
+          <div className="flex flex-col gap-3 sm:gap-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               {/* Search */}
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar por concepto, proveedor o categoria..."
+                  placeholder="Buscar..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 text-sm"
                 />
               </div>
+
+              {/* Clear filters */}
+              {hasFilters && (
+                <Button variant="ghost" onClick={clearFilters} className="shrink-0 text-sm h-9">
+                  <X className="h-4 w-4 mr-1" />
+                  Limpiar
+                </Button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+              {/* Category filter */}
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="Categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  {EXPENSE_CATEGORIES.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Type filter */}
+              <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as ExpenseType | 'all')}>
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="Tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {Object.entries(EXPENSE_TYPE_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Status filter */}
+              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as ExpenseStatus | 'all')}>
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="Estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {Object.entries(EXPENSE_STATUS_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Invoice filter */}
+              <Select value={invoiceFilter} onValueChange={setInvoiceFilter}>
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="Factura" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  <SelectItem value="with">Con factura</SelectItem>
+                  <SelectItem value="without">Sin factura</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Date Filters */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 pt-3 sm:pt-4 border-t">
+              <div>
+                <label className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 block">Desde</label>
+                <Input
+                  type="date"
+                  value={dateFromFilter}
+                  onChange={(e) => setDateFromFilter(e.target.value)}
+                  placeholder="Desde"
+                  className="h-9 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 block">Hasta</label>
+                <Input
+                  type="date"
+                  value={dateToFilter}
+                  onChange={(e) => setDateToFilter(e.target.value)}
+                  placeholder="Hasta"
+                  className="h-9 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 block">Mes</label>
+                <Input
+                  type="month"
+                  value={monthFilter}
+                  onChange={(e) => setMonthFilter(e.target.value)}
+                  placeholder="Mes"
+                  className="h-9 text-sm"
+                />
+              </div>
+            </div>
 
               {/* Clear filters */}
               {hasFilters && (

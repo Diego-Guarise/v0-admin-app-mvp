@@ -183,13 +183,13 @@ export function OrdersContent() {
   }, [filteredOrders])
 
   return (
-    <div className="px-4 lg:px-6 py-6 space-y-6">
+    <div className="px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
       <PageHeader 
         title="Pedidos"
         description={`${filteredOrders.length} pedido${filteredOrders.length !== 1 ? 's' : ''}`}
       >
         <Link href="/pedidos/nuevo">
-          <Button>
+          <Button className="w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-2" />
             Nuevo Pedido
           </Button>
@@ -198,37 +198,37 @@ export function OrdersContent() {
 
       {/* Filters */}
       <Card className="shadow-sm">
-        <CardContent className="pt-6">
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col sm:flex-row gap-4">
+        <CardContent className="pt-4 sm:pt-6">
+          <div className="flex flex-col gap-3 sm:gap-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               {/* Search */}
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar por numero, cliente o vendedor..."
+                  placeholder="Buscar..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 text-sm"
                 />
               </div>
 
               {/* Clear filters */}
               {hasFilters && (
-                <Button variant="ghost" onClick={clearFilters} className="shrink-0">
-                  <X className="h-4 w-4 mr-2" />
-                  Limpiar filtros
+                <Button variant="ghost" onClick={clearFilters} className="shrink-0 text-sm h-9">
+                  <X className="h-4 w-4 mr-1" />
+                  Limpiar
                 </Button>
               )}
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
               {/* Status filter */}
               <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as OrderStatus | 'all')}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9 text-sm">
                   <SelectValue placeholder="Estado" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos los estados</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   {Object.entries(ORDER_STATUS_LABELS).map(([value, label]) => (
                     <SelectItem key={value} value={value}>{label}</SelectItem>
                   ))}
@@ -237,11 +237,11 @@ export function OrdersContent() {
 
               {/* Payment filter */}
               <Select value={paymentFilter} onValueChange={(v) => setPaymentFilter(v as PaymentStatus | 'all')}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9 text-sm">
                   <SelectValue placeholder="Cobro" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos los cobros</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   {Object.entries(PAYMENT_STATUS_LABELS).map(([value, label]) => (
                     <SelectItem key={value} value={value}>{label}</SelectItem>
                   ))}
@@ -250,11 +250,11 @@ export function OrdersContent() {
 
               {/* Client filter */}
               <Select value={clientFilter} onValueChange={setClientFilter}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9 text-sm">
                   <SelectValue placeholder="Cliente" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos los clientes</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   {getAllClients().filter(c => c.active).map((client) => (
                     <SelectItem key={client.id} value={client.id}>{client.name || 'Sin nombre'}</SelectItem>
                   ))}
@@ -263,11 +263,11 @@ export function OrdersContent() {
 
               {/* Vendor filter */}
               <Select value={vendorFilter} onValueChange={setVendorFilter}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9 text-sm">
                   <SelectValue placeholder="Vendedor" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos los vendedores</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   {orderVendorIds.map((vendorId) => {
                     const vendor = getAllVendors().find(v => v.id === vendorId)
                     return vendor ? (
@@ -279,7 +279,7 @@ export function OrdersContent() {
 
               {/* Invoice filter */}
               <Select value={invoiceFilter} onValueChange={(v) => setInvoiceFilter(v as any)}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9 text-sm">
                   <SelectValue placeholder="Factura" />
                 </SelectTrigger>
                 <SelectContent>
@@ -291,42 +291,42 @@ export function OrdersContent() {
             </div>
 
             {/* Date range filters */}
-            <div className="flex flex-wrap items-center gap-2 pt-3 border-t">
-              <span className="text-sm text-muted-foreground flex items-center gap-1">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 pt-3 sm:pt-4 border-t">
+              <span className="text-sm text-muted-foreground flex items-center gap-1 flex-shrink-0">
                 <Calendar className="h-4 w-4" />
-                Rango de fechas:
+                Fechas:
               </span>
               <Select value={dateFilter} onValueChange={(v) => setDateFilter(v as any)}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="h-9 text-sm w-full sm:w-36">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="today">Hoy</SelectItem>
                   <SelectItem value="week">Esta semana</SelectItem>
-                  <SelectItem value="month">Este mes (actual)</SelectItem>
+                  <SelectItem value="month">Este mes</SelectItem>
                   <SelectItem value="last-month">Mes anterior</SelectItem>
                   <SelectItem value="custom">Personalizado</SelectItem>
                 </SelectContent>
               </Select>
 
               {dateFilter === 'custom' && (
-                <>
+                <div className="flex gap-2 w-full">
                   <Input
                     type="date"
                     value={customFromDate}
                     onChange={(e) => setCustomFromDate(e.target.value)}
                     placeholder="Desde"
-                    className="w-32"
+                    className="flex-1 h-9 text-sm"
                   />
-                  <span className="text-sm text-muted-foreground">a</span>
+                  <span className="text-sm text-muted-foreground flex items-center px-1">a</span>
                   <Input
                     type="date"
                     value={customToDate}
                     onChange={(e) => setCustomToDate(e.target.value)}
                     placeholder="Hasta"
-                    className="w-32"
+                    className="flex-1 h-9 text-sm"
                   />
-                </>
+                </div>
               )}
             </div>
           </div>
@@ -433,26 +433,26 @@ export function OrdersContent() {
             </div>
 
             {/* Totals */}
-            <div className="border-t px-6 py-4 bg-muted/20">
-              <div className="flex flex-wrap gap-6 justify-between items-center">
-                <div className="flex gap-6 text-sm">
+            <div className="border-t px-3 sm:px-6 py-3 sm:py-4 bg-muted/20">
+              <div className="flex flex-col gap-3 sm:flex-row sm:gap-6 sm:justify-between sm:items-center">
+                <div className="flex flex-col gap-2 sm:flex-row sm:gap-6 text-xs sm:text-sm">
                   <div className="flex items-center gap-2">
-                    <Package className="h-4 w-4 text-blue-600" />
+                    <Package className="h-4 w-4 text-blue-600 flex-shrink-0" />
                     <span className="text-muted-foreground">Enduido:</span>
                     <span className="font-semibold">{formatWeight(totals.enduidoKg)}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Scale className="h-4 w-4 text-emerald-600" />
+                    <Scale className="h-4 w-4 text-emerald-600 flex-shrink-0" />
                     <span className="text-muted-foreground">Masilla:</span>
                     <span className="font-semibold">{formatWeight(totals.masillaKg)}</span>
                   </div>
                 </div>
-                <div className="flex gap-6 text-sm">
-                  <div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:gap-6 text-xs sm:text-sm">
+                  <div className="flex justify-between sm:justify-start">
                     <span className="text-muted-foreground">Subtotal:</span>
                     <span className="font-semibold ml-2">{formatCurrency(totals.subtotal)}</span>
                   </div>
-                  <div>
+                  <div className="flex justify-between sm:justify-start">
                     <span className="text-muted-foreground">Total:</span>
                     <span className="font-bold ml-2 text-primary">{formatCurrency(totals.total)}</span>
                   </div>

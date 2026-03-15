@@ -522,26 +522,30 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
   }
 
   return (
-    <form onSubmit={handleSubmit} className="px-4 lg:px-6 py-6 space-y-6">
+    <form onSubmit={handleSubmit} className="px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
       <PageHeader 
         title={isEditing ? `Editar Pedido #${order.order_number}` : 'Nuevo Pedido'}
         description={isEditing ? 'Modifica los datos del pedido' : 'Completa los datos para crear un nuevo pedido'}
       >
-        <Link href={getBackPath()}>
-          <Button type="button" variant="ghost">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Cancelar
+        <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
+          <Link href={getBackPath()} className="flex-1 sm:flex-none">
+            <Button type="button" variant="ghost" className="w-full sm:w-auto">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Cancelar</span>
+              <span className="sm:hidden">Atrás</span>
+            </Button>
+          </Link>
+          <Button type="submit" className="flex-1 sm:flex-none">
+            <Save className="h-4 w-4 mr-2" />
+            <span className="hidden sm:inline">{isEditing ? 'Guardar cambios' : 'Crear pedido'}</span>
+            <span className="sm:hidden">{isEditing ? 'Guardar' : 'Crear'}</span>
           </Button>
-        </Link>
-        <Button type="submit">
-          <Save className="h-4 w-4 mr-2" />
-          {isEditing ? 'Guardar cambios' : 'Crear pedido'}
-        </Button>
+        </div>
       </PageHeader>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
         {/* Main Form */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4 sm:space-y-6">
           {/* Client Selection */}
           <Card className="shadow-sm">
             <CardHeader className="pb-4">
@@ -549,12 +553,12 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
               <CardDescription>Selecciona un cliente existente o crea uno nuevo</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex gap-4">
-                <div className="flex-1 relative" ref={clientDropdownRef}>
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+                <div className="flex-1 relative min-w-0" ref={clientDropdownRef}>
                   <Label htmlFor="client" className="sr-only">Cliente</Label>
                   <Input
                     id="client"
-                    placeholder="Buscar cliente por nombre, empresa, email, teléfono o RUT..."
+                    placeholder="Buscar cliente..."
                     value={clientSearch || (selectedClient?.name ? `${selectedClient.name}${selectedClient.company ? ` (${selectedClient.company})` : ''}` : '')}
                     onChange={(e) => {
                       const newValue = e.target.value
@@ -572,7 +576,7 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
                       }
                     }}
                     onFocus={() => setShowClientDropdown(true)}
-                    className="h-12"
+                    className="h-10 sm:h-12 text-sm"
                   />
                   {showClientDropdown && (
                     <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-background border border-input rounded-md shadow-md max-h-48 overflow-y-auto">
@@ -586,25 +590,26 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
                               setClientSearch('')
                               setShowClientDropdown(false)
                             }}
-                            className="w-full text-left px-4 py-2 hover:bg-accent hover:text-accent-foreground transition-colors border-b last:border-b-0"
+                            className="w-full text-left px-3 sm:px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors border-b last:border-b-0"
                           >
-                            <div className="font-medium">{client.name}</div>
-                            {client.company && <div className="text-xs text-muted-foreground">{client.company}</div>}
+                            <div className="font-medium truncate">{client.name}</div>
+                            {client.company && <div className="text-xs text-muted-foreground truncate">{client.company}</div>}
                             {(client.email || client.phone) && (
-                              <div className="text-xs text-muted-foreground">{[client.email, client.phone].filter(Boolean).join(' • ')}</div>
+                              <div className="text-xs text-muted-foreground truncate">{[client.email, client.phone].filter(Boolean).join(' • ')}</div>
                             )}
                           </button>
                         ))
                       ) : (
-                        <div className="px-4 py-2 text-sm text-muted-foreground">No se encontraron clientes</div>
+                        <div className="px-3 sm:px-4 py-2 text-xs sm:text-sm text-muted-foreground">No encontrado</div>
                       )}
                     </div>
                   )}
                 </div>
-                <Link href="/clientes/nuevo?from=pedido">
-                  <Button type="button" variant="outline" className="h-12">
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Nuevo
+                <Link href="/clientes/nuevo?from=pedido" className="flex-shrink-0">
+                  <Button type="button" variant="outline" className="h-10 sm:h-12 w-full sm:w-auto text-sm">
+                    <UserPlus className="h-4 w-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Nuevo</span>
+                    <span className="sm:hidden">+</span>
                   </Button>
                 </Link>
               </div>
