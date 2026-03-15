@@ -19,12 +19,12 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { INGREDIENT_CATEGORY_LABELS, type IngredientCategory, type UnitOfMeasure } from '@/lib/types'
-import type { IngredientInput, IngredientCost } from '@/lib/types'
+import type { IngredientInput } from '@/lib/types'
 
 interface CreateInsumoModalProps {
   isOpen: boolean
   onClose: () => void
-  onCreateInsumo: (insumo: IngredientInput, cost: Omit<IngredientCost, 'id' | 'created_at'>) => void
+  onCreateInsumo: (insumo: IngredientInput) => void
 }
 
 export function CreateInsumoModal({ isOpen, onClose, onCreateInsumo }: CreateInsumoModalProps) {
@@ -46,10 +46,6 @@ export function CreateInsumoModal({ isOpen, onClose, onCreateInsumo }: CreateIns
     setIsSubmitting(true)
 
     try {
-      // Generate new IDs
-      const insumoId = `ins-${Date.now()}`
-      const costId = `ic-${Date.now()}`
-
       // Create the new ingredient
       const newInsumo: IngredientInput = {
         id: insumoId,
@@ -62,21 +58,8 @@ export function CreateInsumoModal({ isOpen, onClose, onCreateInsumo }: CreateIns
         updated_at: new Date().toISOString(),
       }
 
-      // Create the initial cost
-      const newCost: Omit<IngredientCost, 'id' | 'created_at'> = {
-        insumo_id: insumoId,
-        insumo: newInsumo,
-        date: new Date().toISOString().split('T')[0],
-        supplier: 'Ingreso manual',
-        quantity: 1,
-        unit_of_measure: priceUnit,
-        unit_cost_without_iva: Math.round(parseFloat(price) * 100),
-        confirmed: true,
-        notes: 'Creado desde fórmulas',
-      }
-
       // Call the callback
-      onCreateInsumo(newInsumo, newCost)
+      onCreateInsumo(newInsumo)
 
       // Reset form and close
       setName('')

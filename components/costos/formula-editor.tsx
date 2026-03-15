@@ -16,7 +16,7 @@ import {
 import { Trash2, Plus, Save, AlertCircle } from 'lucide-react'
 import { CreateInsumoModal } from './create-insumo-modal'
 import type { ProductFormula } from '@/lib/types'
-import type { IngredientInput, IngredientCost } from '@/lib/types'
+import type { IngredientInput } from '@/lib/types'
 import { 
   PRODUCTS,
   INGREDIENT_INPUTS,
@@ -25,8 +25,7 @@ import {
   formatCurrencyDecimal,
   getLatestIngredientCost,
   updateProductFormula,
-  createNewFormulaRow,
-  INGREDIENT_COSTS
+  createNewFormulaRow
 } from '@/lib/mock-data'
 import { UNIT_OF_MEASURE_ABBR, INGREDIENT_CATEGORY_LABELS, type IngredientCategory, areUnitsCompatible } from '@/lib/types'
 
@@ -84,21 +83,10 @@ export function FormulaEditor({ productId, formulas, onSave }: FormulaEditorProp
     setIsEditing(false)
   }
 
-  const handleCreateInsumo = (newInsumo: IngredientInput, newCost: Omit<IngredientCost, 'id' | 'created_at'>) => {
-    // Add the new insumo to available insumos
+  const handleCreateInsumo = (newInsumo: IngredientInput) => {
+    // Add the new insumo to available insumos (local state only)
     const updatedInsumos = [...availableInsumos, newInsumo]
     setAvailableInsumos(updatedInsumos)
-
-    // Add cost to the mock data (this would normally be saved to a backend)
-    const cost: IngredientCost = {
-      ...newCost,
-      id: `ic-${Date.now()}`,
-      created_at: new Date().toISOString()
-    }
-    INGREDIENT_COSTS.push(cost)
-
-    // Add insumo to mock data (this would normally be saved to a backend)
-    INGREDIENT_INPUTS.push(newInsumo)
 
     // Auto-select the new insumo in the formula row if one was pending
     if (pendingFormulaRowId) {
@@ -116,7 +104,8 @@ export function FormulaEditor({ productId, formulas, onSave }: FormulaEditorProp
   if (!product) return null
 
   return (
-    <Card className="shadow-sm">
+    <>
+      <Card className="shadow-sm">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
@@ -373,14 +362,15 @@ export function FormulaEditor({ productId, formulas, onSave }: FormulaEditorProp
       </CardContent>
     </Card>
 
-    {/* Create Insumo Modal */}
-    <CreateInsumoModal
-      isOpen={showCreateInsumoModal}
-      onClose={() => {
-        setShowCreateInsumoModal(false)
-        setPendingFormulaRowId(null)
-      }}
-      onCreateInsumo={handleCreateInsumo}
-    />
+      {/* Create Insumo Modal */}
+      <CreateInsumoModal
+        isOpen={showCreateInsumoModal}
+        onClose={() => {
+          setShowCreateInsumoModal(false)
+          setPendingFormulaRowId(null)
+        }}
+        onCreateInsumo={handleCreateInsumo}
+      />
+    </>
   )
 }
