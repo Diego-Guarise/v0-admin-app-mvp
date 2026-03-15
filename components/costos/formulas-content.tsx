@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { PageHeader } from '@/components/page-header'
 import { Button } from '@/components/ui/button'
@@ -15,22 +15,50 @@ import {
   formatCurrencyDecimal, 
 } from '@/lib/mock-data'
 import type { ProductFormula } from '@/lib/types'
+import { getPersistedFormulas, saveFormulas } from '@/lib/formula-storage'
 
 export function FormulasContent() {
   const [selectedProduct, setSelectedProduct] = useState<string>('all')
   const [editingFormulas, setEditingFormulas] = useState<Record<string, ProductFormula[]>>({})
+  const [isHydrated, setIsHydrated] = useState(false)
+
+  // Load persisted formulas on mount (client-side only)
+  useEffect(() => {
+    const loadFormulas = () => {
+      const persistedFormulas: Record<string, ProductFormula[]> = {}
+      
+      for (const product of PRODUCTS) {
+        const formulas = getPersistedFormulas(product.id)
+        if (formulas) {
+          // Use persisted formulas if they exist
+          persistedFormulas[product.id] = formulas
+        } else {
+          // Fall back to mock data initially
+          const mockFormulas = PRODUCT_FORMULAS.filter(f => f.product_id === product.id && f.active)
+          if (mockFormulas.length > 0) {
+            persistedFormulas[product.id] = mockFormulas
+          }
+        }
+      }
+      
+      setEditingFormulas(persistedFormulas)
+      setIsHydrated(true)
+    }
+    
+    loadFormulas()
+  }, [])
 
   // Filter formulas by product
   const filteredFormulas = useMemo(() => {
     if (selectedProduct === 'all') {
-      return PRODUCT_FORMULAS.filter(f => f.active)
+      return Object.values(editingFormulas).flat()
     }
-    return PRODUCT_FORMULAS.filter(f => f.product_id === selectedProduct && f.active)
-  }, [selectedProduct])
+    return editingFormulas[selectedProduct] || []
+  }, [selectedProduct, editingFormulas])
 
   // Group formulas by product
   const groupedFormulas = useMemo(() => {
-    const groups: Record<string, typeof filteredFormulas> = {}
+    const groups: Record<string, ProductFormula[]> = {}
     filteredFormulas.forEach(formula => {
       if (!groups[formula.product_id]) {
         groups[formula.product_id] = []
@@ -40,27 +68,33 @@ export function FormulasContent() {
     return groups
   }, [filteredFormulas])
 
-  // Get formulas for display (use edited version if available, otherwise original)
+  // Get formulas for display
   const getDisplayFormulas = (productId: string) => {
-    return editingFormulas[productId] || (groupedFormulas[productId] || [])
+    return editingFormulas[productId] || []
   }
 
-  // Handle formula save - persist changes to PRODUCT_FORMULAS
+  // Handle formula save - persist changes to localStorage
   const handleFormulasSave = (productId: string, updatedFormulas: ProductFormula[]) => {
-    // Update the global PRODUCT_FORMULAS array with the new formulas
-    updatedFormulas.forEach(updated => {
-      const existingIndex = PRODUCT_FORMULAS.findIndex(f => f.id === updated.id)
-      if (existingIndex >= 0) {
-        // Update existing formula
-        PRODUCT_FORMULAS[existingIndex] = updated
-      }
-    })
-    
-    // Update local state for display
+    // Update local state
     setEditingFormulas(prev => ({
       ...prev,
       [productId]: updatedFormulas
     }))
+    
+    // Persist to localStorage
+    saveFormulas(productId, updatedFormulas)
+  }
+
+  // Show loading state until hydrated
+  if (!isHydrated) {
+    return (
+      <div className="px-4 lg:px-6 py-6">
+        <div className="animate-pulse space-y-6">
+          <div className="h-20 bg-muted rounded-lg" />
+          <div className="h-96 bg-muted rounded-lg" />
+        </div>
+      </div>
+    )
   }
 
   return (

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -27,6 +27,7 @@ import {
   createNewFormulaRow
 } from '@/lib/mock-data'
 import { UNIT_OF_MEASURE_ABBR, INGREDIENT_CATEGORY_LABELS, type IngredientCategory, areUnitsCompatible, convertUnit } from '@/lib/types'
+import { runConversionTests } from '@/lib/conversion-test'
 
 interface FormulaEditorProps {
   productId: string
@@ -41,6 +42,18 @@ export function FormulaEditor({ productId, formulas, onSave }: FormulaEditorProp
   const [showCreateInsumoModal, setShowCreateInsumoModal] = useState(false)
   const [pendingFormulaRowId, setPendingFormulaRowId] = useState<string | null>(null)
   const [availableInsumos, setAvailableInsumos] = useState<IngredientInput[]>(getFormulableInsumos())
+
+  // Run conversion tests once on mount (development/verification)
+  useEffect(() => {
+    const testOnce = () => {
+      // Only run once per session to verify conversion logic
+      if (typeof window !== 'undefined' && !(window as any).__conversionTestRun) {
+        runConversionTests()
+        ;(window as any).__conversionTestRun = true
+      }
+    }
+    testOnce()
+  }, [])
 
   // Calculate cost per kg from current editing state (not from global data)
   const costPerKg = useMemo(() => {
