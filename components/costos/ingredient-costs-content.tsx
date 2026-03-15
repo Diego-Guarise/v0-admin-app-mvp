@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { PageHeader } from '@/components/page-header'
 import { Button } from '@/components/ui/button'
@@ -41,26 +41,43 @@ import {
   isProductiveExpense
 } from '@/lib/mock-data'
 import { INGREDIENT_CATEGORY_LABELS, UNIT_OF_MEASURE_ABBR, type IngredientCategory } from '@/lib/types'
+import type { Expense } from '@/lib/types'
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { getExpenses, initializeExpenses } from '@/lib/expenses-store'
 
 export function IngredientCostsContent() {
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [invoiceFilter, setInvoiceFilter] = useState<string>('all')
+  const [expenses, setExpenses] = useState<Expense[]>([])
+  const [isHydrated, setIsHydrated] = useState(false)
+
+  // Initialize expenses from persistent store on mount
+  useEffect(() => {
+    const persistedExpenses = getExpenses()
+    if (persistedExpenses.length > 0) {
+      setExpenses(persistedExpenses)
+    } else {
+      // First time - initialize with defaults
+      initializeExpenses(EXPENSES)
+      setExpenses(EXPENSES)
+    }
+    setIsHydrated(true)
+  }, [])
 
   // Get productive expenses (auto-populated from Gastos when user creates productive purchases)
   const productiveExpenses = useMemo(() => {
-    return EXPENSES.filter(expense => 
+    return expenses.filter(expense => 
       isProductiveExpense(expense.category_id) &&
       expense.insumo_id &&
       expense.quantity
     ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  }, [])
+  }, [expenses])
 
   // Filter productive expenses
   const filteredCosts = useMemo(() => {

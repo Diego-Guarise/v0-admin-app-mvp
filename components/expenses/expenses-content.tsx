@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { PageHeader } from '@/components/page-header'
 import { StatusBadge } from '@/components/status-badge'
@@ -24,9 +24,10 @@ import {
 } from '@/components/ui/table'
 import { Card, CardContent } from '@/components/ui/card'
 import { Plus, Search, Receipt, Eye, Edit, X, FileText, Calendar } from 'lucide-react'
-import { EXPENSES, EXPENSE_CATEGORIES, formatCurrency, formatDate } from '@/lib/mock-data'
-import type { ExpenseType, ExpenseStatus } from '@/lib/types'
+import { EXPENSE_CATEGORIES, formatCurrency, formatDate, EXPENSES } from '@/lib/mock-data'
+import type { ExpenseType, ExpenseStatus, Expense } from '@/lib/types'
 import { EXPENSE_TYPE_LABELS, EXPENSE_STATUS_LABELS, RECURRENCE_FREQUENCY_LABELS } from '@/lib/types'
+import { getExpenses, initializeExpenses } from '@/lib/expenses-store'
 
 export function ExpensesContent() {
   const [search, setSearch] = useState('')
@@ -34,10 +35,25 @@ export function ExpensesContent() {
   const [typeFilter, setTypeFilter] = useState<ExpenseType | 'all'>('all')
   const [statusFilter, setStatusFilter] = useState<ExpenseStatus | 'all'>('all')
   const [invoiceFilter, setInvoiceFilter] = useState<string>('all')
+  const [expenses, setExpenses] = useState<Expense[]>([])
+  const [isHydrated, setIsHydrated] = useState(false)
+
+  // Initialize expenses from persistent store on mount
+  useEffect(() => {
+    const persistedExpenses = getExpenses()
+    if (persistedExpenses.length > 0) {
+      setExpenses(persistedExpenses)
+    } else {
+      // First time - initialize with defaults from mock-data
+      initializeExpenses(EXPENSES)
+      setExpenses(EXPENSES)
+    }
+    setIsHydrated(true)
+  }, [])
 
   // Filter expenses
   const filteredExpenses = useMemo(() => {
-    return EXPENSES.filter(expense => {
+    return expenses.filter(expense => {
       // Search filter
       if (search) {
         const searchLower = search.toLowerCase()
@@ -63,7 +79,7 @@ export function ExpensesContent() {
 
       return true
     }).sort((a, b) => b.date.localeCompare(a.date))
-  }, [search, categoryFilter, typeFilter, statusFilter, invoiceFilter])
+  }, [search, categoryFilter, typeFilter, statusFilter, invoiceFilter, expenses])
 
   const clearFilters = () => {
     setSearch('')

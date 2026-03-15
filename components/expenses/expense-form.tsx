@@ -21,6 +21,7 @@ import { ArrowLeft, Save, Receipt, Calendar, CreditCard, RotateCcw, Package } fr
 import { EXPENSE_CATEGORIES, formatCurrency, INGREDIENT_INPUTS, isProductiveExpense } from '@/lib/mock-data'
 import { EXPENSE_TYPE_LABELS, EXPENSE_STATUS_LABELS, UNIT_OF_MEASURE_ABBR, type UnitOfMeasure } from '@/lib/types'
 import type { Expense, ExpenseType, ExpenseStatus, RecurrenceFrequency } from '@/lib/types'
+import { addExpense, updateExpense } from '@/lib/expenses-store'
 
 interface ExpenseFormProps {
   expense?: Expense
@@ -92,33 +93,48 @@ export function ExpenseForm({ expense }: ExpenseFormProps) {
   // Handle submit
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    // In a real app, this would save to the database
-    console.log('[v0] Expense submitted:', {
+    
+    // Create expense object
+    const newExpense: Expense = {
+      id: expense?.id || `exp-${Date.now()}`,
       date,
-      accountingMonth,
+      accounting_month: accountingMonth,
       concept,
-      categoryId,
+      category_id: categoryId,
+      category: EXPENSE_CATEGORIES.find(c => c.id === categoryId) || EXPENSE_CATEGORIES[0],
       subcategory,
       supplier,
       amount,
-      hasInvoice,
+      amount_without_iva: calculations.amountWithoutIva,
+      iva: calculations.iva,
+      has_invoice: hasInvoice,
       notes,
-      expenseType,
-      status,
-      dueDate,
-      paymentMethod,
-      checkNumber,
-      recurrenceFrequency,
-      estimatedDay,
-      estimatedAmount,
+      expense_type: expenseType,
+      status: status,
+      due_date: dueDate,
+      payment_method: paymentMethod,
+      check_number: checkNumber,
+      recurrence_frequency: recurrenceFrequency,
+      estimated_day: estimatedDay,
+      estimated_amount: estimatedAmount,
       // Productive purchase fields
       ...(isProductiveExpense(categoryId) && {
-        insumoId,
+        insumo_id: insumoId,
         quantity,
-        unitOfMeasure,
+        unit_of_measure: unitOfMeasure,
       }),
-      calculations,
-    })
+      created_at: expense?.created_at || new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+
+    // Save expense
+    if (expense?.id) {
+      updateExpense(expense.id, newExpense)
+    } else {
+      addExpense(newExpense)
+    }
+
+    console.log('[v0] Expense saved:', newExpense)
     router.push('/gastos')
   }
 
