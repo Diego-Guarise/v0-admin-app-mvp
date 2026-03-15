@@ -1,10 +1,101 @@
 import type { PriceListItem, PriceCategory } from './types'
 import { PRODUCTS, PRESENTATIONS } from './mock-data'
 
-const PRICE_STORE_KEY = 'fox-prices'
+/**
+ * Check if price store needs migration (e.g., missing bundle prices)
+ * Returns true if old data structure is detected
+ */
+function needsMigration(prices: PriceListItem[]): boolean {
+  // Check if Masilla (prod-2) 2kg branded funda prices exist
+  // If they don't exist, we need to migrate/repair the data
+  const masilla2kgBranded = prices.find(p =>
+    p.product_id === 'prod-2' &&
+    p.presentation_id === 'pres-7' && // Masilla 2kg branded
+    p.with_brand === true &&
+    p.sales_unit_type === 'funda'
+  )
+  
+  return !masilla2kgBranded
+}
+
+/**
+ * Repair price store by adding missing bundle prices
+ * This safely adds missing prices without removing existing ones
+ */
+function repairPriceStore(prices: PriceListItem[]): PriceListItem[] {
+  console.log('[v0] Detected old price store format - repairing...')
+  
+  const masilla = PRODUCTS.find(p => p.id === 'prod-2')
+  if (!masilla) return prices
+  
+  const mas2kgBranded = PRESENTATIONS.find(p => p.product_id === 'prod-2' && p.weight_kg === 2 && p.type === 'bolsa' && p.with_brand === true)
+  const mas2kgUnbranded = PRESENTATIONS.find(p => p.product_id === 'prod-2' && p.weight_kg === 2 && p.type === 'bolsa' && p.with_brand === false)
+  
+  if (!mas2kgBranded || !mas2kgUnbranded) return prices
+  
+  const categories: PriceCategory[] = ['barraca', 'distribuidor', 'oferta', 'consumidor_final']
+  
+  // Create missing prices and add to array
+  let nextId = Math.max(...prices.filter(p => p.id.startsWith('price-')).map(p => parseInt(p.id.split('-')[1])), 0) + 1
+  
+  const createPrice = (
+    product: typeof masilla,
+    presentation: typeof PRESENTATIONS[0],
+    withBrand: boolean,
+    category: PriceCategory,
+    unitPrice: number,
+    salesUnitType: 'unidad' | 'funda' = 'unidad',
+    unitsPerSalesUnit: number = 1
+  ): PriceListItem => {
+    const totalWeight = presentation.weight_kg * unitsPerSalesUnit
+    
+    return {
+      id: `price-${nextId++}`,
+      product_id: product.id,
+      presentation_id: presentation.id,
+      with_brand: withBrand,
+      price_category: category,
+      sales_unit_type: salesUnitType,
+      units_per_sales_unit: unitsPerSalesUnit,
+      weight_per_unit_kg: presentation.weight_kg,
+      total_weight_per_sales_unit_kg: totalWeight,
+      unit_price_for_sales_unit: unitPrice,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+  }
+  
+  // Add missing Masilla 2kg branded prices
+  categories.forEach(cat => {
+    if (cat === 'consumidor_final') return // Skip this category
+    
+    // Check if this price already exists
+    const exists = prices.some(p =>
+      p.product_id === 'prod-2' &&
+      p.presentation_id === mas2kgBranded.id &&
+      p.with_brand === true &&
+      p.price_category === cat &&
+      p.sales_unit_type === 'funda'
+    )
+    
+    if (!exists) {
+      const brandedPrice = (() => {
+        const basePrice = 48
+        const catMultiplier = cat === 'barraca' ? 1 : cat === 'distribuidor' ? 0.9 : cat === 'oferta' ? 0.8 : 1.4
+        return Math.round(basePrice * catMultiplier * 10) // 10 units per funda
+      })()
+      prices.push(createPrice(masilla, mas2kgBranded, true, cat, brandedPrice, 'funda', 10))
+      console.log(`[v0] Added missing Masilla 2kg branded price for ${cat}`)
+    }
+  })
+  
+  return prices
+}
+
 
 /**
  * Get all prices from localStorage, merged with seeded defaults
+ * Automatically repairs old data structure if needed
  */
 export function getAllPrices(): PriceListItem[] {
   if (typeof window === 'undefined') return []
@@ -12,7 +103,16 @@ export function getAllPrices(): PriceListItem[] {
   try {
     const stored = localStorage.getItem(PRICE_STORE_KEY)
     if (stored) {
-      const prices = JSON.parse(stored) as PriceListItem[]
+      let prices = JSON.parse(stored) as PriceListItem[]
+      
+      // Check if prices need migration/repair
+      if (needsMigration(prices)) {
+        prices = repairPriceStore(prices)
+        // Save repaired prices back to localStorage
+        localStorage.setItem(PRICE_STORE_KEY, JSON.stringify(prices))
+        console.log('[v0] Price store repaired and saved')
+      }
+      
       return prices
     }
   } catch (error) {
@@ -104,6 +204,34 @@ export function resetPrices(): void {
     console.log('[v0] Prices reset to defaults')
   } catch (error) {
     console.error('[v0] Error resetting prices:', error)
+  }
+}
+
+/**
+ * Manually repair prices if needed (for emergency fixes)
+ * Returns true if repair was performed, false if not needed
+ */
+export function repairPricesManually(): boolean {
+  if (typeof window === 'undefined') return false
+  
+  try {
+    const stored = localStorage.getItem(PRICE_STORE_KEY)
+    if (!stored) return false
+    
+    const prices = JSON.parse(stored) as PriceListItem[]
+    
+    if (needsMigration(prices)) {
+      const repaired = repairPriceStore(prices)
+      localStorage.setItem(PRICE_STORE_KEY, JSON.stringify(repaired))
+      console.log('[v0] Price store manually repaired and saved')
+      return true
+    }
+    
+    console.log('[v0] Price store does not need repair')
+    return false
+  } catch (error) {
+    console.error('[v0] Error repairing prices:', error)
+    return false
   }
 }
 
