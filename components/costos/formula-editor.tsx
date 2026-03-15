@@ -170,10 +170,26 @@ export function FormulaEditor({ productId, formulas, onSave }: FormulaEditorProp
             const insumo = formula.insumo || INGREDIENT_INPUTS.find(i => i.id === formula.insumo_id)
             const latestCost = getLatestIngredientCost(formula.insumo_id)
             const unitCost = latestCost?.unit_cost_without_iva || 0
-            const unit = formula.unit_of_measure || insumo?.unit_of_measure || 'kg'
+            const formulaUnit = formula.unit_of_measure || insumo?.unit_of_measure || 'kg'
+            const costUnit = latestCost?.unit_of_measure || formulaUnit
+            
             const isDuplicate = duplicateInsumoIds.has(formula.insumo_id)
             const hasZeroQuantity = formula.quantity_per_kg === 0
-            const ingredientCostContribution = formula.quantity_per_kg * unitCost
+            
+            // Calculate ingredient cost contribution with proper unit conversion
+            let ingredientCostContribution = 0
+            if (unitCost > 0 && latestCost) {
+              if (formulaUnit === costUnit) {
+                // Same unit - direct calculation
+                ingredientCostContribution = formula.quantity_per_kg * unitCost
+              } else if (areUnitsCompatible(formulaUnit, costUnit)) {
+                // Convert formula quantity to cost unit before multiplying
+                const convertedQty = convertUnit(formula.quantity_per_kg, formulaUnit, costUnit)
+                if (convertedQty !== null) {
+                  ingredientCostContribution = convertedQty * unitCost
+                }
+              }
+            }
 
             return (
               <div key={formula.id} className="space-y-2">
@@ -256,7 +272,7 @@ export function FormulaEditor({ productId, formulas, onSave }: FormulaEditorProp
                         <label className="text-xs font-medium text-muted-foreground mb-1 block">
                           Unidad
                         </label>
-                        <Select value={unit} onValueChange={(val) => {
+                        <Select value={formulaUnit} onValueChange={(val) => {
                           handleUpdateFormula(formula.id, { unit_of_measure: val as any })
                         }}>
                           <SelectTrigger className="h-9">
@@ -321,7 +337,7 @@ export function FormulaEditor({ productId, formulas, onSave }: FormulaEditorProp
                           {formula.quantity_per_kg.toFixed(formula.quantity_per_kg < 1 ? 3 : 2)}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {UNIT_OF_MEASURE_ABBR[unit]} por kg
+                          {UNIT_OF_MEASURE_ABBR[formulaUnit]} por kg
                         </p>
                       </div>
 
@@ -340,7 +356,7 @@ export function FormulaEditor({ productId, formulas, onSave }: FormulaEditorProp
                               {formatCurrencyDecimal(unitCost)}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              /{UNIT_OF_MEASURE_ABBR[unit]}
+                              /{UNIT_OF_MEASURE_ABBR[costUnit]}
                             </p>
                           </>
                         )}
