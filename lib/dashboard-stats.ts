@@ -28,17 +28,36 @@ export function calculateRealDashboardStats(month?: string): DashboardStats {
   const targetMonth = month || getCurrentMonth()
   
   // Get all real orders and expenses from persistent stores
-  const allOrders = getAllOrders()
-  const allExpenses = getExpenses()
+  // Safely default to empty arrays if stores fail
+  let allOrders = []
+  let allExpenses = []
+  
+  try {
+    allOrders = getAllOrders() || []
+  } catch (error) {
+    console.error('[v0] Error fetching orders:', error)
+    allOrders = []
+  }
+  
+  try {
+    allExpenses = getExpenses() || []
+  } catch (error) {
+    console.error('[v0] Error fetching expenses:', error)
+    allExpenses = []
+  }
   
   // Filter orders for the target month, excluding cancelled orders
   const monthOrders = allOrders.filter(o => 
+    o && 
+    o.order_date && 
     o.order_date.startsWith(targetMonth) && 
     o.status !== 'anulado'
   )
   
   // Filter expenses for the target month, only active ones
   const monthExpenses = allExpenses.filter(e => 
+    e && 
+    e.accounting_month && 
     e.accounting_month === targetMonth && 
     e.status === 'activo'
   )
@@ -47,10 +66,23 @@ export function calculateRealDashboardStats(month?: string): DashboardStats {
   let totalEnduido = 0
   let totalMasilla = 0
   
+  // Safe iteration through orders
   monthOrders.forEach(order => {
+    // Validate order and items exist
+    if (!order || !Array.isArray(order.items)) {
+      return
+    }
+    
     // Sum product weights by their type
-    order.line_items.forEach(item => {
-      const itemTotalKg = item.quantity * item.weight_per_unit_kg
+    order.items.forEach(item => {
+      // Validate item structure
+      if (!item || typeof item.quantity !== 'number') {
+        return
+      }
+      
+      // Get weight_per_unit_kg, default to 0 if missing
+      const weightPerUnit = item.weight_per_unit_kg || 0
+      const itemTotalKg = item.quantity * weightPerUnit
       
       // Determine product type based on product_id
       // prod-1 = Enduido, prod-2 = Masilla
@@ -63,9 +95,9 @@ export function calculateRealDashboardStats(month?: string): DashboardStats {
   })
   
   return {
-    monthly_sales_without_iva: monthOrders.reduce((sum, o) => sum + o.subtotal, 0),
-    monthly_sales_with_iva: monthOrders.reduce((sum, o) => sum + o.total, 0),
-    monthly_expenses: monthExpenses.reduce((sum, e) => sum + e.amount, 0),
+    monthly_sales_without_iva: monthOrders.reduce((sum, o) => sum + (o?.subtotal || 0), 0),
+    monthly_sales_with_iva: monthOrders.reduce((sum, o) => sum + (o?.total || 0), 0),
+    monthly_expenses: monthExpenses.reduce((sum, e) => sum + (e?.amount || 0), 0),
     enduido_kg_sold: totalEnduido,
     masilla_kg_sold: totalMasilla,
   }
@@ -78,3 +110,4 @@ export function calculateRealDashboardStats(month?: string): DashboardStats {
 export function getDashboardMetrics(month?: string): DashboardStats {
   return calculateRealDashboardStats(month)
 }
+
