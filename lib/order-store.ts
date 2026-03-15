@@ -36,7 +36,17 @@ function saveStoredOrders(orders: Order[]): void {
 }
 
 /**
+ * Get ONLY newly created orders (no seeded demo orders)
+ * Use this for dashboards and reports that need real data only
+ */
+export function getCreatedOrders(): Order[] {
+  return getStoredOrders()
+}
+
+/**
  * Get all orders (seeded + newly created from localStorage)
+ * Note: This includes demo/seed orders for backwards compatibility
+ * For dashboards needing only real data, use getCreatedOrders() instead
  */
 export function getAllOrders(): Order[] {
   const createdOrders = getStoredOrders()

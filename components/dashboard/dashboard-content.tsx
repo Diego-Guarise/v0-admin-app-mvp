@@ -26,8 +26,8 @@ import {
   getUpcomingExpenses,
   getRecurrentExpenses,
 } from '@/lib/mock-data'
-import { calculateRealDashboardStats, getAllOrdersThisMonth } from '@/lib/dashboard-stats'
-import { getAllOrders } from '@/lib/order-store'
+import { calculateRealDashboardStats, getAllRealOrdersThisMonth } from '@/lib/dashboard-stats'
+import { getCreatedOrders } from '@/lib/order-store'
 import type { DashboardStats, Order } from '@/lib/types'
 import Link from 'next/link'
 
@@ -37,17 +37,17 @@ export function DashboardContent() {
   const [realOrders, setRealOrders] = useState<Order[]>([])
   const [isHydrated, setIsHydrated] = useState(false)
 
-  // Calculate stats and get real orders once on client mount
+  // Calculate stats and get REAL orders only (no seeded/demo) for status counts and recent orders display
   useEffect(() => {
     // Get real data from stores
     const realStats = calculateRealDashboardStats()
     setStats(realStats)
     
-    // Get all real orders for status counts and recent orders display
+    // Get ONLY real created orders (no demo/seeded orders)
     try {
-      const allOrders = getAllOrders() || []
-      setRealOrders(allOrders)
-      console.log('[v0] Dashboard loaded with real orders:', allOrders.length)
+      const createdOrders = getCreatedOrders() || []
+      setRealOrders(createdOrders)
+      console.log('[v0] Dashboard loaded with REAL orders only:', createdOrders.length)
     } catch (error) {
       console.error('[v0] Error loading real orders:', error)
       setRealOrders([])

@@ -3,12 +3,13 @@
 /**
  * Dashboard Statistics Helper
  * Calculates REAL metrics from persisted stores (orders + expenses)
- * - ONLY pedidos with status: 'finalizado' or 'entregado' count toward commercial metrics
+ * - ONLY uses real created orders (no demo/seeded orders)
+ * - Includes ALL orders with status != 'anulado' (in_produccion, finalizado, entregado)
  * - No mock data, no mixing with demo orders
  */
 
 import type { DashboardStats } from '@/lib/types'
-import { getAllOrders } from '@/lib/order-store'
+import { getCreatedOrders } from '@/lib/order-store'
 import { getExpenses } from '@/lib/expenses-store'
 
 /**
@@ -22,24 +23,26 @@ function getCurrentMonth(): string {
 }
 
 /**
- * Calculate real dashboard stats from actual persisted data
- * Commercial metrics (ventas, kilos) ONLY include:
- * - Orders with status 'finalizado' or 'entregado'
- * - Orders not cancelled ('anulado')
+ * Calculate real dashboard stats from actual persisted data ONLY
+ * Commercial metrics (ventas, kilos) include:
+ * - ONLY real created orders (no seeded/demo orders)
+ * - ALL orders with status != 'anulado' (en_produccion, finalizado, entregado)
  * - Orders from current month
+ * 
+ * This reflects what's actually being entered in the system, not just what's closed.
  * 
  * @param month - Optional month in YYYY-MM format (defaults to current month)
  */
 export function calculateRealDashboardStats(month?: string): DashboardStats {
   const targetMonth = month || getCurrentMonth()
   
-  // Get all real orders and expenses from persistent stores
+  // Get ONLY real created orders (no seeded demo orders)
   let allOrders = []
   let allExpenses = []
   
   try {
-    allOrders = getAllOrders() || []
-    console.log('[v0] Loaded orders from store:', allOrders.length)
+    allOrders = getCreatedOrders() || []
+    console.log('[v0] Loaded REAL orders from store:', allOrders.length)
   } catch (error) {
     console.error('[v0] Error fetching orders:', error)
     allOrders = []
@@ -53,18 +56,24 @@ export function calculateRealDashboardStats(month?: string): DashboardStats {
     allExpenses = []
   }
   
-  // CRITICAL: Filter for CLOSED orders only (finalizado or entregado)
-  // Only these count toward commercial metrics
-  const closedOrdersThisMonth = allOrders.filter(o => 
+  // NEW RULE: Count ALL real orders that are NOT cancelled (anulado)
+  // This includes: en_produccion, finalizado, entregado
+  const activeOrdersThisMonth = allOrders.filter(o => 
     o && 
     o.order_date && 
     o.order_date.startsWith(targetMonth) && 
-    (o.status === 'finalizado' || o.status === 'entregado')
+    o.status !== 'anulado'
   )
   
-  console.log(`[v0] Orders in ${targetMonth}:`, {
+  console.log(`[v0] Real orders in ${targetMonth}:`, {
     total: allOrders.filter(o => o?.order_date?.startsWith(targetMonth)).length,
-    closed: closedOrdersThisMonth.length,
+    active_not_cancelled: activeOrdersThisMonth.length,
+    by_status: {
+      en_produccion: allOrders.filter(o => o?.order_date?.startsWith(targetMonth) && o.status === 'en_produccion').length,
+      finalizado: allOrders.filter(o => o?.order_date?.startsWith(targetMonth) && o.status === 'finalizado').length,
+      entregado: allOrders.filter(o => o?.order_date?.startsWith(targetMonth) && o.status === 'entregado').length,
+      anulado: allOrders.filter(o => o?.order_date?.startsWith(targetMonth) && o.status === 'anulado').length,
+    }
   })
   
   // Filter expenses for the target month, only active ones
@@ -75,18 +84,17 @@ export function calculateRealDashboardStats(month?: string): DashboardStats {
     e.status === 'activo'
   )
   
-  // Calculate total product weights by type (ONLY from closed orders)
+  // Calculate total product weights by type (from ALL non-cancelled orders)
   let totalEnduido = 0
   let totalMasilla = 0
   
-  closedOrdersThisMonth.forEach(order => {
+  activeOrdersThisMonth.forEach(order => {
     // Validate order and items exist
     if (!order || !Array.isArray(order.items) || order.items.length === 0) {
       return
     }
     
-    console.log(`[v0] Processing order ${order.id}:`, {
-      status: order.status,
+    console.log(`[v0] Processing real order ${order.id} (status: ${order.status}):`, {
       items: order.items.length,
     })
     
@@ -103,9 +111,6 @@ export function calculateRealDashboardStats(month?: string): DashboardStats {
       
       // Get weight_per_unit_kg (with fallback and debugging)
       const weightPerUnit = item.weight_per_unit_kg || 0
-      if (weightPerUnit === 0) {
-        console.log(`[v0] Item ${item.presentation_id} has no weight (weight_per_unit_kg: ${item.weight_per_unit_kg})`)
-      }
       
       const itemTotalKg = quantity * weightPerUnit
       
@@ -121,38 +126,48 @@ export function calculateRealDashboardStats(month?: string): DashboardStats {
     })
   })
   
-  console.log(`[v0] Dashboard stats for ${targetMonth}:`, {
-    sales_without_iva: closedOrdersThisMonth.reduce((sum, o) => sum + (o?.subtotal || 0), 0),
-    sales_with_iva: closedOrdersThisMonth.reduce((sum, o) => sum + (o?.total || 0), 0),
+  const salesWithoutIva = activeOrdersThisMonth.reduce((sum, o) => sum + (o?.subtotal || 0), 0)
+  const salesWithIva = activeOrdersThisMonth.reduce((sum, o) => sum + (o?.total || 0), 0)
+  const expenses = monthExpenses.reduce((sum, e) => sum + (e?.amount || 0), 0)
+  
+  console.log(`[v0] Dashboard stats for ${targetMonth} (REAL DATA ONLY):`, {
+    sales_without_iva: salesWithoutIva,
+    sales_with_iva: salesWithIva,
     enduido_kg: totalEnduido,
     masilla_kg: totalMasilla,
-    expenses: monthExpenses.reduce((sum, e) => sum + (e?.amount || 0), 0),
+    expenses: expenses,
   })
   
   return {
-    monthly_sales_without_iva: closedOrdersThisMonth.reduce((sum, o) => sum + (o?.subtotal || 0), 0),
-    monthly_sales_with_iva: closedOrdersThisMonth.reduce((sum, o) => sum + (o?.total || 0), 0),
-    monthly_expenses: monthExpenses.reduce((sum, e) => sum + (e?.amount || 0), 0),
+    monthly_sales_without_iva: salesWithoutIva,
+    monthly_sales_with_iva: salesWithIva,
+    monthly_expenses: expenses,
     enduido_kg_sold: totalEnduido,
     masilla_kg_sold: totalMasilla,
   }
 }
 
 /**
- * Get ALL orders (any status) for current month
+ * Get ALL REAL orders (any status except anulado) for current month
  * Used by dashboard to show order status counts
+ * Returns ONLY real created orders, not seeded demo orders
  */
-export function getAllOrdersThisMonth(month?: string) {
+export function getAllRealOrdersThisMonth(month?: string) {
   const targetMonth = month || getCurrentMonth()
   
   let allOrders = []
   try {
-    allOrders = getAllOrders() || []
+    allOrders = getCreatedOrders() || []
   } catch (error) {
-    console.error('[v0] Error fetching orders for status counts:', error)
+    console.error('[v0] Error fetching real orders for status counts:', error)
   }
   
-  return allOrders.filter(o => o && o.order_date && o.order_date.startsWith(targetMonth))
+  return allOrders.filter(o => 
+    o && 
+    o.order_date && 
+    o.order_date.startsWith(targetMonth) &&
+    o.status !== 'anulado'
+  )
 }
 
 /**
