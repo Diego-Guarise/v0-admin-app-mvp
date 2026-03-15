@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, Fragment } from 'react'
 import Link from 'next/link'
 import { PageHeader } from '@/components/page-header'
 import { StatCard } from '@/components/stat-card'
@@ -426,8 +426,8 @@ export function CostosDashboard() {
                           const isExpanded = expandedBreakdowns.has(breakdownKey)
 
                           return (
-                            <>
-                              <tr key={idx} className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
+                            <Fragment key={breakdownKey}>
+                              <tr className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
                                 <td className="py-2">
                                   <div className="flex items-center gap-2">
                                     <button
@@ -631,7 +631,7 @@ export function CostosDashboard() {
                                   </td>
                                 </tr>
                               )}
-                            </>
+                            </Fragment>
                           )
                         })}
                       </tbody>
