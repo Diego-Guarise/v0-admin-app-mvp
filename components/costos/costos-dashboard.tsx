@@ -149,8 +149,8 @@ export function CostosDashboard() {
         .filter(p => p.product_id === product.id && p.active && p.with_brand === (selectedBrand === 'con'))
       
       filteredPresentations.forEach(presentation => {
-          // Use the helper that properly calculates costs
-          const costBreakdown = calculatePresentationCost(presentation, product.id)
+          // Use the helper that properly calculates costs from persisted expenses
+          const costBreakdown = calculatePresentationCost(presentation, product.id, persistedExpenses)
           
           // Get price from price store based on selected category
           const priceItem = getPriceByKey(
@@ -195,7 +195,7 @@ export function CostosDashboard() {
       if (a.weight_kg !== b.weight_kg) return a.weight_kg - b.weight_kg
       return a.with_brand ? -1 : 1
     })
-  }, [selectedBrand, selectedCategory])
+  }, [selectedBrand, selectedCategory, persistedExpenses])
 
   // Navigation links
   const navLinks = [

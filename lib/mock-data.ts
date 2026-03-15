@@ -831,7 +831,8 @@ export interface PresentationCostBreakdown {
 
 export function calculatePresentationCost(
   presentation: Presentation,
-  productId: string
+  productId: string,
+  persistedExpenses?: Expense[]
 ): PresentationCostBreakdown {
   const product = PRODUCTS.find(p => p.id === productId)
   if (!product) {
@@ -844,8 +845,8 @@ export function calculatePresentationCost(
     }
   }
 
-  // 1. Product cost per kg (from formula)
-  const productCostPerKg = calculateProductCostPerKg(productId)
+  // 1. Product cost per kg (from formula) - use persisted expenses if provided
+  const productCostPerKg = calculateProductCostPerKg(productId, undefined, persistedExpenses)
   
   // 2. Product cost for presentation weight
   const productCostForWeight = productCostPerKg * presentation.weight_kg

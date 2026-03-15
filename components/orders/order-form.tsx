@@ -530,6 +530,37 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
                 </Select>
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="priceCategory">Canal de venta / Categoría de precio *</Label>
+                <Select value={priceCategory} onValueChange={(value) => {
+                  setPriceCategory(value as PriceCategory)
+                  // Recalculate all non-manual prices when category changes
+                  setItems(prevItems => 
+                    prevItems.map(item => {
+                      if (item.manual_price) return item
+                      const presentation = PRESENTATIONS.find(p => p.id === item.presentation_id)
+                      if (!presentation) return item
+                      const priceDetails = getPriceDetailsFromStore(item.product_id, presentation.id, item.with_brand, value as PriceCategory)
+                      return {
+                        ...item,
+                        unit_price: priceDetails?.unit_price_for_sales_unit || 0
+                      }
+                    })
+                  )
+                }}>
+                  <SelectTrigger id="priceCategory">
+                    <SelectValue placeholder="Seleccionar categoría de precio" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(['barraca', 'distribuidor', 'oferta', 'consumidor_final'] as const).map(category => (
+                      <SelectItem key={category} value={category}>
+                        {PRICE_CATEGORY_LABELS[category]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <Separator />
 
               {/* Invoice Toggle */}
