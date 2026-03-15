@@ -84,58 +84,34 @@ export function calculateRealDashboardStats(month?: string): DashboardStats {
     e.status === 'activo'
   )
   
-  // Calculate total product weights by type (from ALL non-cancelled orders)
+  // Calculate total product weights using the pre-calculated values stored in each Order
+  // Orders already have enduido_kg and masilla_kg calculated correctly at creation time
+  // (see order-form.tsx lines 511-512 where these are computed using sales-unit-aware weights)
   let totalEnduido = 0
   let totalMasilla = 0
   
   activeOrdersThisMonth.forEach(order => {
-    // Validate order and items exist
-    if (!order || !Array.isArray(order.items) || order.items.length === 0) {
-      return
-    }
+    if (!order) return
     
-    console.log(`[v0] Processing real order ${order.id} (status: ${order.status}):`, {
-      items: order.items.length,
-    })
+    // Use the pre-calculated kg values from the Order object
+    // These respect fundas/packs (e.g., Enduido 1kg funda = 20kg total)
+    const orderEnduido = order.enduido_kg || 0
+    const orderMasilla = order.masilla_kg || 0
     
-    // Sum product weights by their type
-    order.items.forEach(item => {
-      // Validate item structure
-      if (!item) {
-        return
-      }
-      
-      // Get quantity (with fallback)
-      const quantity = item.quantity || 0
-      if (quantity === 0) return
-      
-      // Get weight_per_unit_kg (with fallback and debugging)
-      const weightPerUnit = item.weight_per_unit_kg || 0
-      
-      const itemTotalKg = quantity * weightPerUnit
-      
-      // Determine product type based on product_id
-      // prod-1 = Enduido, prod-2 = Masilla
-      if (item.product_id === 'prod-1') {
-        totalEnduido += itemTotalKg
-        console.log(`[v0] Enduido: +${itemTotalKg} kg (qty: ${quantity}, weight: ${weightPerUnit})`)
-      } else if (item.product_id === 'prod-2') {
-        totalMasilla += itemTotalKg
-        console.log(`[v0] Masilla: +${itemTotalKg} kg (qty: ${quantity}, weight: ${weightPerUnit})`)
-      }
-    })
+    totalEnduido += orderEnduido
+    totalMasilla += orderMasilla
+    
+    console.log(`[v0] Order ${order.id}: +${orderEnduido} kg Enduido, +${orderMasilla} kg Masilla`)
   })
   
   const salesWithoutIva = activeOrdersThisMonth.reduce((sum, o) => sum + (o?.subtotal || 0), 0)
   const salesWithIva = activeOrdersThisMonth.reduce((sum, o) => sum + (o?.total || 0), 0)
   const expenses = monthExpenses.reduce((sum, e) => sum + (e?.amount || 0), 0)
   
-  console.log(`[v0] Dashboard stats for ${targetMonth} (REAL DATA ONLY):`, {
-    sales_without_iva: salesWithoutIva,
-    sales_with_iva: salesWithIva,
+  console.log(`[v0] Dashboard stats for ${targetMonth}:`, {
+    orders: activeOrdersThisMonth.length,
     enduido_kg: totalEnduido,
     masilla_kg: totalMasilla,
-    expenses: expenses,
   })
   
   return {
