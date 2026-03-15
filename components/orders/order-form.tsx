@@ -161,7 +161,117 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
     }
   }, [showClientDropdown])
 
-  // Add new item with sensible defaults
+  // Centralized function to resolve a complete, consistent order line state
+  // This ensures product, presentation, brand, price, and weight are always coherent
+  const resolveOrderLineState = (
+    productId: string,
+    presentationId: string,
+    withBrand: boolean,
+    quantity: number,
+    manualPriceMode: boolean,
+    priceCat: PriceCategory
+  ): {
+    product_id: string
+    presentation_id: string
+    with_brand: boolean
+    unit_price: number
+    total_weight_kg: number
+    isValid: boolean
+  } => {
+    // Find the product
+    const product = PRODUCTS.find(p => p.id === productId)
+    if (!product) {
+      return {
+        product_id: productId,
+        presentation_id: '',
+        with_brand: false,
+        unit_price: 0,
+        total_weight_kg: 0,
+        isValid: false,
+      }
+    }
+
+    // If no presentation is selected, return empty state
+    if (!presentationId) {
+      return {
+        product_id: productId,
+        presentation_id: '',
+        with_brand: false,
+        unit_price: 0,
+        total_weight_kg: 0,
+        isValid: false,
+      }
+    }
+
+    // Find the presentation - but check if it matches the product AND brand
+    const presentation = PRESENTATIONS.find(p => p.id === presentationId)
+    if (!presentation || presentation.product_id !== productId) {
+      return {
+        product_id: productId,
+        presentation_id: '',
+        with_brand: false,
+        unit_price: 0,
+        total_weight_kg: 0,
+        isValid: false,
+      }
+    }
+
+    // Force with_brand=true for potes (Masilla only)
+    let resolvedWithBrand = withBrand
+    if (isPotesAlwaysBranded(productId) && presentation.type === 'pote') {
+      resolvedWithBrand = true
+    }
+
+    // Find the matching presentation for the resolved brand setting
+    // This handles the case where user has pres-1 (with_brand=true) but sets with_brand=false
+    const matchingPresentation = PRESENTATIONS.find(p =>
+      p.product_id === productId &&
+      p.type === presentation.type &&
+      p.weight_kg === presentation.weight_kg &&
+      p.with_brand === resolvedWithBrand
+    )
+
+    if (!matchingPresentation) {
+      // No matching presentation for this brand variant - return invalid state
+      return {
+        product_id: productId,
+        presentation_id: '',
+        with_brand: false,
+        unit_price: 0,
+        total_weight_kg: 0,
+        isValid: false,
+      }
+    }
+
+    // Now get the price using the CORRECT presentation
+    let unitPrice = 0
+    if (!manualPriceMode) {
+      const priceDetails = getPriceDetailsFromStore(productId, matchingPresentation.id, resolvedWithBrand, priceCat)
+      if (priceDetails) {
+        unitPrice = priceDetails.unit_price_for_sales_unit
+      }
+      // If no price found, leave as 0 - UI should show this as warning
+    }
+
+    // Get total weight from price store
+    const priceItem = getAllPrices().find(p =>
+      p.product_id === productId &&
+      p.presentation_id === matchingPresentation.id &&
+      p.with_brand === resolvedWithBrand &&
+      p.price_category === priceCat
+    )
+
+    const totalWeightKg = priceItem?.total_weight_per_sales_unit_kg ?? 0
+
+    return {
+      product_id: productId,
+      presentation_id: matchingPresentation.id,
+      with_brand: resolvedWithBrand,
+      unit_price: unitPrice,
+      total_weight_kg: totalWeightKg,
+      isValid: true,
+    }
+  }
   const addItem = () => {
     const defaultProduct = PRODUCTS.find(p => p.id === 'prod-1') || PRODUCTS[0]
     // Find an unbranded bolsa presentation to match the default with_brand=false setting
@@ -171,22 +281,23 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
       p.with_brand === false
     ) || PRESENTATIONS.find(p => p.product_id === defaultProduct.id)
     
-    let unitPrice = 0
-    if (defaultPres) {
-      // Get price from price store - use the presentation's actual brand setting
-      const priceDetails = getPriceDetailsFromStore(defaultProduct.id, defaultPres.id, defaultPres.with_brand, priceCategory)
-      if (priceDetails) {
-        unitPrice = priceDetails.unit_price_for_sales_unit
-      }
-    }
+    // Resolve the line to ensure it's valid
+    const resolvedState = resolveOrderLineState(
+      defaultProduct.id,
+      defaultPres?.id || '',
+      defaultPres?.with_brand ?? false,
+      1,
+      manualPrice,
+      priceCategory
+    )
     
     const newItem: OrderItemForm = {
       id: `temp-${Date.now()}`,
-      product_id: defaultProduct.id,
-      presentation_id: defaultPres?.id || '',
-      with_brand: defaultPres?.with_brand ?? false,
+      product_id: resolvedState.product_id,
+      presentation_id: resolvedState.presentation_id,
+      with_brand: resolvedState.with_brand,
       quantity: 1,
-      unit_price: unitPrice,
+      unit_price: resolvedState.unit_price,
       manual_price: manualPrice,
     }
     setItems([...items, newItem])
@@ -202,13 +313,23 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
     const itemToDuplicate = items.find(item => item.id === id)
     if (!itemToDuplicate) return
     
+    // Resolve state to ensure the duplicated item is also valid
+    const resolvedState = resolveOrderLineState(
+      itemToDuplicate.product_id,
+      itemToDuplicate.presentation_id,
+      itemToDuplicate.with_brand,
+      itemToDuplicate.quantity,
+      itemToDuplicate.manual_price,
+      priceCategory
+    )
+    
     const duplicatedItem: OrderItemForm = {
       id: `temp-${Date.now()}`,
-      product_id: itemToDuplicate.product_id,
-      presentation_id: itemToDuplicate.presentation_id,
-      with_brand: itemToDuplicate.with_brand,
+      product_id: resolvedState.product_id,
+      presentation_id: resolvedState.presentation_id,
+      with_brand: resolvedState.with_brand,
       quantity: itemToDuplicate.quantity,
-      unit_price: itemToDuplicate.unit_price,
+      unit_price: resolvedState.unit_price,
       manual_price: itemToDuplicate.manual_price,
     }
     
@@ -226,41 +347,21 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
       
       const updatedItem = { ...item, [field]: value }
       
-      // Force with_brand=true for potes
-      const presentation = PRESENTATIONS.find(p => p.id === updatedItem.presentation_id)
-      if (presentation && isPotesAlwaysBranded(updatedItem.product_id) && presentation.type === 'pote') {
-        updatedItem.with_brand = true
-      }
-      
-      // Auto-fill price when key fields change (unless manual price mode)
+      // When key fields change, resolve the entire line state for consistency
       if (!manualPrice && (field === 'product_id' || field === 'presentation_id' || field === 'with_brand')) {
-        if (presentation) {
-          // When brand toggles, we need to find the presentation that matches the new brand setting
-          // Each presentation has a fixed with_brand value - we need to swap to the matching one
-          let targetPresentationId = presentation.id
-          
-          if (field === 'with_brand') {
-            // Find presentation with same product, type, weight but matching brand
-            const matchingPres = PRESENTATIONS.find(p => 
-              p.product_id === updatedItem.product_id &&
-              p.type === presentation.type &&
-              p.weight_kg === presentation.weight_kg &&
-              p.with_brand === updatedItem.with_brand
-            )
-            if (matchingPres) {
-              targetPresentationId = matchingPres.id
-              updatedItem.presentation_id = matchingPres.id
-            }
-          }
-          
-          // Get price from price store using the correct presentation_id
-          const priceDetails = getPriceDetailsFromStore(updatedItem.product_id, targetPresentationId, updatedItem.with_brand, priceCategory)
-          if (priceDetails) {
-            updatedItem.unit_price = priceDetails.unit_price_for_sales_unit
-          } else {
-            updatedItem.unit_price = 0
-          }
-        }
+        const resolvedState = resolveOrderLineState(
+          updatedItem.product_id,
+          updatedItem.presentation_id,
+          updatedItem.with_brand,
+          updatedItem.quantity,
+          manualPrice,
+          priceCategory
+        )
+        
+        updatedItem.product_id = resolvedState.product_id
+        updatedItem.presentation_id = resolvedState.presentation_id
+        updatedItem.with_brand = resolvedState.with_brand
+        updatedItem.unit_price = resolvedState.unit_price
       }
       
       return updatedItem
@@ -341,7 +442,7 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
     const total = subtotal + iva
 
     return { subtotal, iva, total, enduidoKg, masillaKg }
-  }, [items, hasInvoice])
+  }, [items, hasInvoice, priceCategory])
 
   // Handle submit
   const handleSubmit = (e: React.FormEvent) => {
@@ -567,12 +668,20 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
                   setItems(prevItems => 
                     prevItems.map(item => {
                       if (item.manual_price) return item
-                      const presentation = PRESENTATIONS.find(p => p.id === item.presentation_id)
-                      if (!presentation) return item
-                      const priceDetails = getPriceDetailsFromStore(item.product_id, presentation.id, item.with_brand, value as PriceCategory)
+                      // Use resolveOrderLineState to ensure consistency
+                      const resolvedState = resolveOrderLineState(
+                        item.product_id,
+                        item.presentation_id,
+                        item.with_brand,
+                        item.quantity,
+                        false,
+                        value as PriceCategory
+                      )
                       return {
                         ...item,
-                        unit_price: priceDetails?.unit_price_for_sales_unit || 0
+                        presentation_id: resolvedState.presentation_id,
+                        with_brand: resolvedState.with_brand,
+                        unit_price: resolvedState.unit_price
                       }
                     })
                   )
@@ -699,25 +808,23 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
                                   setItems(prevItems => prevItems.map(prevItem => {
                                     if (prevItem.id !== item.id) return prevItem
                                     
-                                    const updatedItem = { ...prevItem, product_id: v }
+                                    // Resolve the new state with the new product and first valid presentation
+                                    const resolvedState = resolveOrderLineState(
+                                      v,
+                                      firstPres?.id || '',
+                                      firstPres?.with_brand ?? false,
+                                      prevItem.quantity,
+                                      prevItem.manual_price,
+                                      priceCategory
+                                    )
                                     
-                                    // Also update presentation to first valid one
-                                    if (firstPres) {
-                                      updatedItem.presentation_id = firstPres.id
-                                      // Use the presentation's actual brand setting
-                                      updatedItem.with_brand = firstPres.with_brand
-                                      // Force with_brand=true for potes (Masilla rule)
-                                      if (isPotesAlwaysBranded(v) && firstPres.type === 'pote') {
-                                        updatedItem.with_brand = true
-                                      }
-                                      // Auto-fill price from price store for new presentation
-                                      if (!manualPrice) {
-                                        const priceDetails = getPriceDetailsFromStore(v, firstPres.id, updatedItem.with_brand, priceCategory)
-                                        updatedItem.unit_price = priceDetails?.unit_price_for_sales_unit || 0
-                                      }
+                                    return {
+                                      ...prevItem,
+                                      product_id: resolvedState.product_id,
+                                      presentation_id: resolvedState.presentation_id,
+                                      with_brand: resolvedState.with_brand,
+                                      unit_price: resolvedState.unit_price,
                                     }
-                                    
-                                    return updatedItem
                                   }))
                                 }}
                               >
