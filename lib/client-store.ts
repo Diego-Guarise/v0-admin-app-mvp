@@ -36,18 +36,25 @@ function saveStoredClients(clients: Client[]): void {
 }
 
 /**
- * Get all clients (seeded + newly created from localStorage)
+ * Get all clients (seeded + newly created/edited from localStorage)
+ * Clients in localStorage always override seeds with the same id.
  */
 export function getAllClients(): Client[] {
-  const createdClients = getStoredClients()
-  return [...SEEDED_CLIENTS, ...createdClients]
+  const storedClients = getStoredClients()
+  const storedIds = new Set(storedClients.map(c => c.id))
+  // Exclude any seed whose id has a stored (possibly edited) version
+  const seedsNotOverridden = SEEDED_CLIENTS.filter(c => !storedIds.has(c.id))
+  return [...seedsNotOverridden, ...storedClients]
 }
 
 /**
- * Get a single client by ID
+ * Get a single client by ID — stored version takes priority over seed.
  */
 export function getClientById(id: string): Client | undefined {
-  return getAllClients().find(c => c.id === id)
+  const storedClients = getStoredClients()
+  const stored = storedClients.find(c => c.id === id)
+  if (stored) return stored
+  return SEEDED_CLIENTS.find(c => c.id === id)
 }
 
 /**
@@ -64,7 +71,6 @@ export function saveClient(client: Client): void {
   }
   
   saveStoredClients(createdClients)
-  console.log('[v0] Client persisted to localStorage:', { id: client.id, totalCreated: createdClients.length })
 }
 
 /**
