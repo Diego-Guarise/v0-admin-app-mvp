@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { PageHeader } from '@/components/page-header'
 import { StatusBadge } from '@/components/status-badge'
@@ -16,13 +16,24 @@ import { getAllOrders } from '@/lib/order-store'
 export function ClientsContent() {
   const [search, setSearch] = useState('')
   const [showInactive, setShowInactive] = useState(false)
+  const [clients, setClients] = useState<ReturnType<typeof getStoredClients>>([])
+  const [isHydrated, setIsHydrated] = useState(false)
+
+  // Load clients from localStorage only on client after mount
+  useEffect(() => {
+    setClients(getStoredClients())
+    setIsHydrated(true)
+  }, [])
 
   // Get all orders from shared store for stats calculation
-  const allOrders = useMemo(() => getAllOrders(), [])
+  const allOrders = useMemo(() => {
+    if (!isHydrated) return []
+    return getAllOrders()
+  }, [isHydrated])
 
   // Filter clients
   const filteredClients = useMemo(() => {
-    return getStoredClients().filter(client => {
+    return clients.filter(client => {
       // Active filter
       if (!showInactive && !client.active) return false
 
@@ -39,10 +50,20 @@ export function ClientsContent() {
 
       return true
     })
-  }, [search, showInactive])
+  }, [clients, search, showInactive])
 
   // Count inactive
-  const inactiveCount = getStoredClients().filter(c => !c.active).length
+  const inactiveCount = clients.filter(c => !c.active).length
+
+  if (!isHydrated) {
+    return (
+      <div className="px-4 lg:px-6 py-6">
+        <div className="flex items-center justify-center py-12">
+          <p className="text-muted-foreground">Cargando clientes...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="px-4 lg:px-6 py-6 space-y-6">

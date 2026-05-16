@@ -104,22 +104,28 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
   // Ref for client dropdown to detect click outside
   const clientDropdownRef = useRef<HTMLDivElement>(null)
 
-  // Active clients only
-  const activeClients = useMemo(() => getAllClients().filter(c => c.active), [])
+  // Active clients only - deferred to avoid hydration mismatch
+  const [activeClients, setActiveClients] = useState<ReturnType<typeof getAllClients>>([])
 
-  // Active vendors only
-  const activeVendors = useMemo(() => getAllVendors().filter(v => v.active), [])
+  // Active vendors only - deferred to avoid hydration mismatch
+  const [activeVendors, setActiveVendors] = useState<ReturnType<typeof getAllVendors>>([])
+
+  // Load clients and vendors from localStorage on mount
+  useEffect(() => {
+    setActiveClients(getAllClients().filter(c => c.active))
+    setActiveVendors(getAllVendors().filter(v => v.active))
+  }, [])
 
   // Get selected vendor for display
   const selectedVendor = useMemo(() => 
-    getAllVendors().find(v => v.id === vendorId),
-    [vendorId]
+    activeVendors.find(v => v.id === vendorId),
+    [vendorId, activeVendors]
   )
 
   // Selected client
   const selectedClient = useMemo(() => 
-    getAllClients().find(c => c.id === clientId), 
-    [clientId]
+    activeClients.find(c => c.id === clientId), 
+    [clientId, activeClients]
   )
 
   // Filter clients based on search

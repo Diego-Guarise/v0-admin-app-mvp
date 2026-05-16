@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { PageHeader } from '@/components/page-header'
@@ -53,15 +53,20 @@ interface ClientDetailProps {
 
 export function ClientDetail({ client }: ClientDetailProps) {
   const router = useRouter()
-  
+  const [allOrders, setAllOrders] = useState<ReturnType<typeof getAllOrders>>([])
+  const [isHydrated, setIsHydrated] = useState(false)
+
+  // Load orders from localStorage only on client after mount
+  useEffect(() => {
+    setAllOrders(getAllOrders())
+    setIsHydrated(true)
+  }, [])
+
   // Get all orders from the shared store (including newly created orders)
-  const allOrders = useMemo(() => getAllOrders(), [])
   const stats = useMemo(() => getClientStatsFromStore(client.id, allOrders), [client.id, allOrders])
   const clientOrders = useMemo(() => getClientOrdersFromStore(client.id, allOrders), [client.id, allOrders])
 
   const handleToggleStatus = () => {
-    // In real app, this would call an API to toggle client status
-    console.log('[v0] Toggling client status:', client.id, !client.active)
     router.refresh()
   }
 

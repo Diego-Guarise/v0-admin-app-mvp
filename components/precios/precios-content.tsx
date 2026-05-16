@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { PageHeader } from '@/components/page-header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,13 +24,20 @@ type SortKey = 'product' | 'presentation' | 'category' | 'kilos' | 'price' | 'pr
 type SortOrder = 'asc' | 'desc' | null
 
 export function PreciosContent() {
-  const [prices, setPrices] = useState<PriceListItem[]>(getAllPrices())
+  const [prices, setPrices] = useState<PriceListItem[]>([])
   const [filterProduct, setFilterProduct] = useState<string>('all')
   const [filterCategory, setFilterCategory] = useState<PriceCategory | 'all'>('all')
   const [filterBrand, setFilterBrand] = useState<'all' | 'con' | 'sin'>('all')
   const [hasChanges, setHasChanges] = useState(false)
   const [sortKey, setSortKey] = useState<SortKey>(null)
   const [sortOrder, setSortOrder] = useState<SortOrder>(null)
+  const [isHydrated, setIsHydrated] = useState(false)
+
+  // Load prices from localStorage only on client after mount
+  useEffect(() => {
+    setPrices(getAllPrices())
+    setIsHydrated(true)
+  }, [])
 
   const filteredPrices = useMemo(() => {
     let result = prices.filter(p => {

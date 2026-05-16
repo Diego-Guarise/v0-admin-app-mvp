@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { PageHeader } from '@/components/page-header'
@@ -53,7 +53,18 @@ export function OrdersContent() {
   const [dateFilter, setDateFilter] = useState<'today' | 'week' | 'month' | 'last-month' | 'custom'>('month')
   const [customFromDate, setCustomFromDate] = useState('')
   const [customToDate, setCustomToDate] = useState('')
-  const [orders, setOrders] = useState<any[]>(getAllOrders())
+  const [orders, setOrders] = useState<any[]>([])
+  const [clients, setClients] = useState<ReturnType<typeof getAllClients>>([])
+  const [vendors, setVendors] = useState<ReturnType<typeof getAllVendors>>([])
+  const [isHydrated, setIsHydrated] = useState(false)
+
+  // Load data from localStorage only on client after mount
+  useEffect(() => {
+    setOrders(getAllOrders())
+    setClients(getAllClients())
+    setVendors(getAllVendors())
+    setIsHydrated(true)
+  }, [])
 
   // Helper to get date range based on filter
   const getDateRange = () => {
@@ -88,11 +99,11 @@ export function OrdersContent() {
   // Get unique vendors from orders for filter display
   const orderVendorIds = useMemo(() => {
     const vendorIdSet = new Set<string>()
-    getAllOrders().forEach(order => {
+    orders.forEach(order => {
       if (order.vendor_id) vendorIdSet.add(order.vendor_id)
     })
     return Array.from(vendorIdSet)
-  }, [])
+  }, [orders])
 
   // Filter orders
   const filteredOrders = useMemo(() => {
@@ -168,6 +179,16 @@ export function OrdersContent() {
   }
 
   const hasFilters = search || statusFilter !== 'all' || paymentFilter !== 'all' || clientFilter !== 'all' || vendorFilter !== 'all' || invoiceFilter !== 'all' || dateFilter !== 'month'
+
+  if (!isHydrated) {
+    return (
+      <div className="px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
+        <div className="flex items-center justify-center py-12">
+          <p className="text-muted-foreground">Cargando pedidos...</p>
+        </div>
+      </div>
+    )
+  }
 
   // Calculate totals for filtered orders
   const totals = useMemo(() => {
@@ -255,7 +276,7 @@ export function OrdersContent() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
-                  {getAllClients().filter(c => c.active).map((client) => (
+                  {clients.filter(c => c.active).map((client) => (
                     <SelectItem key={client.id} value={client.id}>{client.name || 'Sin nombre'}</SelectItem>
                   ))}
                 </SelectContent>
@@ -269,7 +290,7 @@ export function OrdersContent() {
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
                   {orderVendorIds.map((vendorId) => {
-                    const vendor = getAllVendors().find(v => v.id === vendorId)
+                    const vendor = vendors.find(v => v.id === vendorId)
                     return vendor ? (
                       <SelectItem key={vendorId} value={vendorId}>{vendor.name}</SelectItem>
                     ) : null

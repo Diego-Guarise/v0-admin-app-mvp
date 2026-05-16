@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { PageHeader } from '@/components/page-header'
 import { Button } from '@/components/ui/button'
@@ -15,9 +15,16 @@ import { formatCurrency } from '@/lib/mock-data'
 export function VendedoresContent() {
   const [search, setSearch] = useState('')
   const [showInactive, setShowInactive] = useState(false)
+  const [vendors, setVendors] = useState<ReturnType<typeof getAllVendors>>([])
+  const [orders, setOrders] = useState<ReturnType<typeof getAllOrders>>([])
+  const [isHydrated, setIsHydrated] = useState(false)
 
-  const vendors = useMemo(() => getAllVendors(), [])
-  const orders = useMemo(() => getAllOrders(), [])
+  // Load data from localStorage only on client after mount
+  useEffect(() => {
+    setVendors(getAllVendors())
+    setOrders(getAllOrders())
+    setIsHydrated(true)
+  }, [])
 
   // Calculate stats for each vendor
   const vendorStats = useMemo(() => {
@@ -52,6 +59,16 @@ export function VendedoresContent() {
       return true
     })
   }, [vendorStats, search, showInactive])
+
+  if (!isHydrated) {
+    return (
+      <div className="space-y-6 p-6">
+        <div className="flex items-center justify-center py-12">
+          <p className="text-muted-foreground">Cargando vendedores...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6 p-6">
