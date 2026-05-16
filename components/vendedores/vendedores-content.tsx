@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Briefcase, Plus, Search, Eye, Edit, Archive } from 'lucide-react'
-import { getAllVendors, deactivateVendor } from '@/lib/vendor-store'
+import { Briefcase, Plus, Search, Eye, Edit, Archive, Trash2 } from 'lucide-react'
+import { getAllVendors, deactivateVendor, deleteVendor, activateVendor } from '@/lib/vendor-store'
 import { getAllOrders } from '@/lib/order-store'
 import { formatCurrency } from '@/lib/mock-data'
 
@@ -25,6 +25,25 @@ export function VendedoresContent() {
     setOrders(getAllOrders())
     setIsHydrated(true)
   }, [])
+
+  // Re-read store and update local state after any mutation
+  const refreshVendors = () => setVendors(getAllVendors())
+
+  const handleDeactivate = (id: string) => {
+    deactivateVendor(id)
+    refreshVendors()
+  }
+
+  const handleActivate = (id: string) => {
+    activateVendor(id)
+    refreshVendors()
+  }
+
+  const handleDelete = (id: string, name: string) => {
+    if (!confirm(`¿Eliminar el vendedor "${name}"? Esta acción no se puede deshacer.`)) return
+    deleteVendor(id)
+    refreshVendors()
+  }
 
   // Calculate stats for each vendor
   const vendorStats = useMemo(() => {
@@ -166,16 +185,36 @@ export function VendedoresContent() {
                     Editar
                   </Button>
                 </Link>
-                {vendor.active && (
+                {vendor.active ? (
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => deactivateVendor(vendor.id)}
+                    onClick={() => handleDeactivate(vendor.id)}
+                    title="Desactivar vendedor"
                     className="gap-2"
                   >
                     <Archive className="h-4 w-4" />
                   </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleActivate(vendor.id)}
+                    title="Reactivar vendedor"
+                    className="gap-2 text-green-600"
+                  >
+                    <Archive className="h-4 w-4" />
+                  </Button>
                 )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleDelete(vendor.id, vendor.name)}
+                  title="Eliminar vendedor"
+                  className="gap-2 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
             </CardContent>
           </Card>
