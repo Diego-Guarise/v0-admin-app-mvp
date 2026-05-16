@@ -19,3 +19,35 @@ model HealthCheck {
 
   @@map("health_checks")
 }
+
+// Client — matches Client interface in lib/types.ts
+model Client {
+  id        String   @id @default(cuid())
+  name      String?
+  rut       String?
+  company   String?
+  phone     String?
+  email     String?
+  address   String?
+  notes     String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("clients")
+}
+
+// Vendor — matches Vendor interface in lib/types.ts
+model Vendor {
+  id                   String   @id @default(cuid())
+  name                 String
+  phone                String?
+  email                String?
+  commissionPercentage Float    @map("commission_percentage")
+  notes                String?
+  active               Boolean  @default(true)
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  @@map("vendors")
+}
