@@ -184,17 +184,22 @@ export function OrdersContent() {
     setOrders(orders.map(o => o.id === orderId ? updatedOrder : o))
   }
 
-  // Calculate totals for filtered orders — must be before any conditional return (Rules of Hooks)
+  // Calculate totals for filtered orders — must be before any conditional return (Rules of Hooks).
+  // Business rule: anulado/cancelado orders are excluded from all financial totals,
+  // matching the same criterion used in dashboard-stats.ts.
+  const EXCLUDED_FROM_TOTALS: OrderStatus[] = ['anulado']
   const totals = useMemo(() => {
-    return filteredOrders.reduce(
-      (acc, o) => ({
-        subtotal: acc.subtotal + (o.subtotal || 0),
-        total: acc.total + (o.total || 0),
-        enduidoKg: acc.enduidoKg + (o.enduido_kg || 0),
-        masillaKg: acc.masillaKg + (o.masilla_kg || 0),
-      }),
-      { subtotal: 0, total: 0, enduidoKg: 0, masillaKg: 0 }
-    )
+    return filteredOrders
+      .filter(o => !EXCLUDED_FROM_TOTALS.includes(o.status))
+      .reduce(
+        (acc, o) => ({
+          subtotal: acc.subtotal + (o.subtotal || 0),
+          total: acc.total + (o.total || 0),
+          enduidoKg: acc.enduidoKg + (o.enduido_kg || 0),
+          masillaKg: acc.masillaKg + (o.masilla_kg || 0),
+        }),
+        { subtotal: 0, total: 0, enduidoKg: 0, masillaKg: 0 }
+      )
   }, [filteredOrders])
 
   const hasFilters = search || statusFilter !== 'all' || paymentFilter !== 'all' || clientFilter !== 'all' || vendorFilter !== 'all' || invoiceFilter !== 'all' || dateFilter !== 'month'
