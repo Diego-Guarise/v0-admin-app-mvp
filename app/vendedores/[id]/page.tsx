@@ -19,6 +19,7 @@ import { StatusBadge } from '@/components/status-badge'
 import { ArrowLeft, Edit, Briefcase, Mail, Phone, Check } from 'lucide-react'
 import { getVendorById } from '@/lib/vendor-store'
 import { getAllOrders, saveOrder } from '@/lib/order-store'
+import { getClientById } from '@/lib/client-store'
 import { formatCurrency, formatDate } from '@/lib/mock-data'
 import type { Vendor } from '@/lib/types'
 
@@ -93,13 +94,12 @@ export default function VendorDetailPage({ params }: VendorDetailPageProps) {
 
       // Save to order-store
       saveOrder(updatedOrder)
-      console.log('[v0] Order marked as paid:', orderId)
-      
+
       // Force immediate refresh of component state
       // Re-read from order-store to trigger useMemo recalculation
       setRefreshKey(prev => prev + 1)
     } catch (error) {
-      console.error('[v0] Error marking order as paid:', error)
+      console.error('Error marking order as paid:', error)
     } finally {
       setMarkingPaid(null)
     }
@@ -199,13 +199,22 @@ export default function VendorDetailPage({ params }: VendorDetailPageProps) {
                 <p className="text-sm text-muted-foreground text-center py-6">No hay pedidos pendientes</p>
               ) : (
                 <div className="space-y-2">
-                  {pendingPaymentOrders.map(order => (
+                  {pendingPaymentOrders.map(order => {
+                    const client = order.client_id ? getClientById(order.client_id) : undefined
+                    const clientName = order.client?.name || client?.name || client?.company || 'Cliente no encontrado'
+                    const clientCompany = order.client?.company || client?.company
+                    return (
                     <div key={order.id} className="p-3 border rounded-lg hover:bg-accent/50 transition-colors">
                       <Link href={`/pedidos/${order.id}?from=vendedor&vendorId=${vendor.id}`}>
                         <div className="flex justify-between items-start cursor-pointer">
                           <div>
-                            <p className="font-medium">Pedido #{order.order_number}</p>
-                            <p className="text-xs text-muted-foreground">{formatDate(order.order_date)}</p>
+                            <p className="font-medium">{clientName}</p>
+                            {clientCompany && clientCompany !== clientName && (
+                              <p className="text-xs text-muted-foreground">{clientCompany}</p>
+                            )}
+                            <p className="text-xs text-muted-foreground">
+                              Pedido #{order.order_number} &middot; {formatDate(order.order_date)}
+                            </p>
                           </div>
                           <p className="font-semibold">{formatCurrency(order.total)}</p>
                         </div>
@@ -228,7 +237,7 @@ export default function VendorDetailPage({ params }: VendorDetailPageProps) {
                         </Button>
                       </div>
                     </div>
-                  ))}
+                  )})}
                 </div>
               )}
             </CardContent>
