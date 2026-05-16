@@ -115,11 +115,14 @@ export default function LiquidarPage({ params }: LiquidarPageProps) {
         notes
       )
 
-      // Update selected orders' commission status
+      // Update selected orders: commission liquidated + order automatically finalized.
+      // Business rule: when commission_status = 'liquidado', order status = 'finalizado'.
+      // Only payment_status, totals, client, products, vendor_id, and liquidacion_id remain untouched.
       selectedOrders.forEach(order => {
         saveOrder({
           ...order,
           commission_status: 'liquidado',
+          status: 'finalizado',
           updated_at: new Date().toISOString(),
         })
       })
