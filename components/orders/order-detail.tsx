@@ -74,8 +74,7 @@ export function OrderDetail({ order, navigationContext }: OrderDetailProps) {
     }
     
     saveOrder(cancelledOrder)
-    console.log('[v0] Order cancelled and persisted:', cancelledOrder.id)
-    
+
     // Redirect back using navigation context
     router.push(getBackPath())
   }
@@ -295,7 +294,9 @@ export function OrderDetail({ order, navigationContext }: OrderDetailProps) {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <p className="font-semibold text-foreground">{order.client?.name || order.client_id}</p>
+                <p className="font-semibold text-foreground">
+                  {order.client?.name || (order.client_id ? 'Cliente eliminado' : 'Sin cliente')}
+                </p>
                 {order.client?.company && (
                   <p className="text-sm text-muted-foreground">{order.client.company}</p>
                 )}

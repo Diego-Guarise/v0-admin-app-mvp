@@ -35,7 +35,7 @@ import { Plus, Search, ShoppingCart, Eye, Edit, X, Package, Scale, ChevronDown }
 import { formatCurrency, formatDate, formatWeight } from '@/lib/mock-data'
 import { getAllOrders, saveOrder } from '@/lib/order-store'
 import { getAllClients } from '@/lib/client-store'
-import { getAllVendors } from '@/lib/vendor-store'
+import { getAllVendors, getVendorByIdSafe } from '@/lib/vendor-store'
 import type { OrderStatus, PaymentStatus } from '@/lib/types'
 import { ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '@/lib/types'
 
@@ -178,6 +178,19 @@ export function OrdersContent() {
     setOrders(orders.map(o => o.id === orderId ? updatedOrder : o))
   }
 
+  // Calculate totals for filtered orders — must be before any conditional return (Rules of Hooks)
+  const totals = useMemo(() => {
+    return filteredOrders.reduce(
+      (acc, o) => ({
+        subtotal: acc.subtotal + (o.subtotal || 0),
+        total: acc.total + (o.total || 0),
+        enduidoKg: acc.enduidoKg + (o.enduido_kg || 0),
+        masillaKg: acc.masillaKg + (o.masilla_kg || 0),
+      }),
+      { subtotal: 0, total: 0, enduidoKg: 0, masillaKg: 0 }
+    )
+  }, [filteredOrders])
+
   const hasFilters = search || statusFilter !== 'all' || paymentFilter !== 'all' || clientFilter !== 'all' || vendorFilter !== 'all' || invoiceFilter !== 'all' || dateFilter !== 'month'
 
   if (!isHydrated) {
@@ -189,19 +202,6 @@ export function OrdersContent() {
       </div>
     )
   }
-
-  // Calculate totals for filtered orders
-  const totals = useMemo(() => {
-    return filteredOrders.reduce(
-      (acc, o) => ({
-        subtotal: acc.subtotal + o.subtotal,
-        total: acc.total + o.total,
-        enduidoKg: acc.enduidoKg + o.enduido_kg,
-        masillaKg: acc.masillaKg + o.masilla_kg,
-      }),
-      { subtotal: 0, total: 0, enduidoKg: 0, masillaKg: 0 }
-    )
-  }, [filteredOrders])
 
   return (
     <div className="px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
@@ -290,10 +290,12 @@ export function OrdersContent() {
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
                   {orderVendorIds.map((vendorId) => {
-                    const vendor = vendors.find(v => v.id === vendorId)
-                    return vendor ? (
-                      <SelectItem key={vendorId} value={vendorId}>{vendor.name}</SelectItem>
-                    ) : null
+                    const vendor = getVendorByIdSafe(vendorId)
+                    return (
+                      <SelectItem key={vendorId} value={vendorId}>
+                        {vendor ? vendor.name : 'Vendedor eliminado'}
+                      </SelectItem>
+                    )
                   })}
                 </SelectContent>
               </Select>
@@ -387,14 +389,20 @@ export function OrdersContent() {
                       </TableCell>
                       <TableCell>
                         <div>
-                          <p className="font-medium">{order.client?.name || 'Sin nombre'}</p>
+                          <p className="font-medium">
+                            {order.client?.name || (order.client_id ? 'Cliente eliminado' : 'Sin cliente')}
+                          </p>
                           {order.client?.company && (
                             <p className="text-xs text-muted-foreground">{order.client.company}</p>
                           )}
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {order.vendor_name || '-'}
+                        {order.vendor_name
+                          ? order.vendor_name
+                          : order.vendor_id
+                            ? (getVendorByIdSafe(order.vendor_id)?.name ?? 'Vendedor eliminado')
+                            : '-'}
                       </TableCell>
                       <TableCell className="text-right font-medium text-muted-foreground">
                         {formatCurrency(order.subtotal)}

@@ -44,13 +44,15 @@ export function getCreatedOrders(): Order[] {
 }
 
 /**
- * Get all orders (seeded + newly created from localStorage)
- * Note: This includes demo/seed orders for backwards compatibility
- * For dashboards needing only real data, use getCreatedOrders() instead
+ * Get all orders (seeded + newly created/updated from localStorage).
+ * Stored orders (including status updates) override seeds with the same id.
+ * For dashboards needing only real data, use getCreatedOrders() instead.
  */
 export function getAllOrders(): Order[] {
-  const createdOrders = getStoredOrders()
-  return [...SEEDED_ORDERS, ...createdOrders]
+  const storedOrders = getStoredOrders()
+  const storedIds = new Set(storedOrders.map(o => o.id))
+  const seedsNotOverridden = SEEDED_ORDERS.filter(o => !storedIds.has(o.id))
+  return [...seedsNotOverridden, ...storedOrders]
 }
 
 /**
@@ -74,7 +76,6 @@ export function saveOrder(order: Order): void {
   }
   
   saveStoredOrders(createdOrders)
-  console.log('[v0] Order persisted to localStorage:', { id: order.id, totalCreated: createdOrders.length })
 }
 
 /**

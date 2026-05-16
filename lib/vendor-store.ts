@@ -111,6 +111,20 @@ export function getVendorById(id: string): Vendor | undefined {
 }
 
 /**
+ * Get a vendor by ID regardless of whether it was deleted/deactivated.
+ * Returns undefined only if the id never existed. Use this for order detail displays
+ * so orders with deleted vendors still render safely.
+ */
+export function getVendorByIdSafe(id: string | null | undefined): Vendor | undefined {
+  if (!id) return undefined
+  // Check stored vendors first (may include deactivated copies)
+  const stored = getStoredVendors().find(v => v.id === id)
+  if (stored) return stored
+  // Fall back to seeds (even if in deletedSeedIds — we still want the name for display)
+  return SEEDED_VENDORS.find(v => v.id === id)
+}
+
+/**
  * Get active vendors only
  */
 export function getActiveVendors(): Vendor[] {
