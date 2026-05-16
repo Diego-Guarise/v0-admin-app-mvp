@@ -260,13 +260,22 @@ export default function VendorDetailPage({ params }: VendorDetailPageProps) {
               ) : (
                 <>
                   <div className="space-y-2 mb-4">
-                    {pendingLiquidationOrders.map(order => (
+                    {pendingLiquidationOrders.map(order => {
+                      const client = order.client_id ? getClientById(order.client_id) : undefined
+                      const clientName = order.client?.name || client?.name || client?.company || 'Cliente no encontrado'
+                      const clientCompany = order.client?.company || client?.company
+                      return (
                       <div key={order.id} className="p-3 border rounded-lg hover:bg-accent/50 transition-colors">
                         <Link href={`/pedidos/${order.id}?from=vendedor&vendorId=${vendor.id}`}>
                           <div className="flex justify-between items-start cursor-pointer mb-2">
                             <div>
-                              <p className="font-medium">Pedido #{order.order_number}</p>
-                              <p className="text-xs text-muted-foreground">{formatDate(order.order_date)}</p>
+                              <p className="font-medium">{clientName}</p>
+                              {clientCompany && clientCompany !== clientName && (
+                                <p className="text-xs text-muted-foreground">{clientCompany}</p>
+                              )}
+                              <p className="text-xs text-muted-foreground">
+                                Pedido #{order.order_number} &middot; {formatDate(order.order_date)}
+                              </p>
                             </div>
                             <p className="font-semibold">{formatCurrency(order.subtotal_without_iva || order.subtotal)}</p>
                           </div>
@@ -284,7 +293,7 @@ export default function VendorDetailPage({ params }: VendorDetailPageProps) {
                           </Link>
                         </div>
                       </div>
-                    ))}
+                    )})}
                   </div>
                   <Link href={`/vendedores/${vendor.id}/liquidar`}>
                     <Button className="w-full">Liquidar Comisiones</Button>
