@@ -167,17 +167,14 @@ export function OrdersContent() {
   }
 
   // Handle order status change.
-  // Business rule: when a pedido is set to "finalizado", automatically mark cobro as "cobrado".
-  // commission_status is intentionally NOT touched — liquidation only happens via Vendedores > Liquidar.
+  // Only the order status (estado del pedido) is updated here.
+  // payment_status and commission_status are managed exclusively via their
+  // own explicit actions: "Marcar cobrado" in Vendedores, and "Liquidar Comisiones" in /liquidar.
   const handleStatusChange = (orderId: string, newStatus: OrderStatus) => {
     const orderToUpdate = orders.find(o => o.id === orderId)
     if (!orderToUpdate) return
 
-    const updatedOrder: typeof orderToUpdate = {
-      ...orderToUpdate,
-      status: newStatus,
-      ...(newStatus === 'finalizado' && { payment_status: 'cobrado' as const }),
-    }
+    const updatedOrder = { ...orderToUpdate, status: newStatus }
     saveOrder(updatedOrder)
 
     // Update local state for immediate UI reflection

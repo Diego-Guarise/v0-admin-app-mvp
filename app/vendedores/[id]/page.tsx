@@ -82,13 +82,12 @@ export default function VendorDetailPage({ params }: VendorDetailPageProps) {
       const order = getAllOrders().find(o => o.id === orderId)
       if (!order) return
 
-      // Update order: set payment_status to 'cobrado' and set commission_status to 'pendiente_liquidar'
+      // Update order: only set payment_status to 'cobrado'.
+      // commission_status is intentionally NOT changed here — it is managed
+      // exclusively via the "Liquidar Comisiones" flow in /liquidar.
       const updatedOrder = {
         ...order,
         payment_status: 'cobrado' as const,
-        commission_status: order.commission_status === 'liquidado' || order.commission_status === 'excluido' 
-          ? order.commission_status 
-          : 'pendiente_liquidar' as const,
         updated_at: new Date().toISOString(),
       }
 
