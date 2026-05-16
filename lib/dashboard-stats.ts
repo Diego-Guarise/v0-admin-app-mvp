@@ -3,117 +3,138 @@
 /**
  * Dashboard Statistics Helper
  * Calculates REAL metrics from persisted stores (orders + expenses)
- * - ONLY uses real created orders (no demo/seeded orders)
- * - Includes ALL orders with status != 'anulado' (in_produccion, finalizado, entregado)
- * - No mock data, no mixing with demo orders
+ * Supports single-month and date-range (multi-month) period filtering.
  */
 
 import type { DashboardStats } from '@/lib/types'
 import { getCreatedOrders } from '@/lib/order-store'
 import { getExpenses } from '@/lib/expenses-store'
 
-/**
- * Get current month in YYYY-MM format
- */
-function getCurrentMonth(): string {
+// ─── Period types ────────────────────────────────────────────────────────────
+
+export type PeriodMode = 'this_month' | 'specific_month' | 'range'
+
+export interface PeriodFilter {
+  mode: PeriodMode
+  /** YYYY-MM — used when mode = 'specific_month' */
+  month?: string
+  /** YYYY-MM — used when mode = 'range' */
+  from?: string
+  /** YYYY-MM — used when mode = 'range' */
+  to?: string
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/** Returns current month as YYYY-MM */
+export function getCurrentMonth(): string {
   const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  return `${year}-${month}`
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 }
 
 /**
- * Calculate real dashboard stats from actual persisted data ONLY
- * Commercial metrics (ventas, kilos) include:
- * - ONLY real created orders (no seeded/demo orders)
- * - ALL orders with status != 'anulado' (en_produccion, finalizado, entregado)
- * - Orders from current month
- * 
- * This reflects what's actually being entered in the system, not just what's closed.
- * 
- * @param month - Optional month in YYYY-MM format (defaults to current month)
+ * Resolves a PeriodFilter to an inclusive { from, to } range in YYYY-MM strings.
  */
-export function calculateRealDashboardStats(month?: string): DashboardStats {
-  const targetMonth = month || getCurrentMonth()
-  
-  // Get ONLY real created orders (no seeded demo orders)
+export function getDateRangeForPeriod(period: PeriodFilter): { from: string; to: string } {
+  const current = getCurrentMonth()
+  switch (period.mode) {
+    case 'this_month':
+      return { from: current, to: current }
+    case 'specific_month':
+      return { from: period.month || current, to: period.month || current }
+    case 'range':
+      return {
+        from: period.from || current,
+        to: period.to || period.from || current,
+      }
+  }
+}
+
+/** Returns a human-readable label for the period */
+export function getPeriodLabel(period: PeriodFilter): string {
+  const fmt = (ym: string) => {
+    const [year, month] = ym.split('-')
+    return new Date(Number(year), Number(month) - 1).toLocaleString('es-UY', {
+      month: 'long',
+      year: 'numeric',
+    })
+  }
+  switch (period.mode) {
+    case 'this_month':
+      return fmt(getCurrentMonth())
+    case 'specific_month':
+      return period.month ? fmt(period.month) : fmt(getCurrentMonth())
+    case 'range': {
+      const from = period.from || getCurrentMonth()
+      const to = period.to || from
+      if (from === to) return fmt(from)
+      return `${fmt(from)} — ${fmt(to)}`
+    }
+  }
+}
+
+/**
+ * Returns true if the order_date (YYYY-MM-DD) falls within the [fromMonth, toMonth] range (inclusive).
+ */
+function orderInRange(orderDate: string, fromMonth: string, toMonth: string): boolean {
+  // Compare YYYY-MM prefix only
+  const month = orderDate.slice(0, 7)
+  return month >= fromMonth && month <= toMonth
+}
+
+/**
+ * Returns true if the expense accounting_month (YYYY-MM) falls within range.
+ */
+function expenseInRange(accountingMonth: string, fromMonth: string, toMonth: string): boolean {
+  return accountingMonth >= fromMonth && accountingMonth <= toMonth
+}
+
+// ─── Core stats function ─────────────────────────────────────────────────────
+
+/**
+ * Calculate real dashboard stats from actual persisted data.
+ * Accepts a PeriodFilter; defaults to current month.
+ *
+ * Includes ONLY real created orders (no seeded/demo), status != 'anulado'.
+ */
+export function calculateRealDashboardStats(period?: PeriodFilter): DashboardStats {
+  const activePeriod: PeriodFilter = period || { mode: 'this_month' }
+  const { from, to } = getDateRangeForPeriod(activePeriod)
+
   let allOrders = []
   let allExpenses = []
-  
+
   try {
     allOrders = getCreatedOrders() || []
-    console.log('[v0] Loaded REAL orders from store:', allOrders.length)
-  } catch (error) {
-    console.error('[v0] Error fetching orders:', error)
+  } catch {
     allOrders = []
   }
-  
+
   try {
     allExpenses = getExpenses() || []
-    console.log('[v0] Loaded expenses from store:', allExpenses.length)
-  } catch (error) {
-    console.error('[v0] Error fetching expenses:', error)
+  } catch {
     allExpenses = []
   }
-  
-  // NEW RULE: Count ALL real orders that are NOT cancelled (anulado)
-  // This includes: en_produccion, finalizado, entregado
-  const activeOrdersThisMonth = allOrders.filter(o => 
-    o && 
-    o.order_date && 
-    o.order_date.startsWith(targetMonth) && 
-    o.status !== 'anulado'
+
+  // Active orders in range (not anulado)
+  const activeOrders = allOrders.filter(
+    o => o?.order_date && orderInRange(o.order_date, from, to) && o.status !== 'anulado'
   )
-  
-  console.log(`[v0] Real orders in ${targetMonth}:`, {
-    total: allOrders.filter(o => o?.order_date?.startsWith(targetMonth)).length,
-    active_not_cancelled: activeOrdersThisMonth.length,
-    by_status: {
-      en_produccion: allOrders.filter(o => o?.order_date?.startsWith(targetMonth) && o.status === 'en_produccion').length,
-      finalizado: allOrders.filter(o => o?.order_date?.startsWith(targetMonth) && o.status === 'finalizado').length,
-      entregado: allOrders.filter(o => o?.order_date?.startsWith(targetMonth) && o.status === 'entregado').length,
-      anulado: allOrders.filter(o => o?.order_date?.startsWith(targetMonth) && o.status === 'anulado').length,
-    }
-  })
-  
-  // Filter expenses for the target month, only active ones
-  const monthExpenses = allExpenses.filter(e => 
-    e && 
-    e.accounting_month && 
-    e.accounting_month === targetMonth && 
-    e.status === 'activo'
+
+  // Active expenses in range
+  const rangeExpenses = allExpenses.filter(
+    e =>
+      e?.accounting_month &&
+      expenseInRange(e.accounting_month, from, to) &&
+      e.status === 'activo'
   )
-  
-  // Calculate total product weights using the pre-calculated values stored in each Order
-  // Orders already have enduido_kg and masilla_kg calculated correctly at creation time
-  // (see order-form.tsx lines 511-512 where these are computed using sales-unit-aware weights)
-  let totalEnduido = 0
-  let totalMasilla = 0
-  
-  activeOrdersThisMonth.forEach(order => {
-    if (!order) return
-    
-    // Use the pre-calculated kg values from the Order object
-    // These respect fundas/packs (e.g., Enduido 1kg funda = 20kg total)
-    const orderEnduido = order.enduido_kg || 0
-    const orderMasilla = order.masilla_kg || 0
-    
-    totalEnduido += orderEnduido
-    totalMasilla += orderMasilla
-    
-    console.log(`[v0] Order ${order.id}: +${orderEnduido} kg Enduido, +${orderMasilla} kg Masilla`)
-  })
-  
-  const salesWithoutIva = activeOrdersThisMonth.reduce((sum, o) => sum + (o?.subtotal || 0), 0)
-  const salesWithIva = activeOrdersThisMonth.reduce((sum, o) => sum + (o?.total || 0), 0)
-  const expenses = monthExpenses.reduce((sum, e) => sum + (e?.amount || 0), 0)
-  
-  console.log(`[v0] Dashboard stats for ${targetMonth}:`, {
-    orders: activeOrdersThisMonth.length,
-    enduido_kg: totalEnduido,
-    masilla_kg: totalMasilla,
-  })
-  
+
+  const salesWithoutIva = activeOrders.reduce((sum, o) => sum + (o?.subtotal || 0), 0)
+  const salesWithIva = activeOrders.reduce((sum, o) => sum + (o?.total || 0), 0)
+  const expenses = rangeExpenses.reduce((sum, e) => sum + (e?.amount || 0), 0)
+  const totalEnduido = activeOrders.reduce((sum, o) => sum + (o?.enduido_kg || 0), 0)
+  const totalMasilla = activeOrders.reduce((sum, o) => sum + (o?.masilla_kg || 0), 0)
+
   return {
     monthly_sales_without_iva: salesWithoutIva,
     monthly_sales_with_iva: salesWithIva,
@@ -124,33 +145,34 @@ export function calculateRealDashboardStats(month?: string): DashboardStats {
 }
 
 /**
- * Get ALL REAL orders (any status except anulado) for current month
- * Used by dashboard to show order status counts
- * Returns ONLY real created orders, not seeded demo orders
+ * Get all real orders (status != anulado) within the given period.
+ * Used for status counts and recent orders list.
  */
-export function getAllRealOrdersThisMonth(month?: string) {
-  const targetMonth = month || getCurrentMonth()
-  
+export function getAllRealOrdersInPeriod(period?: PeriodFilter) {
+  const activePeriod: PeriodFilter = period || { mode: 'this_month' }
+  const { from, to } = getDateRangeForPeriod(activePeriod)
+
   let allOrders = []
   try {
     allOrders = getCreatedOrders() || []
-  } catch (error) {
-    console.error('[v0] Error fetching real orders for status counts:', error)
+  } catch {
+    allOrders = []
   }
-  
-  return allOrders.filter(o => 
-    o && 
-    o.order_date && 
-    o.order_date.startsWith(targetMonth) &&
-    o.status !== 'anulado'
+
+  return allOrders.filter(
+    o => o?.order_date && orderInRange(o.order_date, from, to) && o.status !== 'anulado'
   )
 }
 
-/**
- * Get dashboard stats with memoization support for React
- */
-export function getDashboardMetrics(month?: string): DashboardStats {
-  return calculateRealDashboardStats(month)
+// Keep legacy exports for backward compat
+export function getAllRealOrdersThisMonth(month?: string) {
+  return getAllRealOrdersInPeriod(
+    month ? { mode: 'specific_month', month } : { mode: 'this_month' }
+  )
 }
 
-
+export function getDashboardMetrics(month?: string): DashboardStats {
+  return calculateRealDashboardStats(
+    month ? { mode: 'specific_month', month } : { mode: 'this_month' }
+  )
+}

@@ -5,9 +5,19 @@ import { PageHeader } from '@/components/page-header'
 import { StatCard } from '@/components/stat-card'
 import { StatusBadge } from '@/components/status-badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { 
-  DollarSign, 
-  TrendingDown, 
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  DollarSign,
+  TrendingDown,
   Package,
   Scale,
   Clock,
@@ -17,46 +27,136 @@ import {
   AlertCircle,
   RotateCcw,
   Calendar,
-  ArrowRight
+  ArrowRight,
+  ChevronDown,
 } from 'lucide-react'
-import { 
-  formatCurrency, 
+import {
+  formatCurrency,
   formatDate,
   formatWeight,
   getUpcomingExpenses,
   getRecurrentExpenses,
 } from '@/lib/mock-data'
-import { calculateRealDashboardStats, getAllRealOrdersThisMonth } from '@/lib/dashboard-stats'
-import { getCreatedOrders } from '@/lib/order-store'
+import {
+  calculateRealDashboardStats,
+  getAllRealOrdersInPeriod,
+  getCurrentMonth,
+  getDateRangeForPeriod,
+  getPeriodLabel,
+  type PeriodFilter,
+  type PeriodMode,
+} from '@/lib/dashboard-stats'
 import type { DashboardStats, Order } from '@/lib/types'
 import Link from 'next/link'
 
+// ─── Period Selector Component ────────────────────────────────────────────────
+
+function PeriodSelector({
+  period,
+  onChange,
+}: {
+  period: PeriodFilter
+  onChange: (p: PeriodFilter) => void
+}) {
+  const currentMonth = getCurrentMonth()
+
+  return (
+    <div className="flex flex-wrap items-end gap-3 p-4 bg-muted/40 rounded-xl border border-border">
+      <div className="space-y-1.5">
+        <Label className="text-xs text-muted-foreground uppercase tracking-wide">Período</Label>
+        <Select
+          value={period.mode}
+          onValueChange={(v) => {
+            const mode = v as PeriodMode
+            if (mode === 'this_month') onChange({ mode: 'this_month' })
+            else if (mode === 'specific_month') onChange({ mode: 'specific_month', month: currentMonth })
+            else onChange({ mode: 'range', from: currentMonth, to: currentMonth })
+          }}
+        >
+          <SelectTrigger className="w-44 h-9 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="this_month">Este mes</SelectItem>
+            <SelectItem value="specific_month">Mes específico</SelectItem>
+            <SelectItem value="range">Rango de meses</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {period.mode === 'specific_month' && (
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground uppercase tracking-wide">Mes</Label>
+          <Input
+            type="month"
+            value={period.month || currentMonth}
+            onChange={(e) => onChange({ ...period, month: e.target.value })}
+            className="h-9 text-sm w-40"
+          />
+        </div>
+      )}
+
+      {period.mode === 'range' && (
+        <>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground uppercase tracking-wide">Desde</Label>
+            <Input
+              type="month"
+              value={period.from || currentMonth}
+              onChange={(e) => onChange({ ...period, from: e.target.value })}
+              className="h-9 text-sm w-40"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground uppercase tracking-wide">Hasta</Label>
+            <Input
+              type="month"
+              value={period.to || period.from || currentMonth}
+              onChange={(e) => onChange({ ...period, to: e.target.value })}
+              className="h-9 text-sm w-40"
+            />
+          </div>
+        </>
+      )}
+
+      <div className="flex items-end pb-0.5">
+        <span className="text-sm font-medium text-foreground capitalize">
+          {getPeriodLabel(period)}
+        </span>
+      </div>
+
+      {period.mode !== 'this_month' && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-9 text-xs text-muted-foreground"
+          onClick={() => onChange({ mode: 'this_month' })}
+        >
+          Restablecer
+        </Button>
+      )}
+    </div>
+  )
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
 export function DashboardContent() {
-  // Calculate real dashboard stats from persistent stores
+  const [period, setPeriod] = useState<PeriodFilter>({ mode: 'this_month' })
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [realOrders, setRealOrders] = useState<Order[]>([])
   const [isHydrated, setIsHydrated] = useState(false)
 
-  // Calculate stats and get REAL orders only (no seeded/demo) for status counts and recent orders display
   useEffect(() => {
-    // Get real data from stores
-    const realStats = calculateRealDashboardStats()
+    const realStats = calculateRealDashboardStats(period)
     setStats(realStats)
-    
-    // Get ONLY real created orders (no demo/seeded orders)
-    try {
-      const createdOrders = getCreatedOrders() || []
-      setRealOrders(createdOrders)
-      console.log('[v0] Dashboard loaded with REAL orders only:', createdOrders.length)
-    } catch (error) {
-      console.error('[v0] Error loading real orders:', error)
-      setRealOrders([])
-    }
-    
-    setIsHydrated(true)
-  }, [])
 
-  // Use real stats if available, fallback to defaults while loading
+    const orders = getAllRealOrdersInPeriod(period)
+    setRealOrders(orders)
+
+    if (!isHydrated) setIsHydrated(true)
+  }, [period])
+
   const dashboardStats = useMemo(() => {
     if (!stats) {
       return {
@@ -70,59 +170,62 @@ export function DashboardContent() {
     return stats
   }, [stats])
 
-  // Calculate order status counts from REAL data
+  // Order status counts
   const ordersEnProduccion = realOrders.filter(o => o.status === 'en_produccion').length
   const ordersFinalizados = realOrders.filter(o => o.status === 'finalizado').length
   const ordersEntregados = realOrders.filter(o => o.status === 'entregado').length
   const ordersPendientesCobro = realOrders.filter(o => o.payment_status === 'pendiente').length
-  
-  // Get recent orders sorted by date (most recent first)
+
+  // Recent orders sorted newest first
   const recentOrders = useMemo(() => {
     return [...realOrders]
       .sort((a, b) => new Date(b.order_date).getTime() - new Date(a.order_date).getTime())
       .slice(0, 5)
   }, [realOrders])
-  
+
   const upcomingExpenses = getUpcomingExpenses()
   const recurrentExpenses = getRecurrentExpenses()
 
-  // Calculate margin from real data
   const margin = dashboardStats.monthly_sales_without_iva - dashboardStats.monthly_expenses
   const marginPositive = margin >= 0
+  const periodLabel = getPeriodLabel(period)
 
   return (
     <div className="px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
-      <PageHeader 
+      <PageHeader
         title="Dashboard"
         description="Centro de control - Datos en tiempo real"
       />
 
-      {/* Primary KPIs - 2 large cards for sales */}
+      {/* Period Selector */}
+      <PeriodSelector period={period} onChange={setPeriod} />
+
+      {/* Primary KPIs */}
       <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
         <StatCard
-          title="Ventas del mes (sin IVA)"
+          title="Ventas del período (sin IVA)"
           value={formatCurrency(dashboardStats.monthly_sales_without_iva)}
-          subtitle={`Base imponible ${new Date().toLocaleString('es-UY', { month: 'long', year: 'numeric' })}`}
+          subtitle={`Base imponible · ${periodLabel}`}
           icon={DollarSign}
           variant="primary"
           size="lg"
         />
         <StatCard
-          title="Ventas del mes (con IVA)"
+          title="Ventas del período (con IVA)"
           value={formatCurrency(dashboardStats.monthly_sales_with_iva)}
-          subtitle={`Facturado ${new Date().toLocaleString('es-UY', { month: 'long', year: 'numeric' })}`}
+          subtitle={`Facturado · ${periodLabel}`}
           icon={DollarSign}
           variant="default"
           size="lg"
         />
       </div>
 
-      {/* Secondary KPIs - expenses and kg */}
+      {/* Secondary KPIs */}
       <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Gastos del mes"
+          title="Gastos del período"
           value={formatCurrency(dashboardStats.monthly_expenses)}
-          subtitle={`${new Date().toLocaleString('es-UY', { month: 'long', year: 'numeric' })}`}
+          subtitle={periodLabel}
           icon={TrendingDown}
           variant="warning"
         />
@@ -136,14 +239,14 @@ export function DashboardContent() {
         <StatCard
           title="Enduido vendido"
           value={formatWeight(dashboardStats.enduido_kg_sold)}
-          subtitle={`${new Date().toLocaleString('es-UY', { month: 'long', year: 'numeric' })}`}
+          subtitle={periodLabel}
           icon={Package}
           variant="info"
         />
         <StatCard
           title="Masilla vendida"
           value={formatWeight(dashboardStats.masilla_kg_sold)}
-          subtitle={`${new Date().toLocaleString('es-UY', { month: 'long', year: 'numeric' })}`}
+          subtitle={periodLabel}
           icon={Scale}
           variant="info"
         />
@@ -151,7 +254,6 @@ export function DashboardContent() {
 
       {/* Orders Summary */}
       <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
-        {/* Orders by Status - NOW USING REAL DATA */}
         <Card className="shadow-sm">
           <CardHeader className="pb-3 sm:pb-4">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
@@ -172,7 +274,7 @@ export function DashboardContent() {
                   <p className="text-2xl sm:text-3xl font-bold text-amber-700">{ordersEnProduccion}</p>
                 </div>
               </Link>
-              
+
               <Link href="/pedidos?status=finalizado" className="group">
                 <div className="rounded-xl border-2 border-blue-200 bg-blue-50 p-3 transition-all hover:border-blue-300 hover:shadow-sm">
                   <div className="flex items-center gap-2 mb-2">
@@ -184,7 +286,7 @@ export function DashboardContent() {
                   <p className="text-2xl sm:text-3xl font-bold text-blue-700">{ordersFinalizados}</p>
                 </div>
               </Link>
-              
+
               <Link href="/pedidos?status=entregado" className="group">
                 <div className="rounded-xl border-2 border-emerald-200 bg-emerald-50 p-3 transition-all hover:border-emerald-300 hover:shadow-sm">
                   <div className="flex items-center gap-2 mb-2">
@@ -196,7 +298,7 @@ export function DashboardContent() {
                   <p className="text-2xl sm:text-3xl font-bold text-emerald-700">{ordersEntregados}</p>
                 </div>
               </Link>
-              
+
               <Link href="/pedidos?payment=pendiente" className="group">
                 <div className="rounded-xl border-2 border-orange-200 bg-orange-50 p-3 transition-all hover:border-orange-300 hover:shadow-sm">
                   <div className="flex items-center gap-2 mb-2">
@@ -212,7 +314,6 @@ export function DashboardContent() {
           </CardContent>
         </Card>
 
-        {/* Recent Orders - NOW USING REAL DATA */}
         <Card className="shadow-sm">
           <CardHeader className="pb-3 sm:pb-4">
             <div className="flex items-center justify-between gap-2">
@@ -230,8 +331,8 @@ export function DashboardContent() {
             {recentOrders.length > 0 ? (
               <div className="space-y-2">
                 {recentOrders.map((order) => (
-                  <Link 
-                    key={order.id} 
+                  <Link
+                    key={order.id}
                     href={`/pedidos/${order.id}`}
                     className="flex items-center justify-between gap-2 p-2 sm:p-3 rounded-xl border border-border bg-card hover:bg-accent/50 hover:border-primary/20 transition-all"
                   >
@@ -254,7 +355,7 @@ export function DashboardContent() {
             ) : (
               <div className="text-center py-8">
                 <Package className="h-8 w-8 text-muted-foreground/50 mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">No hay pedidos</p>
+                <p className="text-sm text-muted-foreground">No hay pedidos en este período</p>
               </div>
             )}
           </CardContent>
@@ -263,7 +364,6 @@ export function DashboardContent() {
 
       {/* Expenses Summary */}
       <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
-        {/* Upcoming Due Dates */}
         <Card className="shadow-sm">
           <CardHeader className="pb-3 sm:pb-4">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
@@ -303,7 +403,6 @@ export function DashboardContent() {
           </CardContent>
         </Card>
 
-        {/* Recurrent Expenses */}
         <Card className="shadow-sm">
           <CardHeader className="pb-3 sm:pb-4">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
