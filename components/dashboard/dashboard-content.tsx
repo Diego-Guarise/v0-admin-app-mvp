@@ -29,6 +29,9 @@ import {
   Calendar,
   ArrowRight,
   ChevronDown,
+  Receipt,
+  TrendingUp,
+  Minus,
 } from 'lucide-react'
 import {
   formatCurrency,
@@ -39,12 +42,14 @@ import {
 } from '@/lib/mock-data'
 import {
   calculateRealDashboardStats,
+  calculateIvaStats,
   getAllRealOrdersInPeriod,
   getCurrentMonth,
   getDateRangeForPeriod,
   getPeriodLabel,
   type PeriodFilter,
   type PeriodMode,
+  type IvaStats,
 } from '@/lib/dashboard-stats'
 import type { DashboardStats, Order } from '@/lib/types'
 import Link from 'next/link'
@@ -145,6 +150,7 @@ export function DashboardContent() {
   const [period, setPeriod] = useState<PeriodFilter>({ mode: 'this_month' })
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [realOrders, setRealOrders] = useState<Order[]>([])
+  const [ivaStats, setIvaStats] = useState<IvaStats>({ ivaVentas: 0, ivaCompras: 0, saldoIva: 0 })
   const [isHydrated, setIsHydrated] = useState(false)
 
   useEffect(() => {
@@ -153,6 +159,8 @@ export function DashboardContent() {
 
     const orders = getAllRealOrdersInPeriod(period)
     setRealOrders(orders)
+
+    setIvaStats(calculateIvaStats(period))
 
     if (!isHydrated) setIsHydrated(true)
   }, [period])
@@ -251,6 +259,85 @@ export function DashboardContent() {
           variant="info"
         />
       </div>
+
+      {/* IVA Balance */}
+      {(() => {
+        const { ivaVentas, ivaCompras, saldoIva } = ivaStats
+        const isAPagar = saldoIva > 0
+        const isAFavor = saldoIva < 0
+        const absBalance = Math.abs(saldoIva)
+
+        return (
+          <Card className="shadow-sm">
+            <CardHeader className="pb-3 sm:pb-4">
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <Receipt className="h-4 w-4 text-primary" />
+                Saldo IVA del período
+                <span className="ml-auto text-xs font-normal text-muted-foreground capitalize">{periodLabel}</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-3 sm:px-6">
+              <div className="grid grid-cols-3 gap-3 sm:gap-4">
+                {/* IVA Ventas */}
+                <div className="rounded-xl border border-border bg-muted/30 p-3 sm:p-4 space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <TrendingUp className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
+                    <span>IVA Ventas</span>
+                  </div>
+                  <p className="text-base sm:text-xl font-bold text-foreground tabular-nums">
+                    {formatCurrency(ivaVentas)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Pedidos c/factura</p>
+                </div>
+
+                {/* IVA Compras */}
+                <div className="rounded-xl border border-border bg-muted/30 p-3 sm:p-4 space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <TrendingDown className="h-3.5 w-3.5 text-rose-500 flex-shrink-0" />
+                    <span>IVA Compras</span>
+                  </div>
+                  <p className="text-base sm:text-xl font-bold text-foreground tabular-nums">
+                    {formatCurrency(ivaCompras)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Gastos c/factura</p>
+                </div>
+
+                {/* Saldo */}
+                <div className={`rounded-xl border-2 p-3 sm:p-4 space-y-1 ${
+                  isAPagar
+                    ? 'border-rose-200 bg-rose-50'
+                    : isAFavor
+                    ? 'border-emerald-200 bg-emerald-50'
+                    : 'border-border bg-muted/30'
+                }`}>
+                  <div className={`flex items-center gap-1.5 text-xs font-medium ${
+                    isAPagar ? 'text-rose-600' : isAFavor ? 'text-emerald-600' : 'text-muted-foreground'
+                  }`}>
+                    {isAPagar ? (
+                      <TrendingUp className="h-3.5 w-3.5 flex-shrink-0" />
+                    ) : isAFavor ? (
+                      <TrendingDown className="h-3.5 w-3.5 flex-shrink-0" />
+                    ) : (
+                      <Minus className="h-3.5 w-3.5 flex-shrink-0" />
+                    )}
+                    <span>{isAPagar ? 'IVA a pagar' : isAFavor ? 'IVA a favor' : 'Sin saldo'}</span>
+                  </div>
+                  <p className={`text-base sm:text-xl font-bold tabular-nums ${
+                    isAPagar ? 'text-rose-700' : isAFavor ? 'text-emerald-700' : 'text-foreground'
+                  }`}>
+                    {formatCurrency(absBalance)}
+                  </p>
+                  <p className={`text-xs ${
+                    isAPagar ? 'text-rose-500' : isAFavor ? 'text-emerald-500' : 'text-muted-foreground'
+                  }`}>
+                    {isAPagar ? 'Ventas > Compras' : isAFavor ? 'Compras > Ventas' : 'Equilibrio'}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )
+      })()}
 
       {/* Orders Summary */}
       <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">

@@ -164,6 +164,58 @@ export function getAllRealOrdersInPeriod(period?: PeriodFilter) {
   )
 }
 
+// ─── IVA stats ───────────────────────────────────────────────────────────────
+
+export interface IvaStats {
+  ivaVentas: number    // IVA from invoiced orders (has_invoice = true, status != anulado)
+  ivaCompras: number   // IVA from invoiced expenses (has_invoice = true, status = activo)
+  saldoIva: number     // ivaVentas - ivaCompras
+}
+
+/**
+ * Calculate IVA balance for the given period.
+ * Rules:
+ *  - Orders: has_invoice = true, status != 'anulado', order_date in range
+ *  - Expenses: has_invoice = true, status = 'activo', accounting_month in range
+ *  - Uses order.iva and expense.iva fields directly (not totals)
+ */
+export function calculateIvaStats(period?: PeriodFilter): IvaStats {
+  const activePeriod: PeriodFilter = period || { mode: 'this_month' }
+  const { from, to } = getDateRangeForPeriod(activePeriod)
+
+  let allOrders = []
+  let allExpenses = []
+
+  try { allOrders = getCreatedOrders() || [] } catch { allOrders = [] }
+  try { allExpenses = getExpenses() || [] } catch { allExpenses = [] }
+
+  const ivaVentas = allOrders
+    .filter(
+      o =>
+        o?.order_date &&
+        orderInRange(o.order_date, from, to) &&
+        o.status !== 'anulado' &&
+        o.has_invoice === true
+    )
+    .reduce((sum, o) => sum + (o?.iva || 0), 0)
+
+  const ivaCompras = allExpenses
+    .filter(
+      e =>
+        e?.accounting_month &&
+        expenseInRange(e.accounting_month, from, to) &&
+        e.status === 'activo' &&
+        e.has_invoice === true
+    )
+    .reduce((sum, e) => sum + (e?.iva || 0), 0)
+
+  return {
+    ivaVentas,
+    ivaCompras,
+    saldoIva: ivaVentas - ivaCompras,
+  }
+}
+
 // Keep legacy exports for backward compat
 export function getAllRealOrdersThisMonth(month?: string) {
   return getAllRealOrdersInPeriod(
