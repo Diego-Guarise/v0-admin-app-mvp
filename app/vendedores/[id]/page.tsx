@@ -16,7 +16,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { StatusBadge } from '@/components/status-badge'
-import { ArrowLeft, Edit, Briefcase, Mail, Phone, Check } from 'lucide-react'
+import { ArrowLeft, Edit, Briefcase, Mail, Phone, Check, Undo2 } from 'lucide-react'
 import { getVendorById } from '@/lib/vendor-store'
 import { getAllOrders, saveOrder } from '@/lib/order-store'
 import { getClientById } from '@/lib/client-store'
@@ -33,6 +33,7 @@ export default function VendorDetailPage({ params }: VendorDetailPageProps) {
   const [id, setId] = useState<string>('')
   const [mounted, setMounted] = useState(false)
   const [markingPaid, setMarkingPaid] = useState<string | null>(null)
+  const [unmarkingPaid, setUnmarkingPaid] = useState<string | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
 
   // Unwrap params
@@ -101,6 +102,28 @@ export default function VendorDetailPage({ params }: VendorDetailPageProps) {
       console.error('Error marking order as paid:', error)
     } finally {
       setMarkingPaid(null)
+    }
+  }
+
+  // Revert cobrado → pendiente. Only payment_status changes — nothing else.
+  const handleUnmarkAsPaid = async (orderId: string) => {
+    setUnmarkingPaid(orderId)
+    try {
+      const order = getAllOrders().find(o => o.id === orderId)
+      if (!order) return
+
+      const updatedOrder = {
+        ...order,
+        payment_status: 'pendiente' as const,
+        updated_at: new Date().toISOString(),
+      }
+
+      saveOrder(updatedOrder)
+      setRefreshKey(prev => prev + 1)
+    } catch (error) {
+      console.error('Error unmarking order as paid:', error)
+    } finally {
+      setUnmarkingPaid(null)
     }
   }
 
@@ -285,11 +308,17 @@ export default function VendorDetailPage({ params }: VendorDetailPageProps) {
                               Ver pedido
                             </Button>
                           </Link>
-                          <Link href={`/pedidos/${order.id}/editar?from=vendedor&vendorId=${vendor.id}`} className="flex-1">
-                            <Button variant="outline" size="sm" className="w-full">
-                              Editar
-                            </Button>
-                          </Link>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleUnmarkAsPaid(order.id)}
+                            disabled={unmarkingPaid === order.id}
+                            className="gap-1 text-muted-foreground hover:text-foreground"
+                            title="Revertir cobro — vuelve a Pendiente de Pago"
+                          >
+                            <Undo2 className="h-4 w-4" />
+                            {unmarkingPaid === order.id ? 'Revirtiendo...' : 'Desmarcar cobrado'}
+                          </Button>
                         </div>
                       </div>
                     )})}
