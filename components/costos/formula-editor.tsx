@@ -29,6 +29,7 @@ import {
 } from '@/lib/mock-data'
 import { UNIT_OF_MEASURE_ABBR, INGREDIENT_CATEGORY_LABELS, type IngredientCategory, areUnitsCompatible, convertUnit } from '@/lib/types'
 import { getExpenses } from '@/lib/expenses-store'
+import { selectIfZero } from '@/lib/utils'
 
 interface FormulaEditorProps {
   productId: string
@@ -375,6 +376,7 @@ export function FormulaEditor({ productId, formulas, onSave }: FormulaEditorProp
                             quantity_per_kg: parseFloat(e.target.value) || 0,
                             unit_of_measure: formulaUnit
                           })}
+                          onFocus={selectIfZero}
                           className="h-9"
                         />
                       </div>

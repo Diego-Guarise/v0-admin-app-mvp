@@ -41,6 +41,7 @@ import { isSoldPerBundle, getBundleMultiplier } from '@/lib/pricing'
 import { getExpenses, initializeExpenses } from '@/lib/expenses-store'
 import { EXPENSES } from '@/lib/mock-data'
 import type { PriceCategory, Expense } from '@/lib/types'
+import { selectIfZero } from '@/lib/utils'
 
 // Sample selling prices for profit calculation (would come from price list in production)
 const SAMPLE_PRICES: Record<string, Record<number, number>> = {}
@@ -549,15 +550,16 @@ export function CostosDashboard() {
                                           <div className="flex items-center justify-between text-sm bg-blue-50/50 p-2 rounded border border-blue-100">
                                             <label className="text-muted-foreground">Costo envase</label>
                                             <div className="flex items-center gap-2">
-                                              <input
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                value={editingCosts[costKey]?.envase ?? (pc.breakdown.envase_cost ?? '')}
-                                                onChange={(e) => updateEnvaseCost(costKey, e.target.value)}
-                                                className="w-20 px-2 py-1 text-sm text-right font-mono border border-border rounded bg-white"
-                                                placeholder="0"
-                                              />
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={editingCosts[costKey]?.envase ?? (pc.breakdown.envase_cost ?? '')}
+                                onChange={(e) => updateEnvaseCost(costKey, e.target.value)}
+                                onFocus={selectIfZero}
+                                className="w-20 px-2 py-1 text-sm text-right font-mono border border-border rounded bg-white"
+                                placeholder="0"
+                              />
                                               <span className="text-muted-foreground text-xs">
                                                 {currentEnvaseCost > 0 ? formatCurrencyDecimal(currentEnvaseCost) : '—'}
                                               </span>
@@ -577,15 +579,16 @@ export function CostosDashboard() {
                                           <div className="flex items-center justify-between text-sm bg-emerald-50/50 p-2 rounded border border-emerald-100">
                                             <label className="text-muted-foreground">Costo etiqueta</label>
                                             <div className="flex items-center gap-2">
-                                              <input
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                value={editingCosts[costKey]?.etiqueta ?? (pc.breakdown.etiqueta_cost ?? '')}
-                                                onChange={(e) => updateEtiquetaCost(costKey, e.target.value)}
-                                                className="w-20 px-2 py-1 text-sm text-right font-mono border border-border rounded bg-white"
-                                                placeholder="0"
-                                              />
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={editingCosts[costKey]?.etiqueta ?? (pc.breakdown.etiqueta_cost ?? '')}
+                                onChange={(e) => updateEtiquetaCost(costKey, e.target.value)}
+                                onFocus={selectIfZero}
+                                className="w-20 px-2 py-1 text-sm text-right font-mono border border-border rounded bg-white"
+                                placeholder="0"
+                              />
                                               <span className="text-muted-foreground text-xs">
                                                 {currentEtiquetaCost > 0 ? formatCurrencyDecimal(currentEtiquetaCost) : '—'}
                                               </span>
@@ -605,15 +608,16 @@ export function CostosDashboard() {
                                           <div className="flex items-center justify-between text-sm bg-amber-50/50 p-2 rounded border border-amber-100">
                                             <label className="text-muted-foreground">Costo extra manual</label>
                                             <div className="flex items-center gap-2">
-                                              <input
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                value={editingCosts[costKey]?.manual ?? (pc.breakdown.manual_extra_cost ?? '')}
-                                                onChange={(e) => updateManualExtraCost(costKey, e.target.value)}
-                                                className="w-20 px-2 py-1 text-sm text-right font-mono border border-border rounded bg-white"
-                                                placeholder="0"
-                                              />
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={editingCosts[costKey]?.manual ?? (pc.breakdown.manual_extra_cost ?? '')}
+                                onChange={(e) => updateManualExtraCost(costKey, e.target.value)}
+                                onFocus={selectIfZero}
+                                className="w-20 px-2 py-1 text-sm text-right font-mono border border-border rounded bg-white"
+                                placeholder="0"
+                              />
                                               <span className="text-muted-foreground text-xs">
                                                 {currentManualCost > 0 ? formatCurrencyDecimal(currentManualCost) : '—'}
                                               </span>
@@ -705,15 +709,16 @@ export function CostosDashboard() {
                                                 <div className="flex items-center justify-between text-sm mt-2 bg-amber-50/50 p-2 rounded border border-amber-100">
                                                   <label className="text-muted-foreground">Costo extra funda</label>
                                                   <div className="flex items-center gap-2">
-                                                    <input
-                                                      type="number"
-                                                      step="0.01"
-                                                      min="0"
-                                                      value={editingCosts[costKey]?.bundle ?? (pc.bundle_manual_extra_cost ?? '')}
-                                                      onChange={(e) => updateBundleExtraCost(costKey, e.target.value)}
-                                                      className="w-20 px-2 py-1 text-sm text-right font-mono border border-border rounded bg-white"
-                                                      placeholder="0"
-                                                    />
+                                    <input
+                                      type="number"
+                                      step="0.01"
+                                      min="0"
+                                      value={editingCosts[costKey]?.bundle ?? (pc.bundle_manual_extra_cost ?? '')}
+                                      onChange={(e) => updateBundleExtraCost(costKey, e.target.value)}
+                                      onFocus={selectIfZero}
+                                      className="w-20 px-2 py-1 text-sm text-right font-mono border border-border rounded bg-white"
+                                      placeholder="0"
+                                    />
                                                     <span className="text-muted-foreground text-xs">
                                                       {currentBundleCost > 0 ? formatCurrencyDecimal(currentBundleCost) : '—'}
                                                     </span>

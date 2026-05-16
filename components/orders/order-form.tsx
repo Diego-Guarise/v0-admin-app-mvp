@@ -37,6 +37,7 @@ import { isPotesAlwaysBranded, getPriceDetailsFromStore, isSoldPerBundle } from 
 import { getAllPrices } from '@/lib/price-store'
 import { saveOrder, getOrderById, getAllOrders } from '@/lib/order-store'
 import type { Order, PriceCategory, OrderStatus, PaymentStatus, CommissionStatus } from '@/lib/types'
+import { selectIfZero } from '@/lib/utils'
 
 interface OrderFormProps {
   order?: Order
@@ -933,6 +934,7 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
                                   min="1"
                                   value={item.quantity}
                                   onChange={(e) => updateItem(item.id, 'quantity', parseInt(e.target.value) || 0)}
+                                  onFocus={selectIfZero}
                                   className="w-20 h-9 text-center"
                                 />
                                 <p className="text-xs text-muted-foreground text-center">{formatWeight(kg)}</p>
@@ -945,6 +947,7 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
                                 step="0.01"
                                 value={item.unit_price}
                                 onChange={(e) => updateItem(item.id, 'unit_price', parseFloat(e.target.value) || 0)}
+                                onFocus={selectIfZero}
                                 readOnly={!manualPrice}
                                 className={`w-28 h-9 ${manualPrice ? 'border-amber-300 bg-amber-50' : 'bg-muted cursor-default'}`}
                               />

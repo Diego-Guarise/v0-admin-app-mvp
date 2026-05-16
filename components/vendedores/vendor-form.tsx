@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
+import { selectIfZero } from '@/lib/utils'
 import { ArrowLeft, Save, Briefcase } from 'lucide-react'
 import { createVendor, saveVendor } from '@/lib/vendor-store'
 import type { Vendor } from '@/lib/types'
@@ -125,6 +126,7 @@ export function VendorForm({ vendor }: VendorFormProps) {
                 max="100"
                 value={formData.commission_percentage}
                 onChange={(e) => setFormData({ ...formData, commission_percentage: parseFloat(e.target.value) })}
+                onFocus={selectIfZero}
                 placeholder="5"
                 required
               />

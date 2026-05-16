@@ -22,6 +22,7 @@ import { EXPENSE_CATEGORIES, formatCurrency, INGREDIENT_INPUTS, isProductiveExpe
 import { EXPENSE_TYPE_LABELS, EXPENSE_STATUS_LABELS, UNIT_OF_MEASURE_ABBR, type UnitOfMeasure } from '@/lib/types'
 import type { Expense, ExpenseType, ExpenseStatus, RecurrenceFrequency } from '@/lib/types'
 import { addExpense, updateExpense } from '@/lib/expenses-store'
+import { selectIfZero } from '@/lib/utils'
 
 interface ExpenseFormProps {
   expense?: Expense
@@ -275,6 +276,7 @@ export function ExpenseForm({ expense }: ExpenseFormProps) {
                     step="0.01"
                     value={amount}
                     onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+                    onFocus={selectIfZero}
                     required
                   />
                 </div>
@@ -348,6 +350,7 @@ export function ExpenseForm({ expense }: ExpenseFormProps) {
                       step="0.001"
                       value={quantity}
                       onChange={(e) => setQuantity(parseFloat(e.target.value) || 0)}
+                      onFocus={selectIfZero}
                       placeholder="ej: 1000"
                     />
                   </div>
@@ -478,6 +481,7 @@ export function ExpenseForm({ expense }: ExpenseFormProps) {
                         max="31"
                         value={estimatedDay}
                         onChange={(e) => setEstimatedDay(parseInt(e.target.value) || 1)}
+                        onFocus={selectIfZero}
                       />
                     </div>
                     <div className="space-y-2">
@@ -489,6 +493,7 @@ export function ExpenseForm({ expense }: ExpenseFormProps) {
                         step="0.01"
                         value={estimatedAmount}
                         onChange={(e) => setEstimatedAmount(parseFloat(e.target.value) || 0)}
+                        onFocus={selectIfZero}
                       />
                     </div>
                   </div>

@@ -23,6 +23,7 @@ import { INGREDIENT_INPUTS, INGREDIENT_COSTS } from '@/lib/mock-data'
 import { calculateIngredientCostIVA } from '@/lib/types'
 import { UNIT_OF_MEASURE_ABBR, type UnitOfMeasure } from '@/lib/types'
 import type { IngredientCost } from '@/lib/types'
+import { selectIfZero } from '@/lib/utils'
 
 interface CreateCostRegistrationModalProps {
   isOpen: boolean
@@ -183,6 +184,7 @@ export function CreateCostRegistrationModal({
                   placeholder="1000"
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value)}
+                  onFocus={selectIfZero}
                   disabled={isSubmitting}
                   className="pl-10"
                   step="0.01"
@@ -217,6 +219,7 @@ export function CreateCostRegistrationModal({
                 placeholder="7200"
                 value={totalAmount}
                 onChange={(e) => setTotalAmount(e.target.value)}
+                onFocus={selectIfZero}
                 disabled={isSubmitting}
                 className="pl-10"
                 step="0.01"

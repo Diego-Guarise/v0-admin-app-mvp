@@ -19,6 +19,7 @@ import { getAllPrices, savePrices } from '@/lib/price-store'
 import { PRODUCTS, PRESENTATIONS, formatCurrency } from '@/lib/mock-data'
 import { PRICE_CATEGORY_LABELS } from '@/lib/types'
 import type { PriceListItem, PriceCategory } from '@/lib/types'
+import { selectIfZero } from '@/lib/utils'
 
 type SortKey = 'product' | 'presentation' | 'category' | 'kilos' | 'price' | 'pricePerKg' | null
 type SortOrder = 'asc' | 'desc' | null
@@ -296,6 +297,7 @@ export function PreciosContent() {
                               type="number"
                               value={price.unit_price_for_sales_unit}
                               onChange={(e) => handlePriceChange(price.id, parseFloat(e.target.value) || 0)}
+                              onFocus={selectIfZero}
                               className="w-24 text-center mx-auto"
                               step="1"
                             />
