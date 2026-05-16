@@ -84,6 +84,7 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
   const [commissionStatus, setCommissionStatus] = useState<CommissionStatus>(order?.commission_status || 'pendiente_liquidar')
   const [hasInvoice, setHasInvoice] = useState(order?.has_invoice !== undefined ? order.has_invoice : true)
   const [invoiceNumber, setInvoiceNumber] = useState(order?.invoice_number || '')
+  const [vendorError, setVendorError] = useState(false)
 
   // Items state
   const [items, setItems] = useState<OrderItemForm[]>(
@@ -480,6 +481,11 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
       return
     }
 
+    // Vendor is required
+    const isVendorMissing = !vendorId || vendorId === 'none'
+    setVendorError(isVendorMissing)
+    if (isVendorMissing) return
+
     // Create order object
     const newOrder = {
       id: isEditing ? order!.id : `order-${Date.now()}`,
@@ -676,9 +682,20 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="vendor">Vendedor</Label>
-                <Select value={vendorId} onValueChange={setVendorId}>
-                  <SelectTrigger id="vendor">
+                <Label htmlFor="vendor">
+                  Vendedor <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={vendorId}
+                  onValueChange={(val) => {
+                    setVendorId(val)
+                    if (val && val !== 'none') setVendorError(false)
+                  }}
+                >
+                  <SelectTrigger
+                    id="vendor"
+                    className={vendorError ? 'border-destructive ring-destructive/20 ring-2' : ''}
+                  >
                     <SelectValue placeholder="Seleccionar vendedor" />
                   </SelectTrigger>
                   <SelectContent>
@@ -690,6 +707,11 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
                     ))}
                   </SelectContent>
                 </Select>
+                {vendorError && (
+                  <p className="text-sm text-destructive">
+                    Debes seleccionar un vendedor para crear el pedido
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
