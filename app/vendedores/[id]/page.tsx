@@ -343,8 +343,9 @@ export default function VendorDetailPage({ params }: VendorDetailPageProps) {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Pedido</TableHead>
-                      <TableHead>Fecha</TableHead>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead className="hidden sm:table-cell">Pedido</TableHead>
+                      <TableHead className="hidden sm:table-cell">Fecha</TableHead>
                       <TableHead className="text-right">Subtotal</TableHead>
                       <TableHead className="text-right">Comisión</TableHead>
                     </TableRow>
@@ -353,14 +354,28 @@ export default function VendorDetailPage({ params }: VendorDetailPageProps) {
                     {liquidatedOrders.map(order => {
                       const baseAmount = order.subtotal_without_iva || order.subtotal
                       const commission = baseAmount * (vendor.commission_percentage / 100)
+                      const client = order.client_id ? getClientById(order.client_id) : undefined
+                      const clientName = order.client?.name || client?.name || client?.company || 'Cliente eliminado'
+                      const clientCompany = order.client?.company || client?.company
                       return (
                         <TableRow key={order.id}>
-                          <TableCell className="font-medium">
+                          <TableCell>
+                            <Link href={`/pedidos/${order.id}`} className="hover:underline">
+                              <p className="font-medium">{clientName}</p>
+                              {clientCompany && clientCompany !== clientName && (
+                                <p className="text-xs text-muted-foreground">{clientCompany}</p>
+                              )}
+                              <p className="text-xs text-muted-foreground sm:hidden">
+                                #{order.order_number} &middot; {formatDate(order.order_date)}
+                              </p>
+                            </Link>
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell font-medium">
                             <Link href={`/pedidos/${order.id}`} className="hover:underline">
                               #{order.order_number}
                             </Link>
                           </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
+                          <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
                             {formatDate(order.order_date)}
                           </TableCell>
                           <TableCell className="text-right">{formatCurrency(baseAmount)}</TableCell>
