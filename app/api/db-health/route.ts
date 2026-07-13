@@ -1,44 +1,34 @@
 import { NextResponse } from 'next/server'
+import { db } from '@/lib/db'
 
-// Simple health check that doesn't require direct DB connection during build
+// Never prerender/cache: this must run at request time against the live DB
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   try {
-    // For now, just verify the env var is available
-    const hasDbUrl = !!process.env.DATABASE_URL
-    
-    if (!hasDbUrl) {
-      return NextResponse.json(
-        {
-          status: 'error',
-          database: 'disconnected',
-          error: 'DATABASE_URL not configured',
-          timestamp: new Date().toISOString(),
-        },
-        { status: 503 }
-      )
-    }
+    // Real query against Neon via Prisma. count() is safe and cheap.
+    await db.healthCheck.count()
 
     return NextResponse.json(
       {
         status: 'ok',
-        database: 'configured',
+        database: 'connected',
         timestamp: new Date().toISOString(),
-        message: 'Database connection string is available',
       },
       { status: 200 }
     )
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    
+    // Log full error server-side for debugging, but never leak it (may contain the connection string)
+    console.error('[v0] db-health check failed:', error)
+
     return NextResponse.json(
       {
         status: 'error',
-        database: 'error',
-        error: errorMessage,
+        database: 'disconnected',
+        message: 'Database health check failed',
         timestamp: new Date().toISOString(),
       },
-      { status: 503 }
+      { status: 500 }
     )
   }
 }
-
