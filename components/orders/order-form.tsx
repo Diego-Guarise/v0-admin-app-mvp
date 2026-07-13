@@ -30,13 +30,13 @@ import {
 } from '@/components/ui/table'
 import { ArrowLeft, Plus, Trash2, Save, AlertTriangle, UserPlus, Package, Scale, Lock, ExternalLink, Copy } from 'lucide-react'
 import { PRODUCTS, PRESENTATIONS, ORDERS, formatCurrency, formatWeight } from '@/lib/mock-data'
-import { getAllClients } from '@/lib/client-store'
+import { getClients } from '@/lib/api/clients'
 import { getAllVendors } from '@/lib/vendor-store'
 import { PRICE_CATEGORY_LABELS, ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS, COMMISSION_STATUS_LABELS } from '@/lib/types'
 import { isPotesAlwaysBranded, getPriceDetailsFromStore, isSoldPerBundle } from '@/lib/pricing'
 import { getAllPrices } from '@/lib/price-store'
 import { saveOrder, getOrderById, getAllOrders } from '@/lib/order-store'
-import type { Order, PriceCategory, OrderStatus, PaymentStatus, CommissionStatus } from '@/lib/types'
+import type { Order, PriceCategory, OrderStatus, PaymentStatus, CommissionStatus, Client } from '@/lib/types'
 import { selectIfZero } from '@/lib/utils'
 
 interface OrderFormProps {
@@ -107,15 +107,25 @@ export function OrderForm({ order, preSelectedClientId, navigationContext }: Ord
   const clientDropdownRef = useRef<HTMLDivElement>(null)
 
   // Active clients only - deferred to avoid hydration mismatch
-  const [activeClients, setActiveClients] = useState<ReturnType<typeof getAllClients>>([])
+  const [activeClients, setActiveClients] = useState<Client[]>([])
 
   // Active vendors only - deferred to avoid hydration mismatch
   const [activeVendors, setActiveVendors] = useState<ReturnType<typeof getAllVendors>>([])
 
-  // Load clients and vendors from localStorage on mount
+  // Load clients from the database, vendors from local store, on mount
   useEffect(() => {
-    setActiveClients(getAllClients().filter(c => c.active))
+    let active = true
+    getClients()
+      .then(data => {
+        if (active) setActiveClients(data.filter(c => c.active))
+      })
+      .catch(() => {
+        if (active) setActiveClients([])
+      })
     setActiveVendors(getAllVendors().filter(v => v.active))
+    return () => {
+      active = false
+    }
   }, [])
 
   // Get selected vendor for display

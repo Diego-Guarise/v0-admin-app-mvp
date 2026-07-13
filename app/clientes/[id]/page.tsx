@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { AdminLayout } from '@/components/admin-layout'
 import { ClientDetail } from '@/components/clients/client-detail'
 import { Button } from '@/components/ui/button'
-import { getClientById } from '@/lib/client-store'
+import { getClientById } from '@/lib/api/clients'
 import type { Client } from '@/lib/types'
 
 interface ClientDetailPageProps {
@@ -29,23 +29,36 @@ export default function ClientDetailPage({ params }: ClientDetailPageProps) {
     setMounted(true)
   }, [])
 
-  // Attempt to retrieve client from store once mounted
+  // Retrieve client from the database once mounted
   useEffect(() => {
     if (!id || !mounted) {
       return
     }
-    
-    const foundClient = getClientById(id)
-    
-    if (foundClient) {
-      setClient(foundClient)
-      setNotFound(false)
-    } else {
-      setClient(null)
-      setNotFound(true)
+
+    let active = true
+    getClientById(id)
+      .then(foundClient => {
+        if (!active) return
+        if (foundClient) {
+          setClient(foundClient)
+          setNotFound(false)
+        } else {
+          setClient(null)
+          setNotFound(true)
+        }
+      })
+      .catch(() => {
+        if (!active) return
+        setClient(null)
+        setNotFound(true)
+      })
+      .finally(() => {
+        if (active) setIsLoading(false)
+      })
+
+    return () => {
+      active = false
     }
-    
-    setIsLoading(false)
   }, [id, mounted])
 
   // Show loading while params are being resolved or component is mounting

@@ -34,9 +34,9 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Plus, Search, ShoppingCart, Eye, Edit, X, Package, Scale, ChevronDown } from 'lucide-react'
 import { formatCurrency, formatDate, formatWeight } from '@/lib/mock-data'
 import { getAllOrders, saveOrder } from '@/lib/order-store'
-import { getAllClients } from '@/lib/client-store'
+import { getClients } from '@/lib/api/clients'
 import { getAllVendors, getVendorByIdSafe } from '@/lib/vendor-store'
-import type { OrderStatus, PaymentStatus } from '@/lib/types'
+import type { OrderStatus, PaymentStatus, Client } from '@/lib/types'
 import { ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS } from '@/lib/types'
 
 export function OrdersContent() {
@@ -54,16 +54,28 @@ export function OrdersContent() {
   const [customFromDate, setCustomFromDate] = useState('')
   const [customToDate, setCustomToDate] = useState('')
   const [orders, setOrders] = useState<any[]>([])
-  const [clients, setClients] = useState<ReturnType<typeof getAllClients>>([])
+  const [clients, setClients] = useState<Client[]>([])
   const [vendors, setVendors] = useState<ReturnType<typeof getAllVendors>>([])
   const [isHydrated, setIsHydrated] = useState(false)
 
-  // Load data from localStorage only on client after mount
+  // Orders and vendors from local store; clients from the database.
   useEffect(() => {
+    let active = true
     setOrders(getAllOrders())
-    setClients(getAllClients())
     setVendors(getAllVendors())
-    setIsHydrated(true)
+    getClients()
+      .then(data => {
+        if (active) setClients(data)
+      })
+      .catch(() => {
+        if (active) setClients([])
+      })
+      .finally(() => {
+        if (active) setIsHydrated(true)
+      })
+    return () => {
+      active = false
+    }
   }, [])
 
   // Helper to get date range based on filter

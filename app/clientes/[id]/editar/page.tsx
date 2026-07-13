@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { AdminLayout } from '@/components/admin-layout'
 import { ClientForm } from '@/components/clients/client-form'
 import { Button } from '@/components/ui/button'
-import { getClientById } from '@/lib/client-store'
+import { getClientById } from '@/lib/api/clients'
 import type { Client } from '@/lib/types'
 
 interface EditClientPageProps {
@@ -31,23 +31,36 @@ export default function EditClientPage({ params }: EditClientPageProps) {
     setMounted(true)
   }, [])
 
-  // Attempt to retrieve client from store once mounted
+  // Retrieve client from the database once mounted
   useEffect(() => {
     if (!id || !mounted) {
       return
     }
-    
-    const foundClient = getClientById(id)
-    
-    if (foundClient) {
-      setClient(foundClient)
-      setNotFound(false)
-    } else {
-      setClient(null)
-      setNotFound(true)
+
+    let active = true
+    getClientById(id)
+      .then(foundClient => {
+        if (!active) return
+        if (foundClient) {
+          setClient(foundClient)
+          setNotFound(false)
+        } else {
+          setClient(null)
+          setNotFound(true)
+        }
+      })
+      .catch(() => {
+        if (!active) return
+        setClient(null)
+        setNotFound(true)
+      })
+      .finally(() => {
+        if (active) setIsLoading(false)
+      })
+
+    return () => {
+      active = false
     }
-    
-    setIsLoading(false)
   }, [id, mounted])
 
   const handleSave = () => {

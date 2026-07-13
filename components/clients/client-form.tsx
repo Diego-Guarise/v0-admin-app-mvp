@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArrowLeft, Save, User, Phone, Mail, MapPin, Building, FileText } from 'lucide-react'
-import { saveClient } from '@/lib/client-store'
+import { createClient, updateClient } from '@/lib/api/clients'
 import type { Client } from '@/lib/types'
 
 interface ClientFormProps {
@@ -30,27 +30,35 @@ export function ClientForm({ client, onSave }: ClientFormProps) {
   const [address, setAddress] = useState(client?.address || '')
   const [notes, setNotes] = useState(client?.notes || '')
   const [active, setActive] = useState(client?.active ?? true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  // Handle submit
-  const handleSubmit = (e: React.FormEvent) => {
+  // Handle submit — persists to PostgreSQL/Neon via /api/clients
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    const newClient: Client = {
-      id: isEditing ? client!.id : `client-${Date.now()}`,
-      name: name || undefined,
-      rut: rut || undefined,
-      company: company || undefined,
-      phone: phone || undefined,
-      email: email || undefined,
-      address: address || undefined,
-      notes: notes || undefined,
+    setError(null)
+    setIsSaving(true)
+
+    const payload = {
+      name: name || null,
+      rut: rut || null,
+      company: company || null,
+      phone: phone || null,
+      email: email || null,
+      address: address || null,
+      notes: notes || null,
       active,
-      created_at: isEditing ? client!.created_at : new Date().toISOString(),
-      updated_at: new Date().toISOString(),
     }
-    
-    saveClient(newClient)
-    onSave?.(newClient.id)
+
+    try {
+      const saved = isEditing
+        ? await updateClient(client!.id, payload)
+        : await createClient(payload)
+      onSave?.(saved.id)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo guardar el cliente')
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -60,16 +68,26 @@ export function ClientForm({ client, onSave }: ClientFormProps) {
         description={isEditing ? 'Modificar datos del cliente' : 'Completa los datos del nuevo cliente'}
       >
         <Link href={isEditing ? `/clientes/${client.id}` : '/clientes'}>
-          <Button type="button" variant="ghost">
+          <Button type="button" variant="ghost" disabled={isSaving}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Cancelar
           </Button>
         </Link>
-        <Button type="submit">
+        <Button type="submit" disabled={isSaving}>
           <Save className="h-4 w-4 mr-2" />
-          {isEditing ? 'Guardar cambios' : 'Crear cliente'}
+          {isSaving
+            ? 'Guardando...'
+            : isEditing
+              ? 'Guardar cambios'
+              : 'Crear cliente'}
         </Button>
       </PageHeader>
+
+      {error && (
+        <div className="max-w-2xl mx-auto w-full rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {error}
+        </div>
+      )}
 
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Basic Info */}

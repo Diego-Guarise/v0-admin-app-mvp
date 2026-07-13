@@ -10,19 +10,33 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Plus, Search, Users, Eye, Edit, Phone, Mail, Building, Package, Scale, ShoppingCart } from 'lucide-react'
 import { getClientStatsFromStore, formatCurrency, formatWeight } from '@/lib/mock-data'
-import { getAllClients as getStoredClients } from '@/lib/client-store'
+import { getClients } from '@/lib/api/clients'
 import { getAllOrders } from '@/lib/order-store'
+import type { Client } from '@/lib/types'
 
 export function ClientsContent() {
   const [search, setSearch] = useState('')
   const [showInactive, setShowInactive] = useState(false)
-  const [clients, setClients] = useState<ReturnType<typeof getStoredClients>>([])
+  const [clients, setClients] = useState<Client[]>([])
   const [isHydrated, setIsHydrated] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  // Load clients from localStorage only on client after mount
+  // Load clients from the database (single source of truth)
   useEffect(() => {
-    setClients(getStoredClients())
-    setIsHydrated(true)
+    let active = true
+    getClients()
+      .then(data => {
+        if (active) setClients(data)
+      })
+      .catch(err => {
+        if (active) setError(err instanceof Error ? err.message : 'No se pudieron cargar los clientes')
+      })
+      .finally(() => {
+        if (active) setIsHydrated(true)
+      })
+    return () => {
+      active = false
+    }
   }, [])
 
   // Get all orders from shared store for stats calculation
@@ -60,6 +74,19 @@ export function ClientsContent() {
       <div className="px-4 lg:px-6 py-6">
         <div className="flex items-center justify-center py-12">
           <p className="text-muted-foreground">Cargando clientes...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="px-4 lg:px-6 py-6">
+        <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
+          <p className="text-destructive">{error}</p>
+          <Button variant="outline" onClick={() => window.location.reload()}>
+            Reintentar
+          </Button>
         </div>
       </div>
     )
